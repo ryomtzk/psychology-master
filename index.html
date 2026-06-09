@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>心理学マスター — 学部心理学 総合学習サイト</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="assets/css/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧠</text></svg>">
+</head>
+<body>
+<header class="topbar">
+  <div class="topbar-inner">
+    <a href="#/" class="brand">
+      <span class="brand-logo">🧠</span>
+      <span class="brand-text">心理学マスター<small>学部レベル 総合学習</small></span>
+    </a>
+    <nav class="topnav">
+      <a href="#/" data-nav="home">ホーム</a>
+      <a href="#/review" data-nav="review">復習 <span id="due-badge" class="badge hidden">0</span></a>
+      <a href="#/exam" data-nav="exam">模擬試験</a>
+      <a href="#/glossary" data-nav="glossary">用語集</a>
+      <a href="#/progress" data-nav="progress">進捗</a>
+    </nav>
+    <button id="theme-toggle" class="theme-toggle" title="テーマ切替">🌙</button>
+  </div>
+  <div id="topbar-progress" class="topbar-progress"><span></span></div>
+</header>
+
+<main id="app" class="app">
+  <div class="loading">読み込み中…</div>
+</main>
+
+<footer class="footer">
+  <p>心理学マスター — 分野変更で心理学が必要になった大学院生のための、学部心理学 網羅学習サイト。データはすべてブラウザ内 (localStorage) に保存されます。</p>
+</footer>
+
+<!-- 共通エンジン -->
+<script src="assets/js/app.js"></script>
+
+<!-- 各分野コンテンツ（自己登録） -->
+<script src="data/intro.js"></script>
+<script src="data/research.js"></script>
+<script src="data/stats.js"></script>
+<script src="data/biological.js"></script>
+<script src="data/sensation.js"></script>
+<script src="data/learning.js"></script>
+<script src="data/cognitive.js"></script>
+<script src="data/language.js"></script>
+<script src="data/developmental.js"></script>
+<script src="data/social.js"></script>
+<script src="data/personality.js"></script>
+<script src="data/emotion.js"></script>
+<script src="data/clinical.js"></script>
+<script src="data/abnormal.js"></script>
+<script src="data/testing.js"></script>
+<script src="data/educational.js"></script>
+<script src="data/health.js"></script>
+<script src="data/industrial.js"></script>
+
+<!-- 起動 -->
+<script>PsychApp.boot();</script>
+</body>
+</html>
