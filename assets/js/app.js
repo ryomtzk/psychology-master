@@ -167,6 +167,22 @@
       </svg>`;
     },
 
+    // 数値カウントアップ演出（[data-n] 要素対象、reduced-motion時は即時表示）
+    animateCounts(root) {
+      const reduce = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
+      root.querySelectorAll("[data-n]").forEach((el) => {
+        const n = +el.dataset.n || 0, suf = el.dataset.suffix || "";
+        if (reduce || n <= 0) { el.textContent = n + suf; return; }
+        const t0 = performance.now(), dur = 700;
+        const step = (t) => {
+          const p = Math.min(1, (t - t0) / dur), e = 1 - Math.pow(1 - p, 3);
+          el.textContent = Math.round(n * e) + suf;
+          if (p < 1) requestAnimationFrame(step);
+        };
+        requestAnimationFrame(step);
+      });
+    },
+
     /* ---------- ルーター ---------- */
     boot() {
       if (this._booted) return;
@@ -215,6 +231,10 @@
       const parts = hash.replace(/^#\//, "").split("/").filter(Boolean);
       const app = document.getElementById("app");
       app.scrollTop = 0; window.scrollTo(0, 0);
+      // 前画面のリスナー後始末 + 画面遷移アニメーション
+      if (this._spyHandler) { window.removeEventListener("scroll", this._spyHandler); this._spyHandler = null; }
+      if (this._keyHandler) { document.removeEventListener("keydown", this._keyHandler); this._keyHandler = null; }
+      app.classList.remove("route-in"); void app.offsetWidth; app.classList.add("route-in");
       this.updateDueBadge();
 
       if (parts.length === 0) return this.viewHome(app);
@@ -246,10 +266,10 @@
         <h1>学部心理学を、ゼロから体系的に。</h1>
         <p>分野変更で心理学が必要になった大学院生のための網羅的学習サイト。${this.modules.length}分野を「ビジュアル解説」と「反復演習」で着実に定着させます。間違えた問題は<b>間隔反復</b>で自動的に復習キューへ。</p>
         <div class="hero-stats">
-          <div class="hero-stat"><b>${this.modules.length}</b><span>学習分野</span></div>
-          <div class="hero-stat"><b>${o.total}</b><span>演習問題</span></div>
-          <div class="hero-stat"><b>${o.mastery}%</b><span>総合習熟度</span></div>
-          <div class="hero-stat"><b>${due}</b><span>本日の復習</span></div>
+          <div class="hero-stat"><b data-n="${this.modules.length}">0</b><span>学習分野</span></div>
+          <div class="hero-stat"><b data-n="${o.total}">0</b><span>演習問題</span></div>
+          <div class="hero-stat"><b data-n="${o.mastery}" data-suffix="%">0%</b><span>総合習熟度</span></div>
+          <div class="hero-stat"><b data-n="${due}">0</b><span>本日の復習</span></div>
         </div>
       </section>`;
 
@@ -263,7 +283,7 @@
       CATEGORIES.forEach((cat) => {
         const mods = this.modules.filter((m) => (m.category || "found") === cat.id);
         if (!mods.length) return;
-        html += `<div class="cat-block"><div class="cat-head">${cat.label}</div><div class="grid">`;
+        html += `<div class="cat-block" data-cat="${cat.id}"><div class="cat-head"><i class="cat-dot"></i>${cat.label}</div><div class="grid">`;
         mods.forEach((m) => { html += this.moduleCard(m); });
         html += `</div></div>`;
       });
@@ -279,11 +299,12 @@
       app.innerHTML = html;
       app.querySelectorAll("[data-goto]").forEach((c) =>
         c.addEventListener("click", () => { location.hash = c.dataset.goto; }));
+      this.animateCounts(app);
     },
 
     moduleCard(m) {
       const st = this.moduleStats(m);
-      return `<div class="card" data-goto="#/module/${m.id}">
+      return `<div class="card" data-cat="${m.category || "found"}" data-goto="#/module/${m.id}">
         <div class="card-top">
           <div class="card-emoji">${m.emoji || "📘"}</div>
           <div>
@@ -316,7 +337,7 @@
 
       app.innerHTML = `
         <div class="crumb"><a href="#/">ホーム</a> › <span>${this.esc(mod.title)}</span></div>
-        <div class="mod-header">
+        <div class="mod-header" data-cat="${mod.category || "found"}">
           <div class="card-emoji">${mod.emoji || "📘"}</div>
           <div>
             <h1>${this.esc(mod.title)}</h1>
@@ -387,6 +408,20 @@
           const t = document.getElementById(a.dataset.jump);
           if (t) t.scrollIntoView({ behavior: "smooth", block: "start" });
         }));
+
+      // 目次の現在地ハイライト（スクロールスパイ）
+      const tocLinks = Array.from(app.querySelectorAll("[data-jump]"));
+      const spy = () => {
+        let cur = 0;
+        mod.lessons.forEach((_, i) => {
+          const s = document.getElementById("lesson-" + i);
+          if (s && s.getBoundingClientRect().top < 150) cur = i;
+        });
+        tocLinks.forEach((a, i) => a.classList.toggle("cur", i === cur));
+      };
+      this._spyHandler = spy;
+      window.addEventListener("scroll", spy, { passive: true });
+      spy();
 
       const sl = sessionStorage.getItem("scrollLesson");
       if (sl != null) {
@@ -520,7 +555,7 @@
             <div class="quiz-progress"><span style="width:${pct}%"></span></div>
             <span class="quiz-count">正解 ${st.correct}</span>
           </div>
-          <div class="qcard">
+          <div class="qcard" data-cat="${mod.category || "found"}">
             <div class="q-meta">
               <span class="q-tag">${mod.emoji || ""} ${this.esc(mod.title)}</span>
               <span class="q-tag diff${diff}">${diffLabel}</span>
