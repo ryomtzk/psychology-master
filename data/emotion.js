@@ -228,7 +228,7 @@ PsychApp.registerModule({
         <g stroke="#5b6478" stroke-width="1.6" marker-end="url(#ba)" fill="none">
           <line x1="110" y1="115" x2="168" y2="115"/>
           <path d="M260,108 Q300,80 318,70"/>
-          <line x1="320" y1="172" x2="262" y2="128" stroke-dasharray="0"/>
+          <line x1="262" y1="128" x2="320" y2="172" stroke-dasharray="0"/>
           <path d="M380,75 Q380,115 380,153"/>
           <line x1="440" y1="172" x2="470" y2="138"/>
         </g>
