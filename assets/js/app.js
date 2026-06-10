@@ -264,7 +264,7 @@
 
       let html = `<section class="hero">
         <h1>学部心理学を、ゼロから体系的に。</h1>
-        <p>分野変更で心理学が必要になった大学院生のための網羅的学習サイト。${this.modules.length}分野を「ビジュアル解説」と「反復演習」で着実に定着させます。間違えた問題は<b>間隔反復</b>で自動的に復習キューへ。</p>
+        <p>研究の中で心理学の知識が必要になった研究者のための網羅的学習サイト。${this.modules.length}分野を「ビジュアル解説」と「反復演習」で着実に定着させます。間違えた問題は<b>間隔反復</b>で自動的に復習キューへ。</p>
         <div class="hero-stats">
           <div class="hero-stat"><b data-n="${this.modules.length}">0</b><span>学習分野</span></div>
           <div class="hero-stat"><b data-n="${o.total}">0</b><span>演習問題</span></div>
@@ -487,7 +487,7 @@
       this.setNav("exam");
       app.innerHTML = `
         <div class="crumb"><a href="#/">ホーム</a> › <span>模擬試験</span></div>
-        <section class="hero" style="background:linear-gradient(135deg,#1d2433,#4452d6)">
+        <section class="hero">
           <h1>模擬試験</h1>
           <p>全分野から問題をランダムに出題する総合テストです。範囲・問題数を選んで挑戦しましょう。本番形式で実力を確認できます。</p>
         </section>
