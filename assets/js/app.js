@@ -21,6 +21,7 @@
     { id: "biocog", label: "生物・認知の基礎" },
     { id: "dsp", label: "発達・社会・個人差" },
     { id: "applied", label: "臨床・応用" },
+    { id: "vision", label: "視覚科学（特別編）" },
   ];
 
   const App = {
@@ -246,6 +247,7 @@
         if (b === "quiz") return this.viewQuiz(app, mod);
         return this.viewModule(app, mod);
       }
+      if (head === "vision") return this.viewVision(app);
       if (head === "review") return this.viewReview(app);
       if (head === "exam") return this.viewExam(app);
       if (head === "glossary") return this.viewGlossary(app);
@@ -295,6 +297,48 @@
         others.forEach((m) => { html += this.moduleCard(m); });
         html += `</div></div>`;
       }
+
+      app.innerHTML = html;
+      app.querySelectorAll("[data-goto]").forEach((c) =>
+        c.addEventListener("click", () => { location.hash = c.dataset.goto; }));
+      this.animateCounts(app);
+    },
+
+    /* ====================================================
+       視覚科学（特別編）ハブ
+    ==================================================== */
+    viewVision(app) {
+      this.setNav("vision");
+      const groups = [
+        { label: "I. 神経基盤 — 網膜から皮質へ", ids: ["vis_foundations", "vis_spatial", "vis_color"] },
+        { label: "II. 中次の知覚 — 運動・奥行き・体制化", ids: ["vis_motion", "vis_depth", "vis_gestalt"] },
+        { label: "III. 高次認知 — 認識・注意・情景", ids: ["vis_object", "vis_attention", "vis_eyemov"] },
+        { label: "IV. 理論と意識 — 錯視・推論・気づき", ids: ["vis_illusion", "vis_bayes", "vis_awareness"] },
+        { label: "V. 記憶と応用", ids: ["vis_memory", "vis_applied"] },
+      ];
+      const vmods = this.modules.filter((m) => m.category === "vision");
+      const nLessons = vmods.reduce((a, m) => a + (m.lessons || []).length, 0);
+      const nQs = vmods.reduce((a, m) => a + (m.questions || []).length, 0);
+
+      let html = `<section class="hero" data-cat="vision">
+        <h1>👁️ 視覚科学 <span style="font-size:.5em;font-weight:800;vertical-align:middle;color:var(--cat);background:var(--cat-soft);padding:3px 12px;border-radius:999px;margin-left:8px">特別編</span></h1>
+        <p>視覚心理学と視覚に関する認知科学の知見を体系的にまとめた特別セクション。網膜での神経処理から、空間・色・運動・奥行きの知覚、知覚の体制化、物体と顔の認識、注意と眼球運動、錯視、ベイズ的推論と予測符号化、視覚的意識、視覚記憶、そして可視化への応用までを、<b>「脳が外界を能動的に構成する」</b>という一貫した視点で扱う。低次の神経基盤から高次の認知・計算理論へと積み上げる構成である。</p>
+        <div class="hero-stats">
+          <div class="hero-stat"><b data-n="${vmods.length}">0</b><span>モジュール</span></div>
+          <div class="hero-stat"><b data-n="${nLessons}">0</b><span>レッスン</span></div>
+          <div class="hero-stat"><b data-n="${nQs}">0</b><span>演習問題</span></div>
+        </div>
+      </section>`;
+
+      html += `<div class="callout key"><b>おすすめの学び方</b>：番号順（I→V）に進むと、神経基盤 → 中次の知覚 → 高次認知 → 理論・意識 → 記憶・応用、という依存関係に沿って無理なく積み上がる。各モジュールは「📖 学ぶ → ✏️ 演習する」を1セットにし、間違えた問題は自動で復習キューに入る。</div>`;
+
+      groups.forEach((g) => {
+        const mods = g.ids.map((id) => this.byId[id]).filter(Boolean);
+        if (!mods.length) return;
+        html += `<div class="cat-block" data-cat="vision"><div class="cat-head"><i class="cat-dot"></i>${g.label}</div><div class="grid">`;
+        mods.forEach((m) => { html += this.moduleCard(m); });
+        html += `</div></div>`;
+      });
 
       app.innerHTML = html;
       app.querySelectorAll("[data-goto]").forEach((c) =>
