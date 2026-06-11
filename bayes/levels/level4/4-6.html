@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>4-6 収束診断とサンプリングの実務 | ベイズの階段</title>
+  <meta name="description" content="trace plot・R̂・有効サンプルサイズの読み方">
+  <script>
+    document.documentElement.dataset.theme =
+      localStorage.getItem("bayes-stairs-theme") ||
+      (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Noto+Serif+JP:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../assets/css/main.css">
+
+  <!-- KaTeX: 数式を使うページでは必ずこの3行を入れる -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+          onload="renderMathInElement(document.body, {delimiters: [
+            {left: '$$', right: '$$', display: true},
+            {left: '\\(', right: '\\)', display: false}
+          ]});"></script>
+</head>
+<body data-root="../../" data-level="4" data-lesson-id="4-6">
+
+  <header class="site-header">
+    <button class="sidebar-toggle" id="sidebar-toggle" aria-label="メニュー">☰</button>
+    <a class="brand" href="../../index.html">
+      <span class="brand-mark">階</span>
+      <span>ベイズの階段</span>
+    </a>
+    <div class="header-spacer"></div>
+    <div class="header-progress" id="header-progress"></div>
+    <button class="theme-toggle" id="theme-toggle" aria-label="テーマ切替">🌙</button>
+  </header>
+
+  <div class="layout">
+
+    <!-- サイドバー: main.js がカリキュラムから自動生成 -->
+    <aside class="sidebar"><nav id="sidebar-nav" aria-label="カリキュラム"></nav></aside>
+
+    <main class="lesson">
+
+      <nav class="breadcrumbs" aria-label="パンくず">
+        <a href="../../index.html">ホーム</a><span class="sep">›</span>
+        <a href="index.html">Level 4 計算ベイズ — MCMCと近似推論</a><span class="sep">›</span>
+        <span>4-6 収束診断とサンプリングの実務</span>
+      </nav>
+
+      <header class="lesson-header">
+        <div class="lesson-meta">
+          <span class="level-badge">Level 4</span>
+          <span class="small">レッスン 4-6</span>
+        </div>
+        <h1>収束診断とサンプリングの実務</h1>
+
+        <div class="lesson-goals">
+          <h2>このレッスンでできるようになること</h2>
+          <ul>
+            <li><span class="term">トレースプロット</span>を見て、サンプリングがうまくいったか目視で判断できる</li>
+            <li><span class="term">R̂</span>（アールハット）と<span class="term">有効サンプルサイズ</span>の意味を説明し、合格ラインを言える</li>
+            <li>実務のチェック手順にそって、MCMCの結果を信じてよいか判断できる</li>
+          </ul>
+          <p class="prereq">前提: <a href="4-2.html">4-2 モンテカルロ法の考え方</a> と <a href="4-3.html">4-3 メトロポリス・ヘイスティングス法</a> を読んでいること</p>
+        </div>
+      </header>
+
+      <div class="lesson-body">
+
+        <h2>「サンプルが出たから安心」ではない</h2>
+        <p>ここまでのレッスンで、メトロポリス・ヘイスティングス法やギブスサンプリングを使って、事後分布からサンプルを取り出す方法を学びました。コンピュータにお願いすれば、たしかにたくさんの数字が返ってきます。</p>
+        <p>でも、ここで立ち止まりたいのです。<strong>返ってきたサンプルは、本当に事後分布から取れているのでしょうか?</strong></p>
+        <p>MCMCは「歩き回りながら少しずつ事後分布に近づく」しくみでした。歩き始めの場所が悪かったり、まだ十分に歩いていなかったりすると、サンプルは事後分布をきちんと表していません。それを知らずに平均や信用区間を出すと、まちがった結論にたどり着きます。</p>
+        <p>このレッスンでは、サンプルが信用できるかどうかを見分ける道具を学びます。これは派手ではありませんが、ベイズ分析でいちばん事故が起きやすい場所です。</p>
+
+        <div class="box box-intuition">
+          <div class="box-title">直感でつかむ</div>
+          <p>初めての街で、地図なしに歩いて「街の中心はどのあたりか」を調べる場面を想像してください。</p>
+          <p>歩き始めの数分は、たまたまスタートした端っこをうろうろしているだけです。この間に記録した位置を平均しても、街の中心はわかりません。だから最初の何分かは記録から捨てます。これが<strong>バーンイン</strong>の考え方です。</p>
+          <p>さらに、1人だけで歩くと「実はまだ街全体を回れていない」ことに気づけません。そこで<strong>別々の場所から数人が同時に歩き出します</strong>。全員が同じあたりを「中心」と言い始めたら、もう信じてよさそうです。全員の答えがそろうか——これが収束のサインです。</p>
+        </div>
+
+        <h2>バーンイン — 最初のサンプルを捨てる</h2>
+        <p>MCMCは適当な初期値から出発します。その初期値が事後分布の山から外れていると、最初のうちのサンプルは事後分布を代表していません。</p>
+        <p>そこで、最初のある区間のサンプルをまるごと捨てます。この捨てる区間を <span class="term">バーンイン</span>（burn-in、ウォームアップとも呼びます）と言います。「鎖がなじむまで待つ」イメージです。</p>
+
+        <div class="box box-def">
+          <div class="box-title">定義 — バーンイン</div>
+          <p>MCMCの初期値の影響を取り除くために、サンプリングの最初の一定区間を捨てること。捨てたあとの区間だけを使って、事後分布の平均や信用区間を計算します。捨てる長さは、後で説明するトレースプロットを見て決めます。</p>
+        </div>
+
+        <h2>トレースプロット — まず目で見る</h2>
+        <p>いちばん最初にやるべきことは、目で見ることです。<span class="term">トレースプロット</span>（trace plot）とは、サンプリングの番号（横軸＝何歩目か）に対して、サンプルの値（縦軸）を順番に並べた折れ線グラフです。鎖がどう動いたかの「足あと」が見えます。</p>
+
+        <div class="box box-intuition">
+          <div class="box-title">直感でつかむ — 良い形は「毛虫」</div>
+          <p>うまくいったトレースプロットは、太い毛虫がぺったり横たわったような形になります。値が一定の高さのまわりで、すばやく上下に細かく振動している状態です。これは「鎖が事後分布の山をよく動き回っている」サインです。</p>
+          <p>逆に、ずっと右肩上がり・右肩下がりだったり、なだらかにうねっていたりするのは危険信号です。「鎖がまだ落ち着く場所を探している」または「ゆっくりすぎて動けていない」のどちらかです。</p>
+        </div>
+
+        <figure class="figure">
+          <svg viewBox="0 0 380 220" width="380" aria-label="良いトレースと悪いトレースの比較">
+            <!-- 上段: 良いトレース -->
+            <text x="10" y="18" font-size="12" fill="var(--text-muted)">良いトレース（毛虫型・収束）</text>
+            <line x1="20" y1="30" x2="20" y2="95" stroke="var(--border)" stroke-width="1.5"/>
+            <line x1="20" y1="95" x2="360" y2="95" stroke="var(--border)" stroke-width="1.5"/>
+            <!-- 目標の中心線 -->
+            <line x1="20" y1="62" x2="360" y2="62" stroke="var(--text-muted)" stroke-width="1" stroke-dasharray="4 4"/>
+            <polyline fill="none" stroke="var(--level-color)" stroke-width="1.5"
+              points="20,62 30,50 40,70 50,55 60,68 70,52 80,66 90,58 100,72 110,54 120,64 130,50 140,69 150,57 160,66 170,53 180,70 190,59 200,63 210,51 220,68 230,56 240,67 250,54 260,65 270,52 280,70 290,58 300,64 310,55 320,67 330,53 340,66 350,60 360,62"/>
+            <!-- 下段: 悪いトレース -->
+            <text x="10" y="135" font-size="12" fill="var(--text-muted)">悪いトレース（漂流・未収束）</text>
+            <line x1="20" y1="147" x2="20" y2="212" stroke="var(--border)" stroke-width="1.5"/>
+            <line x1="20" y1="212" x2="360" y2="212" stroke="var(--border)" stroke-width="1.5"/>
+            <polyline fill="none" stroke="var(--text-muted)" stroke-width="1.5"
+              points="20,205 40,200 60,202 80,195 100,193 120,188 140,184 160,180 180,175 200,170 220,167 240,162 260,160 280,156 300,153 320,151 340,150 360,149"/>
+          </svg>
+          <figcaption>図1: 上は収束した鎖（一定の高さで細かく振動する毛虫型）。下は値が一方向に流れ続けており、まだ落ち着く場所を探している未収束の鎖。</figcaption>
+        </figure>
+
+        <h2>R̂ — 複数チェーンの一致を測る</h2>
+        <p>目で見るのは大事ですが、目だけでは見落とします。そこで、数字でも確かめます。そのために <span class="term">複数チェーン</span>を走らせます。チェーン（chain）とは、1本の独立したMCMCの鎖のことです。初期値を変えて、たとえば4本の鎖を別々に走らせます。</p>
+        <p>もしサンプリングが収束しているなら、どの初期値から出発しても、最後はみんな同じ事後分布にたどり着くはずです。<strong>4本の鎖がだいたい同じ範囲を動いていれば収束、ばらばらならまだ収束していない</strong>、という考え方です。</p>
+        <p>この「鎖どうしの一致ぐあい」を1つの数字にしたのが <span class="term">R̂</span>（アールハット、ゲルマン・ルービン統計量とも呼びます）です。記号では \(\hat{R}\) と書きます。</p>
+
+        <div class="box box-def">
+          <div class="box-title">定義 — R̂（アールハット）</div>
+          <p>複数の鎖について、次の2つのばらつきを比べた量です。
+          </p>
+          <ul>
+            <li><strong>チェーン内のばらつき</strong> \(W\): 各鎖が自分の中でどれだけ動いたか（分散の平均）</li>
+            <li><strong>チェーン全体のばらつき</strong> \(\hat{V}\): 全部の鎖をまとめて見たときの動き</li>
+          </ul>
+          <p>このとき R̂ をおおまかに次の形で定義します:</p>
+          <p>$$ \hat{R} \approx \sqrt{\dfrac{\hat{V}}{W}} $$</p>
+        </div>
+
+        <div class="box box-intuition">
+          <div class="box-title">直感でつかむ — なぜ「1に近いか」を見るのか</div>
+          <p>鎖がよく混ざっていれば、1本の鎖の中の動き \(W\) と、全部まとめたときの動き \(\hat{V}\) は同じくらいになります。すると比はほぼ \(1\)。R̂ は \(1\) に近づきます。</p>
+          <p>でも鎖どうしがずれていると、まとめたときの動き \(\hat{V}\) が、1本の中の動き \(W\) より大きくなります。鎖ごとに違う場所にいるからです。すると R̂ は \(1\) より大きくなります。だから <strong>R̂ が \(1\) からどれだけ離れているか</strong>を見ます。</p>
+        </div>
+
+        <div class="formula">
+          <span class="formula-label">R̂ の読み方</span>
+          $$ \hat{R} \approx 1.00 \;\Rightarrow\; \text{収束のサイン} \qquad \hat{R} > 1.01 \;\Rightarrow\; 要注意 $$
+          <div class="formula-parts">
+            <span class="part"><b>合格の目安</b>: すべてのパラメータで \(\hat{R} < 1.01\)</span>
+            <span class="part"><b>NG</b>: どれか1つでも \(\hat{R}\) が大きい（例: 1.1）なら、その結果は使わない</span>
+          </div>
+        </div>
+
+        <div class="box box-warn">
+          <div class="box-title">つまずき注意 — R̂が1でも安心しきらない</div>
+          <p>R̂ が \(1\) に近いのは「収束していない<strong>証拠が見つからなかった</strong>」という意味です。「絶対に収束した」という保証ではありません。たとえば全部の鎖が同じ間違った場所にハマっていると、鎖どうしは一致して R̂ は \(1\) に近くなってしまいます。だから R̂ だけでなく、トレースプロットや次の有効サンプルサイズも合わせて見ます。</p>
+        </div>
+
+        <h2>自己相関 — サンプルは「隣と似ている」</h2>
+        <p>R̂ の次に大事なのが、サンプルの<strong>数の質</strong>です。ここで <span class="term">自己相関</span>（じこそうかん、autocorrelation）の話になります。</p>
+        <p>MCMCのサンプルは、1歩前の値から少しずらして作ります。だから <strong>隣り合うサンプルどうしは似てしまいます</strong>。これが自己相関です。サイコロを毎回ふり直すような「完全に独立な」サンプルとは違うのです。</p>
+
+        <div class="box box-intuition">
+          <div class="box-title">直感でつかむ — 似た票は1票分にならない</div>
+          <p>アンケートで、同じ人に10回聞いて10票集めても、本当の意味では1人分の情報しかありません。意見が毎回そっくりだからです。</p>
+          <p>MCMCのサンプルも同じです。隣どうしが似ていると、サンプルが1万個あっても、独立なサンプルに換算すると、ずっと少ない情報しかありません。「数は多いけれど中身は薄い」状態です。</p>
+        </div>
+
+        <figure class="figure">
+          <svg viewBox="0 0 380 150" width="380" aria-label="自己相関の強い鎖と弱い鎖">
+            <text x="10" y="16" font-size="12" fill="var(--text-muted)">自己相関が強い（ゆっくり動く）</text>
+            <line x1="20" y1="22" x2="20" y2="62" stroke="var(--border)" stroke-width="1.5"/>
+            <line x1="20" y1="62" x2="360" y2="62" stroke="var(--border)" stroke-width="1.5"/>
+            <polyline fill="none" stroke="var(--text-muted)" stroke-width="1.5"
+              points="20,42 50,38 80,32 110,30 140,35 170,44 200,50 230,52 260,48 290,40 320,34 350,30"/>
+            <text x="10" y="98" font-size="12" fill="var(--text-muted)">自己相関が弱い（よく混ざる）</text>
+            <line x1="20" y1="104" x2="20" y2="144" stroke="var(--border)" stroke-width="1.5"/>
+            <line x1="20" y1="144" x2="360" y2="144" stroke="var(--border)" stroke-width="1.5"/>
+            <polyline fill="none" stroke="var(--level-color)" stroke-width="1.5"
+              points="20,124 35,112 50,130 65,116 80,128 95,114 110,131 125,118 140,126 155,113 170,129 185,117 200,127 215,115 230,130 245,119 260,125 275,112 290,128 305,116 320,131 335,118 350,124"/>
+          </svg>
+          <figcaption>図2: 上は自己相関の強い鎖。値がなめらかに長く流れ、隣どうしがよく似ている。下は自己相関の弱い鎖。すばやく上下し、隣との似かたが小さい。下のほうが「中身の濃い」サンプルになる。</figcaption>
+        </figure>
+
+        <h2>有効サンプルサイズ — 「本当の手数」</h2>
+        <p>そこで <span class="term">有効サンプルサイズ</span>（ESS、effective sample size）という考え方が出てきます。これは「自己相関を割り引いたら、独立なサンプル何個分の情報があるか」を表す数です。</p>
+
+        <div class="box box-def">
+          <div class="box-title">定義 — 有効サンプルサイズ（ESS）</div>
+          <p>実際に取った \(N\) 個のサンプルが、独立なサンプルなら何個分の情報量にあたるかを表す数。自己相関が強いほど ESS は小さくなります。記号で書くと、おおよそ次の関係です:</p>
+          <p>$$ \text{ESS} \approx \dfrac{N}{1 + 2\sum_{k=1}^{\infty} \rho_k} $$</p>
+          <p>ここで \(\rho_k\)（ロー）は、\(k\) 歩離れたサンプルどうしの自己相関です。シグマ記法は<a href="../../appendix/a-1.html">付録 a-1 シグマ記法</a>を見てください。自己相関 \(\rho_k\) が大きいほど分母が大きくなり、ESS は小さくなります。</p>
+        </div>
+
+        <p>たとえば1万個のサンプルを取っても、ESS が200しかないなら、独立なサンプル200個分の情報しかありません。事後分布の平均は、この「本当の手数」が少ないほど不安定になります。</p>
+
+        <div class="formula">
+          <span class="formula-label">ESS の読み方（実務の目安）</span>
+          $$ \text{ESS} \gtrsim 400 \;\Rightarrow\; おおむね安心 \qquad \text{ESS} \ll N \;\Rightarrow\; 自己相関が強い $$
+          <div class="formula-parts">
+            <span class="part"><b>平均や信用区間を出すなら</b>: ESS が数百以上ほしい（よく使う目安は各パラメータで400以上）</span>
+            <span class="part"><b>裾の細かい点を見るなら</b>: もっと多くの ESS が必要</span>
+          </div>
+        </div>
+
+        <div class="box box-warn">
+          <div class="box-title">つまずき注意 — 「サンプル1万個」は安心材料ではない</div>
+          <p>サンプルの総数 \(N\) が多くても、ESS が小さければ意味がありません。自己相関が強いと、数だけ膨らんで中身が薄いサンプルになります。報告すべきは「何個取ったか」ではなく「<strong>有効サンプルサイズはいくつか</strong>」です。</p>
+        </div>
+
+        <h2>発散の警告 — 静かなエラーに気づく</h2>
+        <p>新しめのサンプラー（ハミルトニアンモンテカルロやNUTS。<a href="4-5.html">4-5</a>で学びました）は、計算がうまくいかなかった瞬間に <span class="term">発散</span>（はっさん、divergence）という警告を出してくれます。</p>
+        <p>発散とは、事後分布の形が急に切り立っているなどの理由で、鎖がその場所をうまく進めなかった印です。発散が起きると、その付近をサンプルがきちんと探れていない可能性があります。</p>
+
+        <div class="box box-warn">
+          <div class="box-title">つまずき注意 — 発散の警告を無視しない</div>
+          <p>発散の警告が出たら、たとえ R̂ が \(1\) に近くても結果をうのみにしてはいけません。「探れていない場所がある」というサインだからです。発散が出たときは、サンプラーの設定を慎重にし直すか、モデルの書き方を見直すのが基本です。発散の警告は、いちばん見逃してはいけない静かなエラーです。</p>
+        </div>
+
+        <h2>実務のチェック手順</h2>
+        <p>道具がそろいました。実際にMCMCを回したあと、結果を信じてよいか判断する手順をまとめます。上から順に確認します。</p>
+
+        <table>
+          <thead>
+            <tr><th>順番</th><th>見るもの</th><th>合格の目安</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>1</td><td>発散の警告</td><td>0件（出たら最優先で対処）</td></tr>
+            <tr><td>2</td><td>トレースプロット</td><td>複数チェーンが重なって毛虫型</td></tr>
+            <tr><td>3</td><td>\(\hat{R}\)</td><td>すべてのパラメータで \(\hat{R} < 1.01\)</td></tr>
+            <tr><td>4</td><td>有効サンプルサイズ</td><td>各パラメータで数百以上（目安400）</td></tr>
+          </tbody>
+        </table>
+
+        <p>大事なのは、この4つを<strong>すべて</strong>満たして初めて結果を使う、という姿勢です。1つでも引っかかったら、サンプルを増やす・バーンインを延ばす・モデルを見直す、のいずれかに戻ります。「だいたいよさそう」で先に進むのが、いちばんよくある失敗です。</p>
+
+        <div class="box box-ex">
+          <div class="box-title">例題</div>
+          <p>あるパラメータについて、4本のチェーンでMCMCを回しました。結果はこうでした。チェックの結論を出してください。</p>
+          <ul>
+            <li>発散の警告: 0件</li>
+            <li>トレースプロット: 4本が重なって毛虫型</li>
+            <li>\(\hat{R} = 1.00\)</li>
+            <li>サンプル総数 \(N = 8{,}000\)、有効サンプルサイズ \(\text{ESS} = 25\)</li>
+          </ul>
+          <p><strong>解</strong>:</p>
+          <p>手順の1〜3は合格です。発散はなく、トレースは毛虫型、R̂ も \(1.00\) で鎖どうしは一致しています。ここまでだと「OK」と言いたくなります。</p>
+          <p>ところが手順4でつまずきます。サンプルは8,000個もあるのに、ESS はわずか25。これは自己相関がとても強く、独立なサンプル25個分の情報しかない、ということです。平均や信用区間は、この少なさでは信用できません。</p>
+          <p>したがって結論は <strong>「まだ使えない」</strong>。対策は、サンプルを大幅に増やすか、自己相関を減らす工夫（より効率のよいサンプラーやモデルの書き換え）をすることです。R̂ だけ見て安心しなかったのが、この例の急所です。</p>
+        </div>
+
+        <div class="quiz" data-answer="b">
+          <p class="quiz-q">問: トレースプロットが「ずっと右肩上がりに流れている」とき、まず疑うべきことは?</p>
+          <button class="quiz-option" data-key="a">サンプルが多すぎる</button>
+          <button class="quiz-option" data-key="b">まだ収束しておらず、落ち着く場所を探している</button>
+          <button class="quiz-option" data-key="c">事後分布が正規分布である</button>
+          <div class="quiz-explain"><p>正解はb。一定の高さで細かく振動する「毛虫型」が収束のサインです。一方向に流れ続けるのは、鎖がまだ目的の分布に落ち着いていない（バーンインが足りない、または効率が悪い）サインです。サンプル数や分布の形とは直接関係しません。</p></div>
+        </div>
+
+        <div class="quiz" data-answer="c">
+          <p class="quiz-q">問: 4本のチェーンが、それぞれ別々の場所にかたまって動いている。\(\hat{R}\) はどうなると考えられる?</p>
+          <button class="quiz-option" data-key="a">ちょうど1.00になる</button>
+          <button class="quiz-option" data-key="b">1より小さくなる</button>
+          <button class="quiz-option" data-key="c">1より明らかに大きくなる</button>
+          <div class="quiz-explain"><p>正解はc。R̂ は「全部の鎖をまとめた動き \(\hat{V}\)」と「1本の中の動き \(W\)」の比のルートです。鎖どうしがずれていると、まとめたときの動きのほうが大きくなるので、\(\hat{R}\) は \(1\) より大きくなります。これが「未収束」のサインです。R̂ が1より小さくなることは基本的にありません。</p></div>
+        </div>
+
+        <div class="quiz" data-answer="a">
+          <p class="quiz-q">問: サンプルを1万個取ったのに有効サンプルサイズ（ESS）が30だった。これは何を意味する?</p>
+          <button class="quiz-option" data-key="a">自己相関が強く、独立なサンプル30個分の情報しかない</button>
+          <button class="quiz-option" data-key="b">事後分布の平均が必ず0に近い</button>
+          <button class="quiz-option" data-key="c">サンプルが完全に独立に取れている</button>
+          <div class="quiz-explain"><p>正解はa。ESS は「独立なサンプル何個分か」を表します。1万個取っても ESS が30なら、隣どうしが似すぎていて（自己相関が強くて）、実質30個分の情報しかありません。完全に独立なら ESS は総数に近づくはずなので、cは逆です。bは無関係です。</p></div>
+        </div>
+
+        <div class="box box-practice">
+          <div class="box-title">演習1</div>
+          <p>あるパラメータで \(\hat{R} = 1.08\) でした。この結果をそのまま使って事後分布の平均を報告してよいか、理由とともに答えなさい。</p>
+          <details class="answer">
+            <summary>解答を見る</summary>
+            <p>使ってはいけません。合格の目安は \(\hat{R} < 1.01\) です。\(\hat{R} = 1.08\) は \(1\) から明らかに離れており、鎖どうしがまだ一致していない（収束していない）サインです。バーンインを延ばす、サンプルを増やす、モデルを見直すなどして、すべてのパラメータの \(\hat{R}\) が \(1.01\) を下回ってから報告します。</p>
+          </details>
+        </div>
+
+        <div class="box box-practice">
+          <div class="box-title">演習2</div>
+          <p>トレースプロットを見ると、最初の500歩ぶんだけ値がぐんぐん上がっていき、そのあとは一定の高さで毛虫型に振動していました。どう対処すればよいか答えなさい。</p>
+          <details class="answer">
+            <summary>解答を見る</summary>
+            <p>最初の上昇している区間は、初期値の影響が残っている部分です。これは事後分布を代表していないので、<strong>バーンインとして捨てます</strong>。少なくとも最初の500歩、安全をみてもう少し多めに捨て、その後の毛虫型になっている区間だけを使って平均や信用区間を計算します。毛虫型になってからの部分は、収束後のサンプルとして使ってよい区間です。</p>
+          </details>
+        </div>
+
+        <div class="box box-practice">
+          <div class="box-title">演習3</div>
+          <p>チェックの結果がこうでした。結論（使えるか・使えないか）と、その理由を答えなさい。<br>
+          ・発散の警告: 12件 ・トレースプロット: 毛虫型で4本が重なる ・\(\hat{R} = 1.00\) ・ESS = 1,500</p>
+          <details class="answer">
+            <summary>解答を見る</summary>
+            <p>使えません。トレース・R̂・ESS の3つは合格ですが、<strong>発散の警告が12件出ています</strong>。発散は「鎖がうまく探れなかった場所がある」というサインで、R̂ や ESS が良くても、その付近を正しくサンプリングできていない可能性が残ります。手順の最優先は発散の解消です。サンプラーの設定を慎重にし直すか、モデルの書き方を見直してから、もう一度チェックします。</p>
+          </details>
+        </div>
+
+        <div class="box box-practice">
+          <div class="box-title">演習4</div>
+          <p>同じモデルを、1本のチェーンだけで回した人と、4本のチェーンで回した人がいます。収束の判断という点で、4本にする利点を1つ説明しなさい。</p>
+          <details class="answer">
+            <summary>解答を見る</summary>
+            <p>1本だけだと、その鎖が「まだ街全体を回れていない（事後分布の一部しか見ていない）」ことに気づけません。トレースが毛虫型に見えても、別の山を見逃しているかもしれないからです。初期値を変えた複数のチェーンを走らせれば、鎖どうしが一致するかを R̂ で測れます。みんなが同じ範囲に落ち着けば収束のサイン、ばらばらなら未収束、と判断できます。これが複数チェーンの最大の利点です。</p>
+          </details>
+        </div>
+
+        <h2>まとめ</h2>
+        <ul>
+          <li><span class="term">バーンイン</span>: 初期値の影響を取り除くため、最初の一定区間のサンプルは捨てる。</li>
+          <li><span class="term">トレースプロット</span>: まず目で見る。一定の高さで細かく振動する「毛虫型」が収束のサイン。一方向に流れるのは未収束。</li>
+          <li><span class="term">R̂</span>（アールハット）: 初期値を変えた複数チェーンの一致を測る。\(1\) に近いほどよく、すべてのパラメータで \(\hat{R} < 1.01\) が目安。</li>
+          <li><span class="term">有効サンプルサイズ</span>（ESS）: 自己相関を割り引いた「本当の手数」。総数が多くても ESS が小さければ情報は薄い。各パラメータで数百以上ほしい。</li>
+          <li><span class="term">発散</span>の警告は最優先で対処する。発散・トレース・R̂・ESS の4つをすべて満たして初めて結果を使う。</li>
+        </ul>
+        <p>これでLevel 4の計算ベイズはひと通りそろいました。複雑な事後分布をサンプリングで近似し、その結果が信用できるかまで自分で判断できます。次のレベルでは、この道具を使って、より本格的なモデルへ踏み出していきます。</p>
+
+      </div>
+
+      <div class="complete-area">
+        <button class="btn btn-level" id="complete-btn">このレッスンを完了にする</button>
+        <p class="complete-note">進捗はこのブラウザに保存されます</p>
+      </div>
+
+      <!-- 前後ナビ: main.js がカリキュラムから自動生成 -->
+      <nav class="lesson-nav" id="lesson-nav" aria-label="前後のレッスン"></nav>
+
+    </main>
+
+    <!-- ページ内目次: main.js が本文の h2 から自動生成 -->
+    <aside class="toc">
+      <div class="toc-title">このページの内容</div>
+      <nav id="toc"></nav>
+    </aside>
+
+  </div>
+
+  <footer class="site-footer">
+    <p>ベイズの階段 — 中学数学から最前線まで、一段ずつ。</p>
+  </footer>
+
+  <script src="../../assets/js/curriculum.js"></script>
+  <script src="../../assets/js/main.js"></script>
+</body>
+</html>

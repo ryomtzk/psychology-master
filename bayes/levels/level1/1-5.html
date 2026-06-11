@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>1-5 病気の検査問題 — 偽陽性のパラドックス | ベイズの階段</title>
+  <meta name="description" content="精度99%の検査で陽性でも病気とは限らない理由">
+  <script>
+    document.documentElement.dataset.theme =
+      localStorage.getItem("bayes-stairs-theme") ||
+      (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Noto+Serif+JP:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../assets/css/main.css">
+
+  <!-- KaTeX: 数式を使うページでは必ずこの3行を入れる -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+          onload="renderMathInElement(document.body, {delimiters: [
+            {left: '$$', right: '$$', display: true},
+            {left: '\\(', right: '\\)', display: false}
+          ]});"></script>
+</head>
+<body data-root="../../" data-level="1" data-lesson-id="1-5">
+
+  <header class="site-header">
+    <button class="sidebar-toggle" id="sidebar-toggle" aria-label="メニュー">☰</button>
+    <a class="brand" href="../../index.html">
+      <span class="brand-mark">階</span>
+      <span>ベイズの階段</span>
+    </a>
+    <div class="header-spacer"></div>
+    <div class="header-progress" id="header-progress"></div>
+    <button class="theme-toggle" id="theme-toggle" aria-label="テーマ切替">🌙</button>
+  </header>
+
+  <div class="layout">
+
+    <!-- サイドバー: main.js がカリキュラムから自動生成 -->
+    <aside class="sidebar"><nav id="sidebar-nav" aria-label="カリキュラム"></nav></aside>
+
+    <main class="lesson">
+
+      <nav class="breadcrumbs" aria-label="パンくず">
+        <a href="../../index.html">ホーム</a><span class="sep">›</span>
+        <a href="index.html">Level 1 条件付き確率とベイズの定理</a><span class="sep">›</span>
+        <span>1-5 病気の検査問題 — 偽陽性のパラドックス</span>
+      </nav>
+
+      <header class="lesson-header">
+        <div class="lesson-meta">
+          <span class="level-badge">Level 1</span>
+          <span class="small">レッスン 1-5</span>
+        </div>
+        <h1>病気の検査問題 — 偽陽性のパラドックス</h1>
+
+        <div class="lesson-goals">
+          <h2>このレッスンでできるようになること</h2>
+          <ul>
+            <li>有病率・感度・特異度から「陽性のときの本当の病気の確率」を計算できる</li>
+            <li>精度99%の検査でも陽性的中率が約50%になる理由を説明できる</li>
+            <li>基準率の無視という思考のクセに気づき、自然頻度で考え直せる</li>
+          </ul>
+          <p class="prereq">前提: <a href="1-3.html">1-3 ベイズの定理の導出</a> と <a href="1-4.html">1-4 事前確率・尤度・事後確率</a> を読んでいること</p>
+        </div>
+      </header>
+
+      <!-- ▼▼▼ ここからレッスン本文 ▼▼▼ -->
+      <div class="lesson-body">
+
+        <h2>「陽性です」と言われたら</h2>
+        <p>健康診断で、ある病気の検査を受けたとします。お医者さんに「この検査の精度は99%です」と説明されました。そして結果は「陽性」。あなたはどう感じるでしょうか。</p>
+        <p>多くの人は「精度99%なら、自分が病気である確率も99%だ」と考えます。背筋が凍りますよね。でも、これは大きな勘違いなんです。</p>
+        <p>実は、有病率1%のよくある病気では、精度99%の検査で陽性でも、本当に病気である確率は<strong>約50%</strong>にすぎません。コインを投げるのと変わらないのです。今日はこの不思議なズレ、<span class="term">偽陽性（ぎようせい）のパラドックス</span>を解き明かします。偽陽性とは、病気でないのに陽性と出てしまうことです。</p>
+
+        <div class="box box-intuition">
+          <div class="box-title">直感でつかむ</div>
+          <p>カギは「病気の人はもともとすごく少ない」という点です。1,000人いても、本当の病気の人はたった10人ほど。</p>
+          <p>検査が99%正確でも、残り990人の健康な人の1%、つまり約10人が「まちがって陽性」になります。すると陽性者は「本物10人＋まちがい10人」。半分はまちがいなのです。</p>
+          <p>少ない本物が、たくさんの健康な人から出る少数のまちがいに埋もれてしまう。これが正体です。</p>
+        </div>
+
+        <h2>3つの数字を整理する</h2>
+        <p>検査の問題には、必ず3つの数字が登場します。言葉を先に押さえましょう。</p>
+
+        <div class="box box-def">
+          <div class="box-title">定義 — 有病率・感度・特異度</div>
+          <p><span class="term">有病率（ゆうびょうりつ）</span>: 集団の中で実際にその病気を持つ人の割合。検査を受ける前の「病気らしさ」、つまり <span class="term">事前確率</span> にあたります。</p>
+          <p><span class="term">感度（かんど）</span>: 病気の人をきちんと陽性と当てる割合。\(P(\text{陽性} \mid \text{病気})\) と書け、「病気のもとで陽性になる確率」と読みます。</p>
+          <p><span class="term">特異度（とくいど）</span>: 病気でない人をきちんと陰性と当てる割合。\(P(\text{陰性} \mid \text{健康})\) です。</p>
+        </div>
+
+        <p>このレッスンでは、次の設定で考えます。よくある教科書の数字です。</p>
+
+        <table>
+          <thead>
+            <tr><th>項目</th><th>値</th><th>意味</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>有病率</td><td>1%</td><td>\(P(\text{病気}) = 0.01\)</td></tr>
+            <tr><td>感度</td><td>99%</td><td>病気なら99%陽性</td></tr>
+            <tr><td>特異度</td><td>99%</td><td>健康なら99%陰性</td></tr>
+          </tbody>
+        </table>
+
+        <p>特異度が99%ということは、健康な人が陽性になってしまう割合（偽陽性率）は \(100\% - 99\% = 1\%\) です。この「健康な人の1%」が後でじわじわ効いてきます。</p>
+
+        <h2>自然頻度の表で見抜く</h2>
+        <p>パーセントのままだと頭が混乱します。そこで、いっそ <span class="term">自然頻度（しぜんひんど）</span> ——具体的な人数——に置きかえてしまいましょう。10万人の街を想像します。</p>
+
+        <div class="box box-ex">
+          <div class="box-title">例題 — 10万人の街</div>
+          <p>10万人のうち、有病率1%なので病気の人は <strong>1,000人</strong>、健康な人は <strong>99,000人</strong> です。それぞれに検査をかけると、こうなります。</p>
+          <p><strong>病気の1,000人</strong>: 感度99%なので、陽性は \(1000 \times 0.99 = 990\) 人。陰性（見逃し）は10人。</p>
+          <p><strong>健康な99,000人</strong>: 特異度99%なので陰性は98,010人。陽性（偽陽性）は \(99000 \times 0.01 = 990\) 人。</p>
+          <p>表にまとめます。</p>
+          <table>
+            <thead>
+              <tr><th></th><th>病気あり</th><th>病気なし</th><th>合計</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>検査陽性</td><td>990</td><td>990</td><td>1,980</td></tr>
+              <tr><td>検査陰性</td><td>10</td><td>98,010</td><td>98,020</td></tr>
+              <tr><td><strong>合計</strong></td><td>1,000</td><td>99,000</td><td>100,000</td></tr>
+            </tbody>
+          </table>
+          <p><strong>解</strong>: 陽性になった人は全部で1,980人。そのうち本当に病気なのは990人だけ。だから「陽性のとき病気である確率」は
+          $$ \frac{990}{1980} = \frac{1}{2} = 50\% $$
+          きれいに半分です。病気の本物990人と、健康なのに引っかかった偽陽性990人が、ちょうど同じ人数になるのですね。</p>
+        </div>
+
+        <p>下の図は、この1,980人の陽性者の内訳です。半分が「実は健康」だと一目でわかります。</p>
+
+        <figure class="figure">
+          <svg viewBox="0 0 320 120" width="320" aria-label="陽性者1980人の内訳">
+            <rect x="10" y="30" width="145" height="40" fill="var(--level-color)" rx="3"/>
+            <rect x="160" y="30" width="145" height="40" fill="var(--border)" rx="3"/>
+            <text x="82" y="55" text-anchor="middle" font-size="11" fill="#fff" font-weight="700">本当に病気 990</text>
+            <text x="232" y="55" text-anchor="middle" font-size="11" fill="var(--text)" font-weight="700">実は健康 990</text>
+            <text x="160" y="20" text-anchor="middle" font-size="11" fill="var(--text-muted)">陽性者 1,980人</text>
+            <line x1="155" y1="26" x2="155" y2="74" stroke="var(--bg)" stroke-width="3"/>
+          </svg>
+          <figcaption>図1: 陽性と出た1,980人の内訳。色つきが本物の病気、灰色が偽陽性。ちょうど半々。</figcaption>
+        </figure>
+
+        <h2>なぜ直感はだまされるのか</h2>
+        <p>「精度99%なら病気も99%」という勘違いには名前があります。<span class="term">基準率の無視（きじゅんりつのむし）</span>です。基準率とは、ここでの有病率1%のこと。人は検査の正確さ（99%）に目を奪われ、「そもそも病気の人は少ない」という大前提を忘れてしまうのです。</p>
+
+        <div class="box box-warn">
+          <div class="box-title">つまずき注意</div>
+          <p>感度 \(P(\text{陽性} \mid \text{病気})\) と、知りたい \(P(\text{病気} \mid \text{陽性})\) は<strong>向きが逆</strong>です。前者は99%でも、後者は50%。この2つを混同するのが偽陽性のパラドックスの根っこです。検査が教えてくれるのは前者、あなたが知りたいのは後者なのです。</p>
+        </div>
+
+        <h2>ベイズの定理で計算する</h2>
+        <p>表で出した50%を、<a href="1-3.html">1-3</a> で習ったベイズの定理でも確かめましょう。知りたいのは \(P(\text{病気} \mid \text{陽性})\)、「陽性のもとで病気である確率」です。</p>
+
+        <div class="box box-thm">
+          <div class="box-title">定理 — 検査問題へのベイズの定理</div>
+          <p>$$ P(\text{病気} \mid \text{陽性}) = \frac{P(\text{陽性} \mid \text{病気})\, P(\text{病気})}{P(\text{陽性})} $$</p>
+        </div>
+
+        <p>分母の \(P(\text{陽性})\) は、陽性になる全パターンの確率です。病気の人から出る陽性と、健康な人から出る陽性を足します（<a href="1-2.html">1-2 周辺確率</a>の考え方）。</p>
+
+        <div class="formula">
+          <span class="formula-label">分母の組み立て</span>
+          $$ P(\text{陽性}) = \underbrace{P(\text{陽性} \mid \text{病気})P(\text{病気})}_{\text{本物}} + \underbrace{P(\text{陽性} \mid \text{健康})P(\text{健康})}_{\text{偽陽性}} $$
+          <div class="formula-parts">
+            <span class="part"><b>本物</b>: \(0.99 \times 0.01 = 0.0099\)</span>
+            <span class="part"><b>偽陽性</b>: \(0.01 \times 0.99 = 0.0099\)</span>
+            <span class="part"><b>合計</b>: \(P(\text{陽性}) = 0.0198\)</span>
+          </div>
+        </div>
+
+        <p>あとは代入するだけです。</p>
+        <div class="formula">
+          <span class="formula-label">陽性的中率</span>
+          $$ P(\text{病気} \mid \text{陽性}) = \frac{0.99 \times 0.01}{0.0198} = \frac{0.0099}{0.0198} = 0.5 $$
+        </div>
+        <p>やはり50%。表の \(\frac{990}{1980}\) とぴったり一致します。ちなみに、この \(P(\text{病気} \mid \text{陽性})\) を <span class="term">陽性的中率（ようせいてきちゅうりつ）</span> と呼びます。検査が陽性のとき、それが当たっている割合のことです。</p>
+
+        <div class="box box-sim">
+          <div class="box-title">やってみよう</div>
+          <p>有病率を変えると陽性的中率がどう動くか、頭の中で試してみましょう。有病率が10%に上がれば本物が増え、的中率は約92%まで跳ね上がります。逆に0.1%まで下がれば、的中率はわずか約9%。<strong>病気が珍しいほど、陽性の意味は薄くなる</strong>のです。だから珍しい病気では、陽性が出ても次は別の精密検査で確かめます。</p>
+        </div>
+
+        <h2>理解度チェック</h2>
+
+        <div class="quiz" data-answer="c">
+          <p class="quiz-q">問1: 有病率1%・感度99%・特異度99%の検査で陽性でした。あなたが本当に病気である確率に最も近いのは?</p>
+          <button class="quiz-option" data-key="a">99%</button>
+          <button class="quiz-option" data-key="b">90%</button>
+          <button class="quiz-option" data-key="c">50%</button>
+          <div class="quiz-explain"><p>陽性者1,980人のうち本物は990人なので \( \frac{990}{1980} = 50\% \)。検査の精度99%と、陽性的中率50%は別物です。基準率（有病率1%）の小ささが効いています。</p></div>
+        </div>
+
+        <div class="quiz" data-answer="a">
+          <p class="quiz-q">問2: 同じ検査を、有病率がずっと高い集団（例えば症状が出ている人だけ）に使うと、陽性的中率はどうなりますか?</p>
+          <button class="quiz-option" data-key="a">高くなる</button>
+          <button class="quiz-option" data-key="b">低くなる</button>
+          <button class="quiz-option" data-key="c">変わらない</button>
+          <div class="quiz-explain"><p>有病率（事前確率）が上がると本物の陽性が増え、偽陽性の割合が相対的に減ります。だから的中率は上がります。症状のある人にしぼって検査するのは、この理由からです。</p></div>
+        </div>
+
+        <div class="quiz" data-answer="b">
+          <p class="quiz-q">問3: 「精度99%なのに病気の確率が50%」という勘違いを生む思考のクセを何と呼びますか?</p>
+          <button class="quiz-option" data-key="a">感度の過大評価</button>
+          <button class="quiz-option" data-key="b">基準率の無視</button>
+          <button class="quiz-option" data-key="c">特異度の混同</button>
+          <div class="quiz-explain"><p>基準率の無視です。検査の正確さばかり見て、「そもそも病気の人は少ない」という前提（基準率＝有病率）を忘れることから起きます。</p></div>
+        </div>
+
+        <h2>演習</h2>
+
+        <div class="box box-practice">
+          <div class="box-title">演習1</div>
+          <p>10万人で、有病率2%・感度95%・特異度90%の検査を考えます。自然頻度の表をつくり、陽性的中率を求めなさい。</p>
+          <details class="answer">
+            <summary>解答を見る</summary>
+            <p>病気の人は \(100000 \times 0.02 = 2000\) 人、健康な人は98,000人。</p>
+            <p>病気の陽性 = \(2000 \times 0.95 = 1900\) 人。健康の偽陽性 = \(98000 \times 0.10 = 9800\) 人。</p>
+            <p>陽性者は \(1900 + 9800 = 11700\) 人。よって陽性的中率は
+            $$ \frac{1900}{11700} \approx 0.162 = 約16\% $$
+            特異度が90%（偽陽性率10%）と低いと、偽陽性が大量に出て的中率がさらに下がります。</p>
+          </details>
+        </div>
+
+        <div class="box box-practice">
+          <div class="box-title">演習2</div>
+          <p>本文の設定（有病率1%・感度99%・特異度99%）で、今度は<strong>陰性</strong>と出た人について、「本当に健康である確率」をベイズの定理で求めなさい。これを陰性的中率といいます。</p>
+          <details class="answer">
+            <summary>解答を見る</summary>
+            <p>求めるのは \(P(\text{健康} \mid \text{陰性})\)。表を使うと早いです。陰性者は98,020人で、うち健康は98,010人。</p>
+            $$ P(\text{健康} \mid \text{陰性}) = \frac{98010}{98020} \approx 0.9999 $$
+            <p>約99.99%。陰性的中率はほぼ100%です。つまりこの検査は「陰性なら安心してよい」が「陽性は半信半疑」という性質を持ちます。陽性と陰性で意味の重さがまるで違うのです。</p>
+          </details>
+        </div>
+
+        <div class="box box-practice">
+          <div class="box-title">演習3</div>
+          <p>有病率を \(p\)、感度を \(s\)、偽陽性率を \(f\)（＝1−特異度）とおくと、陽性的中率はどんな式で書けますか。ベイズの定理から導きなさい。</p>
+          <details class="answer">
+            <summary>解答を見る</summary>
+            <p>分子は本物の陽性 \(s\,p\)、分母は本物＋偽陽性なので、
+            $$ P(\text{病気} \mid \text{陽性}) = \frac{s\,p}{s\,p + f\,(1-p)} $$
+            この式で \(p=0.01,\ s=0.99,\ f=0.01\) を入れると \( \frac{0.0099}{0.0099+0.0099}=0.5\)。\(p\) が小さいほど分母の \(f(1-p)\) が効いて、的中率が下がることが式からも読み取れます。</p>
+          </details>
+        </div>
+
+        <h2>まとめ</h2>
+        <ul>
+          <li>知りたいのは \(P(\text{病気} \mid \text{陽性})\)（陽性的中率）。検査が教える感度 \(P(\text{陽性} \mid \text{病気})\) とは<strong>向きが逆</strong>。</li>
+          <li>有病率1%・感度99%・特異度99%でも、陽性的中率は<strong>約50%</strong>。本物の陽性と偽陽性がほぼ同数になるため。</li>
+          <li>自然頻度（10万人の表）に置きかえると、内訳が見えて直感的に理解できる。</li>
+          <li>勘違いの正体は<strong>基準率の無視</strong>。病気が珍しいほど、陽性が出てもその確率は低くなる。</li>
+          <li>ベイズの定理 \(\dfrac{s\,p}{s\,p + f(1-p)}\) でいつでも正確に計算できる。</li>
+        </ul>
+        <p>陽性的中率がたった50%なのは、検査が悪いからではなく、有病率という事前確率が小さいから。「データを見る前の確率」がどれだけ結果を左右するか、よくわかる例でした。次は、この事前確率の選び方そのものに踏み込んでいきます。</p>
+
+      </div>
+      <!-- ▲▲▲ レッスン本文ここまで ▲▲▲ -->
+
+      <div class="complete-area">
+        <button class="btn btn-level" id="complete-btn">このレッスンを完了にする</button>
+        <p class="complete-note">進捗はこのブラウザに保存されます</p>
+      </div>
+
+      <!-- 前後ナビ: main.js がカリキュラムから自動生成 -->
+      <nav class="lesson-nav" id="lesson-nav" aria-label="前後のレッスン"></nav>
+
+    </main>
+
+    <!-- ページ内目次: main.js が本文の h2 から自動生成 -->
+    <aside class="toc">
+      <div class="toc-title">このページの内容</div>
+      <nav id="toc"></nav>
+    </aside>
+
+  </div>
+
+  <footer class="site-footer">
+    <p>ベイズの階段 — 中学数学から最前線まで、一段ずつ。</p>
+  </footer>
+
+  <script src="../../assets/js/curriculum.js"></script>
+  <script src="../../assets/js/main.js"></script>
+</body>
+</html>

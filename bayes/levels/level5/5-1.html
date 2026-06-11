@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>5-1 PyMCではじめるベイズ推定 | ベイズの階段</title>
+  <meta name="description" content="環境構築と最初のモデル。Level 3の手計算を再現する">
+  <script>
+    document.documentElement.dataset.theme =
+      localStorage.getItem("bayes-stairs-theme") ||
+      (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Noto+Serif+JP:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../assets/css/main.css">
+
+  <!-- KaTeX: 数式を使うページでは必ずこの3行を入れる -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+          onload="renderMathInElement(document.body, {delimiters: [
+            {left: '$$', right: '$$', display: true},
+            {left: '\\(', right: '\\)', display: false}
+          ]});"></script>
+</head>
+<body data-root="../../" data-level="5" data-lesson-id="5-1">
+
+  <header class="site-header">
+    <button class="sidebar-toggle" id="sidebar-toggle" aria-label="メニュー">☰</button>
+    <a class="brand" href="../../index.html">
+      <span class="brand-mark">階</span>
+      <span>ベイズの階段</span>
+    </a>
+    <div class="header-spacer"></div>
+    <div class="header-progress" id="header-progress"></div>
+    <button class="theme-toggle" id="theme-toggle" aria-label="テーマ切替">🌙</button>
+  </header>
+
+  <div class="layout">
+
+    <!-- サイドバー: main.js がカリキュラムから自動生成 -->
+    <aside class="sidebar"><nav id="sidebar-nav" aria-label="カリキュラム"></nav></aside>
+
+    <main class="lesson">
+
+      <nav class="breadcrumbs" aria-label="パンくず">
+        <a href="../../index.html">ホーム</a><span class="sep">›</span>
+        <a href="index.html">Level 5 実践ベイズモデリング</a><span class="sep">›</span>
+        <span>5-1 PyMCではじめるベイズ推定</span>
+      </nav>
+
+      <header class="lesson-header">
+        <div class="lesson-meta">
+          <span class="level-badge">Level 5</span>
+          <span class="small">レッスン 5-1</span>
+        </div>
+        <h1>PyMCではじめるベイズ推定</h1>
+
+        <div class="lesson-goals">
+          <h2>このレッスンでできるようになること</h2>
+          <ul>
+            <li>PyMC をインストールし、最初のベイズモデルを動かせる</li>
+            <li><code>with pm.Model()</code> の中で、事前分布・尤度・観測データを宣言できる</li>
+            <li><code>pm.sample</code> で事後分布を得て、ArviZ で要約を読み取れる</li>
+          </ul>
+          <p class="prereq">前提: <a href="../level3/3-2.html">3-2 ベータ・二項モデル</a> と <a href="../level3/3-5.html">3-5 事後分布の要約</a> を読んでいること</p>
+        </div>
+      </header>
+
+      <div class="lesson-body">
+
+        <h2>手計算から、コードへ</h2>
+        <p><a href="../level3/3-2.html">3-2</a> では、コインの表の出やすさ \( \theta \)（シータ）を、紙とえんぴつで推定しました。事前分布 \( \mathrm{Beta}(1,1) \) に「10回中7回表」を足して、事後分布 \( \mathrm{Beta}(8,4) \)。きれいに一周しましたね。</p>
+        <p>でも、あれが手計算で解けたのは「相性のよい組み合わせ」だったからです。<a href="../level4/4-1.html">Level 4</a> で見たように、ふつうのモデルは積分が解けず、手では完走できません。そこで <span class="term">MCMC（エムシーエムシー）</span>——マルコフ連鎖モンテカルロ——で事後分布からサンプルを取り、その散らばりで分布を近似しました。</p>
+        <p>ただ、MCMC を毎回自分で書くのは大変です。そこで登場するのが <span class="term">PyMC（パイエムシー）</span>。Python のベイズモデリング用ライブラリで、「モデルの形」を宣言するだけで、裏側のサンプリングを全部やってくれます。このレッスンでは PyMC を導入し、3-2 の手計算をコードで再現します。答え合わせができる、いちばん安心な第一歩です。</p>
+
+        <div class="box box-intuition">
+          <div class="box-title">直感でつかむ</div>
+          <p>PyMC を使うときの気持ちは、料理のレシピに似ています。あなたがやるのは「材料を並べる」ことだけ。\( \theta \) の事前分布はこれ、データの出方（尤度）はこれ、観測した数字はこれ——と書き並べます。</p>
+          <p>火加減や混ぜ方、つまり MCMC でどうサンプルを取るかは、PyMC が引き受けます。あなたは完成した事後分布を受け取って、味見（要約）をするだけ。手計算で理解した中身を、そのまま機械にまかせる、というわけです。</p>
+        </div>
+
+        <h2>準備 — PyMC をインストールする</h2>
+        <p>PyMC は Python のライブラリです。ターミナル（コマンドを打つ画面）から、次の1行でインストールできます。<code>pip</code> は Python の標準的なインストール用コマンドです。</p>
+
+        <pre><code>pip install pymc arviz</code></pre>
+
+        <p>いっしょに入れた <span class="term">ArviZ（アービズ）</span> は、事後分布のサンプルを要約・可視化するためのライブラリです。PyMC で得たサンプルを、平均や信用区間の表にしてくれます。</p>
+
+        <div class="box box-warn">
+          <div class="box-title">つまずき注意</div>
+          <p>PyMC は内部で多くの数値計算ライブラリに依存します。<code>pip</code> でうまく入らないときは、Anaconda（コンダ）という環境管理ツールを使うと安定します。その場合は <code>conda install -c conda-forge pymc</code> です。バージョンによって書き方が変わることもあるので、このレッスンは PyMC 5 系（<code>import pymc as pm</code> と書く世代）を前提にします。古い記事にある <code>import pymc3</code> は別物なので注意してください。</p>
+        </div>
+
+        <h2>モデルの3つの部品</h2>
+        <p>PyMC のモデルは、<a href="../level1/1-4.html">1-4</a> で学んだベイズの定理の3つの部品に、そのまま対応します。コードを書く前に、対応関係をはっきりさせておきましょう。</p>
+
+        <div class="box box-def">
+          <div class="box-title">定義 — PyMC モデルの3部品</div>
+          <ul>
+            <li><strong>事前分布</strong>: 知りたい値（パラメータ）が、データを見る前にどう散らばっているか。今回は \( \theta \sim \mathrm{Beta}(1,1) \)。</li>
+            <li><strong>尤度（ゆうど）</strong>: パラメータを決めたとき、データがどう出るか。今回は表の回数が二項分布にしたがう、\( y \sim \mathrm{Binomial}(n, \theta) \)。</li>
+            <li><strong>観測データ</strong>: 実際に得た数字。今回は「10回中7回表」。</li>
+          </ul>
+          <p>記号 \( \sim \) は『〜にしたがう』と読みます。\( \theta \sim \mathrm{Beta}(1,1) \) は「\( \theta \) はベータ分布 \( \mathrm{Beta}(1,1) \) にしたがう確率変数だ」という意味です。</p>
+        </div>
+
+        <p>この3つを <code>with pm.Model() as model:</code> という「箱」の中に並べると、PyMC はベイズの定理を組み立て、事後分布を計算する準備を整えます。式で言えば、いつものこれを作っているだけです。</p>
+
+        <div class="formula">
+          <span class="formula-label">PyMC が裏で組み立てている関係</span>
+          $$ \underbrace{p(\theta \mid y)}_{\text{事後分布}} \;\propto\; \underbrace{p(y \mid \theta)}_{\text{尤度}} \times \underbrace{p(\theta)}_{\text{事前分布}} $$
+          <div class="formula-parts">
+            <span class="part"><b>事前分布</b>: <code>pm.Beta("theta", 1, 1)</code></span>
+            <span class="part"><b>尤度</b>: <code>pm.Binomial("y", n=10, p=theta)</code></span>
+            <span class="part"><b>観測データ</b>: <code>observed=7</code></span>
+          </div>
+        </div>
+
+        <h2>最初のモデルを書く</h2>
+        <p>では、3-2 の例題をそのままコードにします。下が完全な形です。コピーして動かせます。</p>
+
+        <pre><code>import pymc as pm
+import arviz as az
+
+# 観測データ: 10回投げて、表が7回
+n_trials = 10
+k_heads  = 7
+
+with pm.Model() as coin_model:
+    # ① 事前分布: θ ～ Beta(1, 1)（0〜1で平ら）
+    theta = pm.Beta("theta", alpha=1, beta=1)
+
+    # ② 尤度 + 観測データ: 表の回数 ～ Binomial(n, θ)
+    y = pm.Binomial("y", n=n_trials, p=theta, observed=k_heads)
+
+    # ③ MCMC で事後分布からサンプルを取る
+    idata = pm.sample(2000, chains=4, random_seed=42)
+
+# ④ ArviZ で要約を表示
+print(az.summary(idata, hdi_prob=0.95))</code></pre>
+
+        <p>4つの段落を、1つずつ読み解きます。</p>
+
+        <h3>① 事前分布の宣言</h3>
+        <p><code>theta = pm.Beta("theta", alpha=1, beta=1)</code> は、\( \theta \sim \mathrm{Beta}(1,1) \) という事前分布を宣言しています。第1引数の <code>"theta"</code> は<strong>名前</strong>で、後で結果を読むときの見出しになります。変数名 <code>theta</code> と名前 <code>"theta"</code> はそろえておくと混乱しません。</p>
+
+        <h3>② 尤度と観測データ</h3>
+        <p><code>pm.Binomial("y", n=n_trials, p=theta, observed=k_heads)</code> が尤度です。「成功確率 \( \theta \) で \( n \) 回試したときの成功回数」を表す二項分布で、<code>p=theta</code> のところに、さっき作った確率変数 <code>theta</code> をそのまま渡しています。</p>
+        <p>ポイントは <code>observed=k_heads</code> です。これを書くと、PyMC は「この変数は実際に観測された数字（=7）だ」と理解します。<code>observed</code> がある変数は尤度、ない変数（<code>theta</code>）は推定したいパラメータ、という区別です。</p>
+
+        <div class="box box-warn">
+          <div class="box-title">つまずき注意</div>
+          <p><code>observed</code> を書き忘れると、PyMC は <code>y</code> も「推定したい未知数」だと思ってしまい、まったく別のモデルになります。<strong>データを入れる変数には必ず <code>observed=</code> を付ける</strong>。これが PyMC でいちばん多いミスです。</p>
+        </div>
+
+        <h3>③ サンプリング</h3>
+        <p><code>idata = pm.sample(2000, chains=4, random_seed=42)</code> が本番です。<a href="../level4/4-5.html">4-5</a> の NUTS という賢い MCMC を使って、事後分布から<strong>2000個 × 4本 = 8000個</strong>のサンプルを取ります。</p>
+        <ul>
+          <li><code>chains=4</code>: サンプリングの列（チェーン）を4本、別々の出発点から走らせます。<a href="../level4/4-6.html">4-6</a> で学んだ収束診断のためです。</li>
+          <li><code>random_seed=42</code>: 乱数の種を固定します。同じ種なら毎回同じ結果になり、再現できます。</li>
+        </ul>
+        <p>返ってくる <code>idata</code> は <span class="term">InferenceData（インファレンスデータ）</span>という入れ物で、取れたサンプルや診断情報が、まとめて入っています。</p>
+
+        <h3>④ 要約</h3>
+        <p><code>az.summary(idata, hdi_prob=0.95)</code> で、サンプルを表にします。<code>hdi_prob=0.95</code> は「95%の<span class="term">信用区間（ベイズ）</span>を出してね」という指定です（HDI は最高密度区間。<a href="../level3/3-5.html">3-5</a> で学んだ要約のひとつ）。</p>
+
+        <h2>結果を読む</h2>
+        <p>上のコードを動かすと、おおよそ次のような表が出ます（乱数なので末尾の数字は少し変わります）。</p>
+
+        <pre><code>        mean     sd  hdi_2.5%  hdi_97.5%  ...  r_hat
+theta  0.667  0.130     0.405      0.899  ...    1.0</code></pre>
+
+        <p>1行ずつ意味を確かめましょう。<code>theta</code> の行が、推定した \( \theta \) の事後分布の要約です。</p>
+        <ul>
+          <li><code>mean = 0.667</code>: 事後分布の平均（<a href="../level3/3-5.html">3-5</a> の事後平均）。</li>
+          <li><code>sd = 0.130</code>: 事後分布の標準偏差。推定の「ぶれ幅」です。</li>
+          <li><code>hdi_2.5% 〜 hdi_97.5%</code>: 95%信用区間。「\( \theta \) はこの範囲に95%の確からしさで入る」と言えます。</li>
+          <li><code>r_hat = 1.0</code>: 収束の指標 \( \hat{R} \)（<a href="../level4/4-6.html">4-6</a>）。1.0 に近ければ、4本のチェーンが同じ分布に落ち着いた合図です。</li>
+        </ul>
+
+        <div class="box box-ex">
+          <div class="box-title">例題 — 手計算と答え合わせ</div>
+          <p>3-2 の手計算では、事後分布は \( \mathrm{Beta}(8,4) \) でした。PyMC の出した <code>mean = 0.667</code> は、これと合っているでしょうか?</p>
+
+          <p><strong>解</strong>: ベータ分布 \( \mathrm{Beta}(\alpha,\beta) \) の平均は \( \dfrac{\alpha}{\alpha+\beta} \) でした（<a href="../level2/2-6.html">2-6</a>）。\( \mathrm{Beta}(8,4) \) なら</p>
+          $$ \frac{\alpha}{\alpha + \beta} = \frac{8}{8 + 4} = \frac{8}{12} = 0.6\overline{6} $$
+          <p>です。PyMC の <code>mean = 0.667</code> とぴたり一致しました。手計算の正解が出る分、MCMC が正しく動いていると安心できます。</p>
+          <p>ついでに最頻値（山の頂上）も確かめます。\( \dfrac{\alpha-1}{\alpha+\beta-2} = \dfrac{7}{10} = 0.7 \) で、データの割合 \( 7/10 \) と一致。これは <a href="../level3/3-5.html">3-5</a> の MAP 推定にあたります。数式で出した値が、コードでも再現できました。</p>
+        </div>
+
+        <h2>事後分布を絵で見る</h2>
+        <p>表だけでなく、分布のかたちも見たいですね。ArviZ の <code>plot_posterior</code> を1行足すだけで、ヒストグラムが描けます。</p>
+
+        <pre><code>az.plot_posterior(idata, hdi_prob=0.95)</code></pre>
+
+        <p>出てくるのは、3-2 の図とそっくりの、\( \theta = 0.7 \) あたりに山をもつ分布です。MCMC のサンプルを積み上げただけなのに、手計算した \( \mathrm{Beta}(8,4) \) の形がちゃんと浮かび上がります。</p>
+
+        <figure class="figure">
+          <svg viewBox="0 0 420 240" width="420" aria-label="MCMCサンプルから再現した事後分布">
+            <!-- 軸 -->
+            <line x1="40" y1="200" x2="400" y2="200" stroke="var(--border)" stroke-width="2"/>
+            <line x1="40" y1="20" x2="40" y2="200" stroke="var(--border)" stroke-width="2"/>
+            <!-- x目盛り 0, 0.5, 1 -->
+            <line x1="220" y1="200" x2="220" y2="205" stroke="var(--border)" stroke-width="1"/>
+            <line x1="400" y1="200" x2="400" y2="205" stroke="var(--border)" stroke-width="1"/>
+            <text x="40"  y="220" text-anchor="middle" font-size="11" fill="var(--text-muted)">0</text>
+            <text x="220" y="220" text-anchor="middle" font-size="11" fill="var(--text-muted)">0.5</text>
+            <text x="400" y="220" text-anchor="middle" font-size="11" fill="var(--text-muted)">1</text>
+            <text x="220" y="236" text-anchor="middle" font-size="11" fill="var(--text-muted)">θ（表の出やすさ）</text>
+            <!-- MCMCサンプルのヒストグラム（バー）。Beta(8,4)の形を近似 -->
+            <g fill="var(--level-color)" opacity="0.32">
+              <rect x="148" y="190" width="17" height="10"/>
+              <rect x="166" y="176" width="17" height="24"/>
+              <rect x="184" y="156" width="17" height="44"/>
+              <rect x="202" y="128" width="17" height="72"/>
+              <rect x="220" y="100" width="17" height="100"/>
+              <rect x="238" y="74"  width="17" height="126"/>
+              <rect x="256" y="58"  width="17" height="142"/>
+              <rect x="274" y="50"  width="17" height="150"/>
+              <rect x="292" y="62"  width="17" height="138"/>
+              <rect x="310" y="92"  width="17" height="108"/>
+              <rect x="328" y="132" width="17" height="68"/>
+              <rect x="346" y="166" width="17" height="34"/>
+              <rect x="364" y="188" width="17" height="12"/>
+            </g>
+            <!-- なめらかな事後曲線 Beta(8,4) -->
+            <path d="M40,200 C150,200 210,175 270,60 C300,30 320,40 340,90 C360,140 380,195 400,200"
+                  fill="none" stroke="var(--level-color)" stroke-width="3"/>
+            <!-- ピーク位置 0.7 -->
+            <line x1="292" y1="200" x2="292" y2="44" stroke="var(--level-color)" stroke-width="1" stroke-dasharray="3 3" opacity="0.6"/>
+            <text x="292" y="40" text-anchor="middle" font-size="11" fill="var(--level-color)">0.7</text>
+            <text x="120" y="60" font-size="11" fill="var(--text-muted)">MCMCの8000サンプル</text>
+          </svg>
+          <figcaption>図1: <code>pm.sample</code> が集めた8000個のサンプル（棒）を積み上げると、手計算した事後分布 \( \mathrm{Beta}(8,4) \)（実線）の形がそのまま現れます。山の頂上は \( \theta = 0.7 \)、平均は約 \( 0.667 \)。数式とコードが同じ答えにたどり着きました。</figcaption>
+        </figure>
+
+        <div class="box box-intuition">
+          <div class="box-title">直感でつかむ — なぜ「サンプル」で分布がわかるのか</div>
+          <p>MCMC は、事後分布の「ありそうなところ」を多めに、「ありそうにないところ」を少なめに点を打っていきます（<a href="../level4/4-2.html">4-2</a>）。だから点が密集した場所が、山の高いところ。8000個の点を棒グラフに積めば、分布のかたちが浮かび上がるのです。</p>
+          <p>平均を知りたければ、8000個の <code>theta</code> の値を足して8000で割るだけ。信用区間なら、小さい順に並べて下から2.5%と上から2.5%を切るだけ。<strong>難しい積分が、ただの集計に変わる</strong>。これが MCMC とサンプルのありがたさです。</p>
+        </div>
+
+        <h2>理解度チェック</h2>
+
+        <div class="quiz" data-answer="b">
+          <p class="quiz-q">問1: PyMC で「これは観測されたデータだ」と PyMC に伝えるための書き方はどれですか?</p>
+          <button class="quiz-option" data-key="a"><code>pm.Binomial("y", n=10, p=theta)</code> のように、引数を増やさず書く</button>
+          <button class="quiz-option" data-key="b"><code>pm.Binomial("y", n=10, p=theta, observed=7)</code> のように <code>observed=</code> を付ける</button>
+          <button class="quiz-option" data-key="c"><code>pm.sample()</code> の引数にデータを渡す</button>
+          <div class="quiz-explain"><p>データを入れる変数には <code>observed=</code> を付けます。これがある変数は尤度（観測値）として扱われ、ない変数（<code>theta</code> など）は推定したいパラメータになります。<code>observed</code> の書き忘れは、PyMC でいちばん多いミスです。</p></div>
+        </div>
+
+        <div class="quiz" data-answer="c">
+          <p class="quiz-q">問2: <code>az.summary</code> の出力で <code>r_hat</code>（\( \hat{R} \)）が示しているのは何ですか?</p>
+          <button class="quiz-option" data-key="a">事後分布の平均値</button>
+          <button class="quiz-option" data-key="b">95%信用区間の幅</button>
+          <button class="quiz-option" data-key="c">複数チェーンが同じ分布に落ち着いたか、という収束の目安</button>
+          <div class="quiz-explain"><p>\( \hat{R} \) は収束診断の指標です（<a href="../level4/4-6.html">4-6</a>）。1.0 に近ければ、別々の出発点から走らせたチェーンが同じ事後分布に行き着いたしるし。1.0 から大きく離れていたら、サンプリングを疑います。平均は <code>mean</code>、区間は <code>hdi_</code> の列で読みます。</p></div>
+        </div>
+
+        <div class="quiz" data-answer="a">
+          <p class="quiz-q">問3: 事前分布 \( \mathrm{Beta}(1,1) \)、データ「10回中7回表」のとき、PyMC の <code>mean</code> がおよそ 0.667 になるのはなぜですか?</p>
+          <button class="quiz-option" data-key="a">事後分布が \( \mathrm{Beta}(8,4) \) で、その平均 \( 8/(8+4) \) が 0.667 だから</button>
+          <button class="quiz-option" data-key="b">データの割合 \( 7/10 = 0.7 \) がそのまま平均になるから</button>
+          <button class="quiz-option" data-key="c">MCMC のサンプル数が8000個だから</button>
+          <div class="quiz-explain"><p>3-2 の更新ルールで事後分布は \( \mathrm{Beta}(1+7,\ 1+3) = \mathrm{Beta}(8,4) \)。ベータ分布の平均は \( \alpha/(\alpha+\beta) = 8/12 \approx 0.667 \) です。データの割合 0.7 は<strong>平均でなく最頻値（山の頂上）</strong>のほう。平均と最頻値は別物なので、混同しないようにしましょう。</p></div>
+        </div>
+
+        <h2>演習</h2>
+
+        <div class="box box-practice">
+          <div class="box-title">演習1</div>
+          <p>本文のコードで、観測データを「<strong>40回投げて表が28回</strong>」に変えるには、どの2行をどう書き換えればよいですか? また、事後分布は \( \mathrm{Beta} \) で言うと何になりますか?</p>
+          <details class="answer">
+            <summary>解答を見る</summary>
+            <p>冒頭の2行を <code>n_trials = 40</code> と <code>k_heads = 28</code> に変えるだけです。モデルの中身（<code>pm.Beta</code> や <code>pm.Binomial</code> の行）はそのままで動きます。<br>事後分布は、3-2 の更新ルールから \( \mathrm{Beta}(1+28,\ 1+12) = \mathrm{Beta}(29, 13) \)。平均は \( 29/(29+13) = 29/42 \approx 0.690 \) なので、PyMC の <code>mean</code> もこの近くになります。データが10回から40回に増えた分、<code>sd</code>（ぶれ幅）は小さくなり、信用区間も狭まります。</p>
+          </details>
+        </div>
+
+        <div class="box box-practice">
+          <div class="box-title">演習2</div>
+          <p>事前分布を「平ら」ではなく \( \mathrm{Beta}(2,2) \)（0.5寄りの、ゆるい山）に変えたいとします。コードのどこを、どう直しますか?</p>
+          <details class="answer">
+            <summary>解答を見る</summary>
+            <p>事前分布を宣言している行を、<code>theta = pm.Beta("theta", alpha=2, beta=2)</code> に書き換えます。<code>alpha</code> と <code>beta</code> を 2 にするだけです。<br>このとき「10回中7回表」のデータでの事後分布は \( \mathrm{Beta}(2+7,\ 2+3) = \mathrm{Beta}(9,5) \)。平均は \( 9/14 \approx 0.643 \) で、平らな事前のとき（0.667）より、ほんの少し 0.5 に引き戻されます。事前分布が 0.5 寄りだった影響です。</p>
+          </details>
+        </div>
+
+        <div class="box box-practice">
+          <div class="box-title">演習3</div>
+          <p><code>idata = pm.sample(2000, chains=4)</code> の <code>chains</code> を 1 にしてしまうと、何が困りますか? 一言で説明しなさい。</p>
+          <details class="answer">
+            <summary>解答を見る</summary>
+            <p>チェーンが1本だけだと、\( \hat{R} \)（収束診断）が計算できません。\( \hat{R} \) は「複数のチェーンが互いに一致しているか」を見る指標なので、比べる相手がいないと意味をなさないからです（<a href="../level4/4-6.html">4-6</a>）。サンプリングが正しく収束したかを確かめるために、チェーンは2本以上（ふつう4本）走らせるのがおすすめです。</p>
+          </details>
+        </div>
+
+        <div class="box box-practice">
+          <div class="box-title">演習4</div>
+          <p>友人が「<code>az.summary</code> の <code>mean</code> が 0.7 にならないからコードが間違っている」と言っています。事前分布 \( \mathrm{Beta}(1,1) \)、データ「10回中7回」のときです。どう声をかけますか?</p>
+          <details class="answer">
+            <summary>解答を見る</summary>
+            <p>「<code>mean</code>（事後平均）は 0.667 で正しいよ」と伝えます。0.7 はデータの割合であり、事後分布 \( \mathrm{Beta}(8,4) \) の<strong>最頻値（山の頂上）</strong>のほうです。平均は \( 8/12 \approx 0.667 \)。ベータ分布は左右対称ではないので、平均と最頻値はずれます。最頻値 0.7 を確かめたいなら、<code>az.summary</code> の <code>mean</code> ではなく、<code>plot_posterior</code> の山の頂上や MAP 推定（<a href="../level3/3-5.html">3-5</a>）で見るのが筋です。</p>
+          </details>
+        </div>
+
+        <h2>まとめ</h2>
+        <ul>
+          <li><span class="term">PyMC</span> は <code>pip install pymc arviz</code> で導入します。モデルの形を宣言すれば、裏側の MCMC（<a href="../level4/4-5.html">4-5</a> の NUTS）はおまかせです。</li>
+          <li>モデルは <code>with pm.Model() as model:</code> の中に、<strong>事前分布・尤度・観測データ</strong>の3部品を並べて作ります。ベイズの定理の3部品と1対1で対応します。</li>
+          <li>データを入れる変数には必ず <code>observed=</code> を付けます。これが尤度とパラメータを分ける目印です。</li>
+          <li><code>pm.sample</code> で事後分布からサンプルを取り、<code>az.summary</code> で平均・標準偏差・信用区間・\( \hat{R} \) を読みます。難しい積分が、ただの集計に変わります。</li>
+          <li>3-2 の手計算 \( \mathrm{Beta}(8,4) \)（平均 0.667）と、PyMC の結果はぴたり一致。答え合わせができるからこそ、安心して次へ進めます。</li>
+        </ul>
+        <p>手で解けるモデルを、あえてコードで再現しました。ここで PyMC の書き味に慣れておけば、次からは<strong>手では解けないモデル</strong>へ踏み出せます。レシピの材料を入れ替えるだけで、推定の幅がぐっと広がっていきますよ。</p>
+
+      </div>
+
+      <div class="complete-area">
+        <button class="btn btn-level" id="complete-btn">このレッスンを完了にする</button>
+        <p class="complete-note">進捗はこのブラウザに保存されます</p>
+      </div>
+
+      <!-- 前後ナビ: main.js がカリキュラムから自動生成 -->
+      <nav class="lesson-nav" id="lesson-nav" aria-label="前後のレッスン"></nav>
+
+    </main>
+
+    <!-- ページ内目次: main.js が本文の h2 から自動生成 -->
+    <aside class="toc">
+      <div class="toc-title">このページの内容</div>
+      <nav id="toc"></nav>
+    </aside>
+
+  </div>
+
+  <footer class="site-footer">
+    <p>ベイズの階段 — 中学数学から最前線まで、一段ずつ。</p>
+  </footer>
+
+  <script src="../../assets/js/curriculum.js"></script>
+  <script src="../../assets/js/main.js"></script>
+</body>
+</html>

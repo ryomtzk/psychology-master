@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>5-4 階層ベイズモデル | ベイズの階段</title>
+  <meta name="description" content="グループ構造を持つデータ。部分プーリングの威力">
+  <script>
+    document.documentElement.dataset.theme =
+      localStorage.getItem("bayes-stairs-theme") ||
+      (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Noto+Serif+JP:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../assets/css/main.css">
+
+  <!-- KaTeX: 数式を使うページでは必ずこの3行を入れる -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+          onload="renderMathInElement(document.body, {delimiters: [
+            {left: '$$', right: '$$', display: true},
+            {left: '\\(', right: '\\)', display: false}
+          ]});"></script>
+</head>
+<body data-root="../../" data-level="5" data-lesson-id="5-4">
+
+  <header class="site-header">
+    <button class="sidebar-toggle" id="sidebar-toggle" aria-label="メニュー">☰</button>
+    <a class="brand" href="../../index.html">
+      <span class="brand-mark">階</span>
+      <span>ベイズの階段</span>
+    </a>
+    <div class="header-spacer"></div>
+    <div class="header-progress" id="header-progress"></div>
+    <button class="theme-toggle" id="theme-toggle" aria-label="テーマ切替">🌙</button>
+  </header>
+
+  <div class="layout">
+
+    <!-- サイドバー: main.js がカリキュラムから自動生成 -->
+    <aside class="sidebar"><nav id="sidebar-nav" aria-label="カリキュラム"></nav></aside>
+
+    <main class="lesson">
+
+      <nav class="breadcrumbs" aria-label="パンくず">
+        <a href="../../index.html">ホーム</a><span class="sep">›</span>
+        <a href="index.html">Level 5 実践ベイズモデリング</a><span class="sep">›</span>
+        <span>5-4 階層ベイズモデル</span>
+      </nav>
+
+      <header class="lesson-header">
+        <div class="lesson-meta">
+          <span class="level-badge">Level 5</span>
+          <span class="small">レッスン 5-4</span>
+        </div>
+        <h1>階層ベイズモデル</h1>
+
+        <div class="lesson-goals">
+          <h2>このレッスンでできるようになること</h2>
+          <ul>
+            <li>完全プーリング・無プーリング・部分プーリングの3つの考え方を、例を挙げて説明できる</li>
+            <li>グループ別パラメータと共通の超事前分布からなる階層モデルを、式と図で書ける</li>
+            <li>収縮（しゅうしゅう）がなぜ起き、データの少ないグループほど強く効くのかを説明できる</li>
+          </ul>
+          <p class="prereq">前提: <a href="5-1.html">5-1 PyMCではじめるベイズ推定</a> と <a href="../level3/3-2.html">3-2 ベータ・二項モデル</a> を読んでいること</p>
+        </div>
+      </header>
+
+      <div class="lesson-body">
+
+        <h2>8つの店、バラバラの成績をどう読む?</h2>
+        <p>あるチェーン店が、新しい接客マニュアルを試しています。8つの店舗それぞれで、来店客にアンケートをとり「満足した人の割合」を調べました。ところが、店ごとの来客数がまるでちがいます。</p>
+        <p>A店は200人に聞いて満足が120人。割合は \(0.60\) です。一方、B店は来客が少なく、5人に聞いて満足は4人。割合は \(0.80\) と高く出ました。さて、B店は本当にA店より優秀なのでしょうか?</p>
+        <p>たった5人のうちの4人です。1人ちがえば割合は \(0.60\) になります。少ない人数の割合は、ぐらぐら揺れて当てになりません。かといって「人数が少ない店は無視」とするのも乱暴です。このレッスンでは、店ごとの個性を残しつつ、少数のグループの推定を安定させる方法を学びます。それが<span class="term">階層ベイズモデル</span>（マルチレベルモデルとも呼びます）です。</p>
+
+        <div class="box box-intuition">
+          <div class="box-title">直感でつかむ</div>
+          <p>8店舗の成績を読むとき、極端な2つの態度が考えられます。</p>
+          <p>1つめは「店のちがいなんて誤差。全部まとめて1つの割合として扱おう」。これだと、せっかくの店ごとの個性が消えてしまいます。</p>
+          <p>2つめは「店はそれぞれ別物。8つを完全に独立に推定しよう」。これだと、5人しか聞いていないB店の \(0.80\) を、そのまま信じることになります。</p>
+          <p>階層モデルは、この2つの<strong>あいだ</strong>をとります。「店はちがう、でも同じチェーンの店どうし、似てもいる」。データの少ない店は、全体の平均のほうへそっと引き寄せて、推定を落ち着かせます。これが<strong>部分プーリング</strong>です。</p>
+        </div>
+
+        <h2>3つの態度 — 完全プーリング・無プーリング・部分プーリング</h2>
+        <p>グループ構造を持つデータへの向き合い方を、まず言葉で整理します。各店 \(j\) の本当の満足率を \( \theta_j \)（シータ・ジェイ）と書きます。\(j\) は店の番号 \(1, 2, \dots, 8\) です。</p>
+
+        <div class="box box-def">
+          <div class="box-title">定義 — プーリングの3つの態度</div>
+          <p><strong>① 完全プーリング</strong>: 店のちがいを無視し、すべての店で割合は同じだと考えます。\( \theta_1 = \theta_2 = \dots = \theta_8 = \theta \)。全店のデータを1つにまとめて、たった1つの \( \theta \) を推定します。</p>
+          <p><strong>② 無プーリング</strong>: 店どうしは無関係だと考えます。\( \theta_1, \dots, \theta_8 \) を、それぞれの店のデータだけで、別々に推定します。</p>
+          <p><strong>③ 部分プーリング</strong>: 店ごとに \( \theta_j \) はちがう。でも、すべて「共通の親分布」から生まれた仲間だと考えます。その親分布の中心へ向けて、各 \( \theta_j \) をほどよく引き寄せます。これが階層モデルの立場です。</p>
+        </div>
+
+        <div class="box box-warn">
+          <div class="box-title">つまずき注意</div>
+          <p>完全プーリングと無プーリングは、どちらも「極端」です。完全プーリングは店の個性を消しすぎ（バイアスが大きい）、無プーリングは少数データの偶然に振り回されすぎ（ばらつきが大きい）。階層モデルは、データそのものに「どれくらい引き寄せるか」を決めさせる、賢い折衷案だと思ってください。</p>
+        </div>
+
+        <h2>階層モデルの組み立て</h2>
+        <p>では部分プーリングを、式で組み立てます。考え方は2段がまえです。下の段が「各店のデータ」、上の段が「店どうしをつなぐ親分布」です。</p>
+        <p>まず下の段。店 \(j\) で \( n_j \) 人に聞き、そのうち \( y_j \) 人が満足したとします。これは<a href="../level3/3-2.html">3-2</a>でも使った二項分布です。</p>
+
+        <div class="formula">
+          <span class="formula-label">下の段 — データの尤度</span>
+          $$ y_j \;\sim\; \mathrm{Binomial}(n_j,\; \theta_j) \qquad (j = 1, \dots, 8) $$
+        </div>
+        <p>記号 \( \sim \) は『〜という分布に従う』と読みます。店ごとに \( \theta_j \) がちがうことに注意してください。ここまでは無プーリングと同じです。</p>
+
+        <p>つぎが階層モデルの心臓部、上の段です。8つの \( \theta_j \) を「バラバラの他人」ではなく「共通の親から生まれたきょうだい」として結びつけます。親となる分布を1つ用意し、各 \( \theta_j \) はそこから引かれたと考えます。割合 \( \theta_j \) は \(0\)〜\(1\) の値なので、親分布には<a href="../level2/2-6.html">2-6</a>のベータ分布を使いましょう。</p>
+
+        <div class="formula">
+          <span class="formula-label">上の段 — グループをつなぐ親分布</span>
+          $$ \theta_j \;\sim\; \mathrm{Beta}(\alpha,\; \beta) \qquad (j = 1, \dots, 8) $$
+        </div>
+        <p>この \( \alpha, \beta \) は<strong>全店で共通</strong>です。8つの \( \theta_j \) は、みな同じ \( \mathrm{Beta}(\alpha, \beta) \) から生まれたきょうだい。だから「お互いに似ている」という前提が、自然に式に入ります。</p>
+
+        <p>では \( \alpha, \beta \) はいくつにするのでしょう。ここがポイントです。階層モデルでは、これも<strong>データから推定するパラメータ</strong>にします。データを見る前は \( \alpha, \beta \) もわからないので、これらにさらに事前分布を置きます。</p>
+
+        <div class="box box-def">
+          <div class="box-title">定義 — 超パラメータと超事前分布</div>
+          <p>各 \( \theta_j \) を生む親分布のパラメータ \( \alpha, \beta \) を<span class="term">超パラメータ</span>（ハイパーパラメータ）と呼びます。\( \theta_j \) を支配する、ひとつ上の階のパラメータ、という意味です。</p>
+          <p>その超パラメータに置く事前分布を<span class="term">超事前分布</span>（ハイパープライアではなく、こう呼びます）といいます。たとえば「親分布の平均的な満足率はどのへんで、店ごとのばらつきはどれくらいか」についての、ゆるい事前の信念です。</p>
+        </div>
+
+        <p>こうして、データ \( y_j \) → 店ごとの \( \theta_j \) → 共通の \( \alpha, \beta \) → 超事前分布、という<strong>階層</strong>ができあがります。下の図で全体像をつかみましょう。</p>
+
+        <figure class="figure">
+          <svg viewBox="0 0 460 300" width="460" aria-label="階層ベイズモデルの構造図">
+            <!-- 上の段: 超パラメータ -->
+            <ellipse cx="230" cy="40" rx="90" ry="26" fill="none" stroke="var(--level-color)" stroke-width="2.5"/>
+            <text x="230" y="36" text-anchor="middle" font-size="13" fill="var(--level-color)" font-weight="700">超パラメータ</text>
+            <text x="230" y="52" text-anchor="middle" font-size="12" fill="var(--level-color)">α, β（全店で共通）</text>
+
+            <!-- 中の段: 各店のθ -->
+            <g fill="none" stroke="var(--text-muted)" stroke-width="1.5">
+              <circle cx="70"  cy="150" r="24"/>
+              <circle cx="150" cy="150" r="24"/>
+              <circle cx="310" cy="150" r="24"/>
+              <circle cx="390" cy="150" r="24"/>
+            </g>
+            <text x="70"  y="155" text-anchor="middle" font-size="13" fill="var(--text-muted)">θ₁</text>
+            <text x="150" y="155" text-anchor="middle" font-size="13" fill="var(--text-muted)">θ₂</text>
+            <text x="230" y="155" text-anchor="middle" font-size="16" fill="var(--text-muted)">⋯</text>
+            <text x="310" y="155" text-anchor="middle" font-size="13" fill="var(--text-muted)">θ₇</text>
+            <text x="390" y="155" text-anchor="middle" font-size="13" fill="var(--text-muted)">θ₈</text>
+
+            <!-- 親→子 の矢印 -->
+            <g stroke="var(--level-color)" stroke-width="1.5" opacity="0.7">
+              <line x1="180" y1="62" x2="78"  y2="128" marker-end="url(#arr)"/>
+              <line x1="200" y1="64" x2="155" y2="128" marker-end="url(#arr)"/>
+              <line x1="260" y1="64" x2="305" y2="128" marker-end="url(#arr)"/>
+              <line x1="280" y1="62" x2="382" y2="128" marker-end="url(#arr)"/>
+            </g>
+
+            <!-- 下の段: データ -->
+            <g fill="var(--level-color)" opacity="0.18" stroke="var(--level-color)" stroke-width="1.5">
+              <rect x="50"  y="240" width="40" height="34" rx="4"/>
+              <rect x="130" y="240" width="40" height="34" rx="4"/>
+              <rect x="290" y="240" width="40" height="34" rx="4"/>
+              <rect x="370" y="240" width="40" height="34" rx="4"/>
+            </g>
+            <g fill="var(--text)" font-size="12">
+              <text x="70"  y="261" text-anchor="middle">y₁</text>
+              <text x="150" y="261" text-anchor="middle">y₂</text>
+              <text x="230" y="261" text-anchor="middle" fill="var(--text-muted)" font-size="16">⋯</text>
+              <text x="310" y="261" text-anchor="middle">y₇</text>
+              <text x="390" y="261" text-anchor="middle">y₈</text>
+            </g>
+            <!-- θ→データ の矢印 -->
+            <g stroke="var(--text-muted)" stroke-width="1.5">
+              <line x1="70"  y1="174" x2="70"  y2="238" marker-end="url(#arrg)"/>
+              <line x1="150" y1="174" x2="150" y2="238" marker-end="url(#arrg)"/>
+              <line x1="310" y1="174" x2="310" y2="238" marker-end="url(#arrg)"/>
+              <line x1="390" y1="174" x2="390" y2="238" marker-end="url(#arrg)"/>
+            </g>
+
+            <defs>
+              <marker id="arr" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+                <path d="M0,0 L6,3 L0,6 Z" fill="var(--level-color)"/>
+              </marker>
+              <marker id="arrg" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+                <path d="M0,0 L6,3 L0,6 Z" fill="var(--text-muted)"/>
+              </marker>
+            </defs>
+          </svg>
+          <figcaption>図1: 階層モデルの構造。上の共通の超パラメータ \( \alpha, \beta \) が各店の \( \theta_j \) を生み、各 \( \theta_j \) がその店のデータ \( y_j \) を生みます。\( \theta_j \) たちは共通の親を持つことで、たがいに情報を貸し借りします。</figcaption>
+        </figure>
+
+        <div class="box box-thm">
+          <div class="box-title">公式 — 階層ベイズモデル（割合の場合）</div>
+          <p>$$ \begin{aligned}
+            \alpha, \beta &\sim \text{（超事前分布）} & &\text{← 上の段} \\
+            \theta_j &\sim \mathrm{Beta}(\alpha, \beta) & &\text{← 親分布（共通の } \alpha,\beta\text{）} \\
+            y_j &\sim \mathrm{Binomial}(n_j, \theta_j) & &\text{← データ}
+          \end{aligned} $$</p>
+          <p>3段で読むのがコツです。下から「データは \( \theta_j \) から」「\( \theta_j \) は共通の親から」「親のかたちはデータが教えてくれる」。</p>
+        </div>
+
+        <h2>情報の貸し借り — なぜ収縮が起きるのか</h2>
+        <p>階層モデルのいちばんおもしろい現象が<span class="term">収縮（しゅうしゅう）</span>です。英語では shrinkage（シュリンケージ）といいます。各店の推定値が、全体の平均のほうへ「縮んで」寄っていく現象です。</p>
+
+        <div class="box box-intuition">
+          <div class="box-title">直感でつかむ — 縮む量はデータが決める</div>
+          <p>なぜ寄るのでしょう。共通の親分布 \( \mathrm{Beta}(\alpha, \beta) \) が、各 \( \theta_j \) にとっての<strong>事前分布</strong>として働くからです。<a href="../level3/3-2.html">3-2</a>で見たように、事前分布は推定を自分の中心へ引っぱります。その「引っぱる中心」が、全店の平均になっているのです。</p>
+          <p>そして引っぱられる量は、データの量しだいです。来客200人のA店は、自分のデータの声が大きいので、ほとんど引っぱられません。来客5人のB店は、自分の声が小さいぶん、全体の平均のほうへ大きく引き寄せられます。<strong>データの少ないグループほど、強く収縮する</strong>。これが階層モデルの賢さです。</p>
+        </div>
+
+        <p>B店の生（なま）の割合 \(0.80\) は、たった5人から出た、たよりない数字でした。階層モデルはこれを「ほかの7店も見るかぎり、満足率はだいたい0.6前後。B店だけ突出して0.8というのは、5人ぶんの偶然かもしれない」と判断し、推定値を0.6寄りへ引き戻します。下の図で、生の割合と階層モデルの推定がどう変わるかを見てみましょう。</p>
+
+        <figure class="figure">
+          <svg viewBox="0 0 460 230" width="460" aria-label="収縮のようすを示す図">
+            <!-- 縦の数直線 2本: 左=生の割合, 右=階層モデル推定 -->
+            <line x1="110" y1="20" x2="110" y2="200" stroke="var(--border)" stroke-width="2"/>
+            <line x1="350" y1="20" x2="350" y2="200" stroke="var(--border)" stroke-width="2"/>
+            <text x="110" y="218" text-anchor="middle" font-size="12" fill="var(--text-muted)">生の割合</text>
+            <text x="350" y="218" text-anchor="middle" font-size="12" fill="var(--text-muted)">階層モデルの推定</text>
+
+            <!-- 目盛り 1.0(上) ~ 0(下) -->
+            <text x="92" y="24"  text-anchor="end" font-size="10" fill="var(--text-muted)">1.0</text>
+            <text x="92" y="114" text-anchor="end" font-size="10" fill="var(--text-muted)">0.5</text>
+            <text x="92" y="204" text-anchor="end" font-size="10" fill="var(--text-muted)">0</text>
+
+            <!-- 全体平均ライン 0.6 -> y = 200 - 0.6*180 = 92 -->
+            <line x1="110" y1="92" x2="350" y2="92" stroke="var(--text-muted)" stroke-width="1" stroke-dasharray="4 4" opacity="0.6"/>
+            <text x="356" y="90" font-size="10" fill="var(--text-muted)">全体平均 0.6</text>
+
+            <!-- A店 0.60 -> y=92 ; ほぼ動かない -->
+            <circle cx="110" cy="92" r="5" fill="var(--text-muted)"/>
+            <circle cx="350" cy="93" r="5" fill="var(--level-color)"/>
+            <line x1="116" y1="92" x2="344" y2="93" stroke="var(--text-muted)" stroke-width="1" opacity="0.4"/>
+            <text x="104" y="84" text-anchor="end" font-size="10" fill="var(--text-muted)">A店(200人)</text>
+
+            <!-- B店 0.80 -> y=200-0.8*180=56 ; 大きく収縮 0.65 -> y=200-0.65*180=83 -->
+            <circle cx="110" cy="56" r="5" fill="var(--text-muted)"/>
+            <circle cx="350" cy="83" r="5" fill="var(--level-color)"/>
+            <line x1="116" y1="56" x2="344" y2="83" stroke="var(--level-color)" stroke-width="1.5" opacity="0.7"/>
+            <text x="104" y="50" text-anchor="end" font-size="10" fill="var(--text-muted)">B店(5人)</text>
+
+            <!-- C店 0.30 -> y=200-0.3*180=146 ; やや収縮 0.45 -> y=200-0.45*180=119 -->
+            <circle cx="110" cy="146" r="5" fill="var(--text-muted)"/>
+            <circle cx="350" cy="119" r="5" fill="var(--level-color)"/>
+            <line x1="116" y1="146" x2="344" y2="119" stroke="var(--level-color)" stroke-width="1.5" opacity="0.7"/>
+            <text x="104" y="156" text-anchor="end" font-size="10" fill="var(--text-muted)">C店(8人)</text>
+          </svg>
+          <figcaption>図2: 収縮のようす。生の割合（左）が、階層モデルの推定（右）では全体平均0.6のほうへ引き寄せられます。来客200人のA店はほとんど動きません。来客5人のB店、8人のC店は、データが少ないぶん大きく収縮します。</figcaption>
+        </figure>
+
+        <div class="box box-warn">
+          <div class="box-title">つまずき注意</div>
+          <p>収縮は「全部を平均につぶす」ことではありません。データの<strong>多い</strong>グループは、はっきりした証拠を持っているので、ほとんど動きません。動かされるのは、証拠の薄い、少数グループだけです。だから店の個性はちゃんと残ります。平均につぶしてしまうのは、収縮ではなく完全プーリングのほうです。</p>
+        </div>
+
+        <h2>PyMC で書いてみる</h2>
+        <p><a href="5-1.html">5-1</a>で学んだ書き方で、この階層モデルをコードにします。8店舗の来客数 <code>n</code> と満足者数 <code>y</code> を与え、店ごとの \( \theta_j \) を推定します。親分布の中心を表す超パラメータを <code>mu</code>（全体の平均的な満足率）、ばらつきの強さを <code>kappa</code> として置きます。</p>
+        <p>ベータ分布は \( \alpha, \beta \) で書くより、「平均 \( \mu \) と集中度 \( \kappa \)」で書くほうが意味をつかみやすいので、\( \alpha = \mu\kappa,\ \beta = (1-\mu)\kappa \) と置きかえています。\( \kappa \)（カッパ）が大きいほど、各店は親の中心 \( \mu \) の近くに固まります。</p>
+
+        <pre><code>import pymc as pm
+import numpy as np
+
+# 8店舗のデータ: 来客数 n と 満足者数 y
+n = np.array([200, 5, 8, 50, 120, 30, 15, 90])
+y = np.array([120, 4, 2, 28,  78, 17,  6, 55])
+J = len(n)
+
+with pm.Model() as hierarchical:
+    # --- 超事前分布（上の段）---
+    mu    = pm.Beta("mu", alpha=1, beta=1)          # 全体の平均的な満足率
+    kappa = pm.HalfNormal("kappa", sigma=20) + 2    # 集中度（大きいほど店差が小さい）
+
+    # μ, κ を ベータの α, β に変換
+    alpha = mu * kappa
+    beta  = (1 - mu) * kappa
+
+    # --- 親分布（中の段）: 店ごとの θ_j ---
+    theta = pm.Beta("theta", alpha=alpha, beta=beta, shape=J)
+
+    # --- データ（下の段）---
+    obs = pm.Binomial("obs", n=n, p=theta, observed=y)
+
+    idata = pm.sample(2000, tune=1000)              # MCMC実行</code></pre>
+
+        <p><code>shape=J</code> がポイントです。これで <code>theta</code> が8店ぶんの配列になり、すべてが共通の <code>alpha, beta</code> から生まれます。<code>mu</code> と <code>kappa</code> が全店で共有されることで、店どうしが情報を貸し借りし、収縮が自動的に起こります。サンプリングの結果 <code>idata</code> には、店ごとの \( \theta_j \) の事後分布がまるごと入っています。</p>
+
+        <div class="box box-intuition">
+          <div class="box-title">直感でつかむ — κ が引っぱりの強さ</div>
+          <p>もし完全プーリングにしたければ \( \kappa \) をうんと大きく固定すればよく、全店が \( \mu \) に張りつきます。無プーリングにしたければ \( \kappa \) を小さくすればよく、各店は自由に動きます。階層モデルのえらいところは、この \( \kappa \) を<strong>データから推定する</strong>点です。店どうしが似ていればデータが \( \kappa \) を大きく見積もり強く収縮、ばらばらなら小さく見積もり収縮は弱まります。どれだけ寄せるかを、人間が決めずにデータに決めさせるのです。</p>
+        </div>
+
+        <h2>例題 — B店の推定はどう変わる?</h2>
+
+        <div class="box box-ex">
+          <div class="box-title">例題</div>
+          <p>冒頭のB店（来客5人、満足4人、生の割合 \(0.80\)）を考えます。8店全体の満足率は、おおよそ \(0.6\) のあたりに集まっていました。次の3つの態度それぞれで、B店の \( \theta_B \) の推定はどうなるか、言葉で説明しなさい。</p>
+          <p>(1) 完全プーリング　(2) 無プーリング　(3) 部分プーリング（階層モデル）</p>
+
+          <p><strong>解</strong>:</p>
+          <p><strong>(1) 完全プーリング</strong>: 店のちがいを無視し、全店のデータを合算して1つの割合を出します。B店だけの推定という考え自体がなくなり、\( \theta_B \) は全店共通の割合（およそ \(0.6\)）になります。B店の「4/5」という情報は、大きな集団に溶けて消えます。</p>
+          <p><strong>(2) 無プーリング</strong>: B店のデータだけで推定します。生の割合 \(0.80\) がそのまま推定の中心になります。ただし、たった5人ぶんなので、事後分布の幅（不確かさ）はとても広く、たよりない推定です。</p>
+          <p><strong>(3) 部分プーリング</strong>: B店の \(0.80\) と、全体平均 \(0.6\) の<strong>あいだ</strong>に落ち着きます。ただしB店はデータが5人と少ないので、引っぱりが強く、推定の中心は \(0.6\) のほう（たとえば \(0.65\) あたり）まで大きく寄ります。生の \(0.80\) を、より信頼できる値へやわらげた、というわけです。これがいちばん妥当な推定になります。</p>
+        </div>
+
+        <h2>理解度チェック</h2>
+
+        <div class="quiz" data-answer="c">
+          <p class="quiz-q">問1: 階層モデルで「収縮（shrinkage）」がいちばん強く効くのは、どんなグループですか?</p>
+          <button class="quiz-option" data-key="a">データ（標本サイズ）が多いグループ</button>
+          <button class="quiz-option" data-key="b">生の割合が、ちょうど全体平均に等しいグループ</button>
+          <button class="quiz-option" data-key="c">データ（標本サイズ）が少ないグループ</button>
+          <div class="quiz-explain"><p>正解はC。データの少ないグループは、自分自身の証拠が薄いため、共通の親分布（全体平均）のほうへ強く引き寄せられます。逆にデータの多いグループは、はっきりした証拠を持つのでほとんど動きません。本文のB店（来客5人）が大きく収縮したのが、その例です。</p></div>
+        </div>
+
+        <div class="quiz" data-answer="a">
+          <p class="quiz-q">問2: 「すべての店の満足率は同じ \( \theta \) だ」として、全データを1つにまとめて推定する態度を何と呼びますか?</p>
+          <button class="quiz-option" data-key="a">完全プーリング</button>
+          <button class="quiz-option" data-key="b">無プーリング</button>
+          <button class="quiz-option" data-key="c">部分プーリング</button>
+          <div class="quiz-explain"><p>正解はA。完全プーリングは、グループのちがいを無視してすべて同じパラメータとみなし、データを完全に「プール（一緒くた）」にします。店の個性が消えるのが弱点です。無プーリングは各店を完全に独立に、部分プーリング（階層モデル）はその中間で、共通の親分布を通じてゆるくつなぎます。</p></div>
+        </div>
+
+        <div class="quiz" data-answer="b">
+          <p class="quiz-q">問3: 階層モデルで、各 \( \theta_j \) を生む親分布のパラメータ \( \alpha, \beta \) に、さらに事前分布を置きます。この \( \alpha, \beta \) の呼び名はどれですか?</p>
+          <button class="quiz-option" data-key="a">尤度</button>
+          <button class="quiz-option" data-key="b">超パラメータ（ハイパーパラメータ）</button>
+          <button class="quiz-option" data-key="c">周辺尤度</button>
+          <div class="quiz-explain"><p>正解はB。各 \( \theta_j \) のひとつ上の階で、それらをまとめて支配するパラメータを超パラメータ（ハイパーパラメータ）と呼びます。これに置く事前分布が超事前分布です。尤度はデータの出やすさ、周辺尤度はベイズの定理の分母で、いずれも別物です。</p></div>
+        </div>
+
+        <h2>演習</h2>
+
+        <div class="box box-practice">
+          <div class="box-title">演習1</div>
+          <p>本文の「店舗」を「学校」に置きかえて考えます。ある学区の10校で、同じ模試を受けた生徒の平均点を比べたいとします。生徒数は学校によって大きくちがい、5人しか受けていない小さな学校もあります。この問題に階層モデルを使う利点を、2つあげなさい。</p>
+          <details class="answer">
+            <summary>解答を見る</summary>
+            <p>(1) <strong>少人数の学校の推定が安定する</strong>。5人だけの学校の平均は、たまたま優秀な数人がいただけで高く出るかもしれません。階層モデルは、これを全体平均のほうへ収縮させ、過剰に高い（または低い）推定を防ぎます。</p>
+            <p>(2) <strong>学校の個性を保ちつつ、情報を共有できる</strong>。完全プーリング（全校同じ）のように個性を消すことなく、かつ無プーリング（各校バラバラ）のように偶然に振り回されることもなく、両者のいいとこ取りができます。データの多い学校はそのまま、少ない学校はやわらげる、と扱い分けてくれます。</p>
+          </details>
+        </div>
+
+        <div class="box box-practice">
+          <div class="box-title">演習2</div>
+          <p>2つの店を比べます。X店は来客300人で生の割合 \(0.40\)、Y店は来客4人で生の割合 \(1.00\)（4人全員が満足）でした。全体平均は \(0.55\) です。階層モデルの推定は、X店とY店それぞれで、生の割合からどちら向きに・どれくらい動くと予想できますか?</p>
+          <details class="answer">
+            <summary>解答を見る</summary>
+            <p><strong>X店</strong>: 来客300人とデータが多いので、収縮はごくわずかです。推定は生の \(0.40\) のすぐ近く（ほんの少しだけ \(0.55\) 寄りの、たとえば \(0.41\) 程度）にとどまります。証拠が厚いので、ほとんど動きません。</p>
+            <p><strong>Y店</strong>: 来客4人と極端に少ないので、強く収縮します。生の \(1.00\) は「4人全員がたまたま満足した」だけかもしれず、信用できません。推定は全体平均 \(0.55\) のほうへ大きく引き戻され、\(1.00\) よりかなり低い値（たとえば \(0.6\)〜\(0.7\) あたり）に落ち着きます。「全員満足だから満足率100%」とは決して結論しない、というのが階層モデルの慎重さです。</p>
+          </details>
+        </div>
+
+        <div class="box box-practice">
+          <div class="box-title">演習3</div>
+          <p>本文のPyMCコードでは、集中度 <code>kappa</code> をデータから推定していました。もし代わりに <code>kappa</code> を非常に大きい値に固定したら、モデルは3つの態度のどれに近づきますか。また、<code>kappa</code> をほぼ0に近い小さい値に固定したら、どれに近づきますか。</p>
+          <details class="answer">
+            <summary>解答を見る</summary>
+            <p><code>kappa</code> を非常に大きく固定すると、親分布 \( \mathrm{Beta}(\mu\kappa, (1-\mu)\kappa) \) が \( \mu \) のまわりに鋭くとがり、すべての \( \theta_j \) が共通の \( \mu \) に張りつきます。これは<strong>完全プーリング</strong>に近づきます（全店ほぼ同じ割合）。</p>
+            <p>逆に <code>kappa</code> をほぼ0に固定すると、親分布が \(0\)〜\(1\) でほぼ平らになり、各 \( \theta_j \) を引っぱる力がなくなります。各店は自分のデータだけで自由に決まるので、<strong>無プーリング</strong>に近づきます。階層モデルは、この \( \kappa \) をデータに決めさせることで、2つの極のあいだの最適な点を自動で選んでいるわけです。</p>
+          </details>
+        </div>
+
+        <div class="box box-practice">
+          <div class="box-title">演習4</div>
+          <p>「収縮は、各グループの推定を全部1つの値につぶしてしまう操作だ」。この説明はどこが誤りですか。正しく言い直しなさい。</p>
+          <details class="answer">
+            <summary>解答を見る</summary>
+            <p>誤りは「全部つぶす」という部分です。収縮は、すべてのグループを同じ値にそろえる操作ではありません。引き寄せられる量はグループごとにちがい、<strong>データの少ないグループほど強く、データの多いグループはほとんど寄りません</strong>。証拠の厚いグループの個性はしっかり残ります。「全部1つの値につぶす」のは、収縮ではなく完全プーリングの説明です。正しくは「収縮とは、各グループの推定を、データ量に応じた強さで全体平均のほうへほどよく引き寄せる操作」となります。</p>
+          </details>
+        </div>
+
+        <h2>まとめ</h2>
+        <ul>
+          <li>グループ構造を持つデータには3つの態度があります。<span class="term">完全プーリング</span>（全部同じ）、<span class="term">無プーリング</span>（全部バラバラ）、そして両者の中間をとる<span class="term">部分プーリング</span>です。</li>
+          <li><span class="term">階層ベイズモデル</span>は部分プーリングを実現します。グループ別パラメータ \( \theta_j \) を、共通の親分布 \( \mathrm{Beta}(\alpha, \beta) \) から生まれたきょうだいとして結びつけます。</li>
+          <li>親分布のパラメータ \( \alpha, \beta \) を<span class="term">超パラメータ</span>と呼び、これにさらに<span class="term">超事前分布</span>を置いて、データから推定します。</li>
+          <li>その結果<span class="term">収縮（shrinkage）</span>が起こります。各グループの推定が全体平均のほうへ引き寄せられ、<strong>データの少ないグループほど強く</strong>収縮します。少数データの偶然に振り回されず、推定が安定します。</li>
+          <li>PyMCでは、共通の超パラメータ（<code>mu</code>, <code>kappa</code>）と <code>shape</code> でグループ別パラメータを並べるだけで、情報の貸し借りと収縮が自動的に起こります。</li>
+        </ul>
+        <p>1つのパラメータを推定するところから始めたベイズが、ここでグループ全体を一度にあつかう「群れの推定」へ広がりました。次の <a href="5-5.html">5-5 状態空間モデルと時系列</a> では、グループのかわりに「時間」でつながったパラメータを追いかけます。「似たものは情報を貸し借りする」という今回の発想が、また形を変えて顔を出します。</p>
+
+      </div>
+
+      <div class="complete-area">
+        <button class="btn btn-level" id="complete-btn">このレッスンを完了にする</button>
+        <p class="complete-note">進捗はこのブラウザに保存されます</p>
+      </div>
+
+      <!-- 前後ナビ: main.js がカリキュラムから自動生成 -->
+      <nav class="lesson-nav" id="lesson-nav" aria-label="前後のレッスン"></nav>
+
+    </main>
+
+    <!-- ページ内目次: main.js が本文の h2 から自動生成 -->
+    <aside class="toc">
+      <div class="toc-title">このページの内容</div>
+      <nav id="toc"></nav>
+    </aside>
+
+  </div>
+
+  <footer class="site-footer">
+    <p>ベイズの階段 — 中学数学から最前線まで、一段ずつ。</p>
+  </footer>
+
+  <script src="../../assets/js/curriculum.js"></script>
+  <script src="../../assets/js/main.js"></script>
+</body>
+</html>

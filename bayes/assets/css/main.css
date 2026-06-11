@@ -1,0 +1,962 @@
+/* =====================================================================
+ * ベイズの階段 — デザインシステム main.css
+ * ---------------------------------------------------------------------
+ * 構成:
+ *   §1 デザイントークン (ライト/ダーク)
+ *   §2 リセットとベース
+ *   §3 タイポグラフィ
+ *   §4 レイアウト (ヘッダー / サイドバー / 本文 / 目次 / フッター)
+ *   §5 コンポーネント
+ *      5.1 レベルバッジ・レベルカード
+ *      5.2 学習ボックス (定義/定理/例題/演習/直感/注意/やってみよう)
+ *      5.3 数式・コード・表
+ *      5.4 クイズ
+ *      5.5 ボタン・パンくず・前後ナビ・進捗
+ *   §6 ユーティリティ / レスポンシブ / 印刷
+ * ===================================================================== */
+
+/* ============================ §1 トークン ============================ */
+:root {
+  /* 色 — ベース */
+  --bg: #faf9f6;
+  --surface: #ffffff;
+  --surface-2: #f1efe9;
+  --text: #21262f;
+  --text-muted: #5d6571;
+  --border: #e4e1d8;
+  --shadow: 0 1px 3px rgba(30, 35, 48, 0.07), 0 6px 24px rgba(30, 35, 48, 0.06);
+  --shadow-lift: 0 4px 12px rgba(30, 35, 48, 0.10), 0 12px 40px rgba(30, 35, 48, 0.10);
+
+  /* 色 — ブランド */
+  --primary: #2d4f8f;
+  --primary-strong: #1f3a6e;
+  --link: #2d5fae;
+
+  /* 色 — レベル (curriculum.js と一致させること) */
+  --level0: #1f9d63;
+  --level1: #1187a8;
+  --level2: #2f6fde;
+  --level3: #6c53e0;
+  --level4: #a845c8;
+  --level5: #d23369;
+  --appendix: #8a8577;
+
+  /* 現在ページのレベル色。body[data-level] で上書きされる */
+  --level-color: var(--primary);
+
+  /* タイポグラフィ */
+  --font-sans: "Noto Sans JP", "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif;
+  --font-serif: "Noto Serif JP", "Hiragino Mincho ProN", "Yu Mincho", serif;
+  --font-mono: "JetBrains Mono", "SF Mono", Menlo, Consolas, monospace;
+  --fs-base: 16px;
+  --lh-body: 1.9;          /* 日本語の長文向けに広め */
+
+  /* 寸法 */
+  --header-h: 60px;
+  --sidebar-w: 280px;
+  --toc-w: 200px;
+  --content-max: 760px;
+  --radius: 10px;
+  --radius-sm: 6px;
+  --space: 1rem;
+}
+
+[data-theme="dark"] {
+  --bg: #13161d;
+  --surface: #1b2029;
+  --surface-2: #232936;
+  --text: #e7eaf1;
+  --text-muted: #99a2b2;
+  --border: #2c3342;
+  --shadow: 0 1px 3px rgba(0, 0, 0, 0.4), 0 6px 24px rgba(0, 0, 0, 0.3);
+  --shadow-lift: 0 4px 12px rgba(0, 0, 0, 0.5), 0 12px 40px rgba(0, 0, 0, 0.4);
+  --primary: #7ea2e0;
+  --primary-strong: #a9c2ee;
+  --link: #8db1ec;
+  --level0: #34c184;
+  --level1: #2fb1d4;
+  --level2: #6695ec;
+  --level3: #937fe9;
+  --level4: #c46fdf;
+  --level5: #e95f8d;
+  --appendix: #a8a394;
+}
+
+/* body[data-level] → そのページのアクセント色を決める */
+body[data-level="0"] { --level-color: var(--level0); }
+body[data-level="1"] { --level-color: var(--level1); }
+body[data-level="2"] { --level-color: var(--level2); }
+body[data-level="3"] { --level-color: var(--level3); }
+body[data-level="4"] { --level-color: var(--level4); }
+body[data-level="5"] { --level-color: var(--level5); }
+body[data-level="appendix"] { --level-color: var(--appendix); }
+
+/* ========================= §2 リセット/ベース ========================= */
+*, *::before, *::after { box-sizing: border-box; }
+
+html {
+  font-size: var(--fs-base);
+  scroll-behavior: smooth;
+  scroll-padding-top: calc(var(--header-h) + 16px);
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  line-height: var(--lh-body);
+  color: var(--text);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+img, svg, canvas { max-width: 100%; height: auto; }
+
+a { color: var(--link); text-decoration-thickness: 1px; text-underline-offset: 3px; }
+a:hover { text-decoration-thickness: 2px; }
+
+::selection { background: color-mix(in srgb, var(--level-color) 25%, transparent); }
+
+:focus-visible {
+  outline: 2px solid var(--level-color);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* ========================= §3 タイポグラフィ ========================= */
+h1, h2, h3, h4 { line-height: 1.45; font-weight: 700; }
+
+h1 {
+  font-family: var(--font-serif);
+  font-size: 1.9rem;
+  margin: 0 0 0.5em;
+}
+
+/* レッスン本文の h2: レベル色の左ボーダーで章感を出す */
+.lesson-body h2 {
+  font-size: 1.4rem;
+  margin: 2.8em 0 1em;
+  padding: 0.2em 0 0.2em 0.6em;
+  border-left: 5px solid var(--level-color);
+}
+
+.lesson-body h3 {
+  font-size: 1.15rem;
+  margin: 2.2em 0 0.8em;
+}
+
+p { margin: 0 0 1.2em; }
+
+.lead {
+  font-size: 1.05rem;
+  color: var(--text-muted);
+}
+
+/* キーワード強調: 初出の重要用語に使う */
+.term {
+  font-weight: 700;
+  background: linear-gradient(transparent 65%, color-mix(in srgb, var(--level-color) 28%, transparent) 65%);
+  padding: 0 2px;
+}
+
+strong { font-weight: 700; }
+
+small, .small { font-size: 0.85rem; color: var(--text-muted); }
+
+/* ============================ §4 レイアウト ============================ */
+
+/* --- ヘッダー --- */
+.site-header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  height: var(--header-h);
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 0 20px;
+  background: color-mix(in srgb, var(--surface) 88%, transparent);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--border);
+}
+
+.brand {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  font-family: var(--font-serif);
+  font-weight: 700;
+  font-size: 1.15rem;
+  color: var(--text);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.brand .brand-mark {
+  display: inline-grid;
+  place-items: center;
+  width: 30px; height: 30px;
+  border-radius: 8px;
+  background: var(--primary);
+  color: #fff;
+  font-family: var(--font-serif);
+  font-size: 0.95rem;
+  align-self: center;
+}
+[data-theme="dark"] .brand .brand-mark { color: var(--bg); }
+
+.brand .brand-tagline {
+  font-family: var(--font-sans);
+  font-weight: 400;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+/* 親サイト(ゼロから学ぶ心理学)へ戻るリンク — main.js が自動挿入 */
+.parent-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-family: var(--font-sans);
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  text-decoration: none;
+  white-space: nowrap;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+}
+.parent-link:hover {
+  color: var(--text);
+  border-color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 8%, transparent);
+}
+@media (max-width: 640px) {
+  .parent-link .parent-link-label { display: none; }
+  .parent-link { padding: 4px 8px; }
+}
+
+.header-spacer { flex: 1; }
+
+.header-progress {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+/* --- 全体グリッド: サイドバー / 本文 / ページ内目次 --- */
+.layout {
+  display: grid;
+  grid-template-columns: var(--sidebar-w) minmax(0, 1fr) var(--toc-w);
+  gap: 40px;
+  max-width: 1320px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+.layout-single {                /* サイドバー無しページ (トップ等) 用 */
+  max-width: 1060px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+/* --- サイドバー (カリキュラムナビ。main.js が生成) --- */
+.sidebar {
+  position: sticky;
+  top: var(--header-h);
+  height: calc(100vh - var(--header-h));
+  overflow-y: auto;
+  padding: 24px 4px 40px 0;
+  font-size: 0.88rem;
+  scrollbar-width: thin;
+}
+
+.sidebar-group { margin-bottom: 4px; }
+
+.sidebar-group > summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-weight: 700;
+  list-style: none;
+  user-select: none;
+}
+.sidebar-group > summary::-webkit-details-marker { display: none; }
+.sidebar-group > summary:hover { background: var(--surface-2); }
+
+.sidebar-group .lv-dot {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.sidebar-group ul {
+  list-style: none;
+  margin: 2px 0 8px;
+  padding-left: 14px;
+}
+
+.sidebar-group li a {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  padding: 5px 10px;
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  text-decoration: none;
+  line-height: 1.5;
+}
+.sidebar-group li a:hover { background: var(--surface-2); color: var(--text); }
+
+.sidebar-group li a.is-current {
+  background: color-mix(in srgb, var(--level-color) 12%, transparent);
+  color: var(--text);
+  font-weight: 700;
+}
+
+.sidebar-group li a .done-mark {
+  flex-shrink: 0;
+  font-size: 0.75rem;
+  color: var(--level0);
+  visibility: hidden;
+}
+.sidebar-group li a.is-done .done-mark { visibility: visible; }
+
+/* --- 本文カラム --- */
+.lesson {
+  max-width: var(--content-max);
+  padding: 32px 0 80px;
+  min-width: 0;
+}
+
+.lesson-header { margin-bottom: 2.5rem; }
+
+.lesson-header .lesson-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 0.8rem;
+}
+
+/* --- ページ内目次 (右カラム。main.js が h2 から生成) --- */
+.toc {
+  position: sticky;
+  top: calc(var(--header-h) + 32px);
+  height: max-content;
+  max-height: calc(100vh - var(--header-h) - 64px);
+  overflow-y: auto;
+  padding: 0 0 20px;
+  font-size: 0.8rem;
+}
+
+.toc-title {
+  font-weight: 700;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: 0.72rem;
+}
+
+.toc ul { list-style: none; margin: 0; padding: 0; }
+.toc li a {
+  display: block;
+  padding: 4px 0 4px 12px;
+  border-left: 2px solid var(--border);
+  color: var(--text-muted);
+  text-decoration: none;
+  line-height: 1.5;
+}
+.toc li a:hover { color: var(--text); }
+.toc li a.is-active {
+  border-left-color: var(--level-color);
+  color: var(--text);
+  font-weight: 700;
+}
+
+/* --- フッター --- */
+.site-footer {
+  border-top: 1px solid var(--border);
+  padding: 32px 20px 48px;
+  text-align: center;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+
+/* ========================== §5 コンポーネント ========================== */
+
+/* ----- 5.1 レベルバッジ / レベルカード ----- */
+.level-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 12px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #fff;
+  background: var(--level-color);
+  letter-spacing: 0.03em;
+}
+[data-theme="dark"] .level-badge { color: var(--bg); }
+
+.level-map {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 20px;
+  margin: 2rem 0;
+}
+
+.level-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 22px 22px 18px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-top: 4px solid var(--lv, var(--primary)); /* --lv はJSがカード毎に設定 */
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  color: var(--text);
+  text-decoration: none;
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+.level-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-lift); }
+
+.level-card .lv-num {
+  font-family: var(--font-serif);
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--lv, var(--primary));
+  letter-spacing: 0.08em;
+}
+
+.level-card .lv-title {
+  font-size: 1.12rem;
+  font-weight: 700;
+  line-height: 1.5;
+}
+
+.level-card .lv-subtitle {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  flex: 1;
+}
+
+.level-card .lv-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  margin-top: 6px;
+}
+
+/* レッスン一覧 (レベル目次ページ用) */
+.lesson-list { list-style: none; margin: 1.5rem 0; padding: 0; display: grid; gap: 10px; }
+
+.lesson-list a {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  padding: 14px 18px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  text-decoration: none;
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+.lesson-list a:hover { border-color: var(--level-color); transform: translateX(3px); }
+
+.lesson-list .ls-id {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--level-color);
+  flex-shrink: 0;
+}
+
+.lesson-list .ls-title { font-weight: 700; }
+.lesson-list .ls-summary { font-size: 0.82rem; color: var(--text-muted); margin-left: auto; text-align: right; }
+
+/* ----- 5.2 学習ボックス -----
+ * 使い方:
+ *   <div class="box box-def">
+ *     <div class="box-title">定義 — 条件付き確率</div>
+ *     <p>…</p>
+ *   </div>
+ * 種類: box-def(定義) box-thm(定理・公式) box-ex(例題) box-practice(演習)
+ *       box-intuition(直感) box-warn(つまずき注意) box-sim(やってみよう)
+ */
+.box {
+  --box-color: var(--primary);
+  margin: 1.8em 0;
+  padding: 18px 20px 14px;
+  border-radius: var(--radius);
+  border: 1px solid color-mix(in srgb, var(--box-color) 32%, var(--border));
+  border-left: 5px solid var(--box-color);
+  background: color-mix(in srgb, var(--box-color) 6%, var(--surface));
+}
+
+.box > :last-child { margin-bottom: 0; }
+
+.box-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  font-size: 0.92rem;
+  color: var(--box-color);
+  margin-bottom: 0.6em;
+}
+.box-title::before { font-size: 1rem; }
+
+.box-def       { --box-color: #2f6fde; }
+.box-def       .box-title::before { content: "📘"; }
+.box-thm       { --box-color: #2d4f8f; }
+.box-thm       .box-title::before { content: "⚖️"; }
+.box-ex        { --box-color: #1f9d63; }
+.box-ex        .box-title::before { content: "✏️"; }
+.box-practice  { --box-color: #d97b16; }
+.box-practice  .box-title::before { content: "🏋️"; }
+.box-intuition { --box-color: #b58a00; }
+.box-intuition .box-title::before { content: "💡"; }
+.box-warn      { --box-color: #cc3a3a; }
+.box-warn      .box-title::before { content: "⚠️"; }
+.box-sim       { --box-color: #8a4fd0; }
+.box-sim       .box-title::before { content: "🎲"; }
+
+[data-theme="dark"] .box-def       { --box-color: #6695ec; }
+[data-theme="dark"] .box-thm       { --box-color: #7ea2e0; }
+[data-theme="dark"] .box-ex        { --box-color: #34c184; }
+[data-theme="dark"] .box-practice  { --box-color: #e89a45; }
+[data-theme="dark"] .box-intuition { --box-color: #d4b13a; }
+[data-theme="dark"] .box-warn      { --box-color: #e06666; }
+[data-theme="dark"] .box-sim       { --box-color: #ad7fe0; }
+
+/* 解答の折りたたみ (演習ボックス内で使用) */
+details.answer {
+  margin-top: 0.8em;
+  border-top: 1px dashed color-mix(in srgb, var(--box-color) 40%, var(--border));
+  padding-top: 0.6em;
+}
+details.answer summary {
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 0.88rem;
+  color: var(--box-color);
+  user-select: none;
+}
+details.answer[open] summary { margin-bottom: 0.5em; }
+
+/* ----- 5.3 数式 / コード / 表 ----- */
+
+/* 重要数式の独立表示。KaTeX display math を中に置く */
+.formula {
+  margin: 1.8em 0;
+  padding: 20px 24px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow-x: auto;
+  text-align: center;
+}
+
+.formula .formula-label {
+  display: block;
+  text-align: left;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--level-color);
+  margin-bottom: 8px;
+}
+
+/* 数式の部品に注釈を付けるとき (事前確率/尤度 など) */
+.formula-parts {
+  display: flex;
+  justify-content: center;
+  gap: 24px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+.formula-parts .part b { color: var(--level-color); }
+
+code {
+  font-family: var(--font-mono);
+  font-size: 0.86em;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 1px 6px;
+}
+
+pre {
+  margin: 1.5em 0;
+  padding: 16px 20px;
+  background: #20242e;
+  color: #e8eaf0;
+  border-radius: var(--radius);
+  overflow-x: auto;
+  line-height: 1.65;
+  font-size: 0.85rem;
+}
+[data-theme="dark"] pre { background: #10131a; border: 1px solid var(--border); }
+pre code { background: none; border: none; padding: 0; color: inherit; font-size: inherit; }
+
+table {
+  border-collapse: collapse;
+  margin: 1.5em 0;
+  width: 100%;
+  font-size: 0.92rem;
+  background: var(--surface);
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: 0 0 0 1px var(--border);
+}
+th, td { padding: 10px 14px; text-align: left; border-bottom: 1px solid var(--border); }
+thead th { background: color-mix(in srgb, var(--level-color) 9%, var(--surface)); font-size: 0.85rem; }
+tbody tr:last-child td { border-bottom: none; }
+tbody tr:hover { background: var(--surface-2); }
+
+/* シミュレーション/図の挿入枠 (canvas や svg を中に置く) */
+.figure {
+  margin: 1.8em 0;
+  padding: 20px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  text-align: center;
+}
+.figure figcaption {
+  margin-top: 10px;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+/* ----- 5.4 クイズ (main.js が動作を付与) -----
+ * <div class="quiz" data-answer="b">
+ *   <p class="quiz-q">問: …</p>
+ *   <button class="quiz-option" data-key="a">選択肢A</button>
+ *   <button class="quiz-option" data-key="b">選択肢B</button>
+ *   <div class="quiz-explain"><p>解説…</p></div>
+ * </div>
+ */
+.quiz {
+  margin: 1.8em 0;
+  padding: 18px 20px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.quiz::before {
+  content: "✅ 理解度チェック";
+  display: block;
+  font-weight: 700;
+  font-size: 0.92rem;
+  color: var(--level-color);
+  margin-bottom: 0.6em;
+}
+
+.quiz .quiz-q { font-weight: 700; }
+
+.quiz-option {
+  display: block;
+  width: 100%;
+  text-align: left;
+  margin: 8px 0;
+  padding: 10px 14px;
+  font: inherit;
+  font-size: 0.92rem;
+  color: var(--text);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: border-color 0.12s ease;
+}
+.quiz-option:hover { border-color: var(--level-color); }
+
+.quiz-option.is-correct {
+  border-color: var(--level0);
+  background: color-mix(in srgb, var(--level0) 12%, var(--surface));
+  font-weight: 700;
+}
+.quiz-option.is-wrong {
+  border-color: #cc3a3a;
+  background: color-mix(in srgb, #cc3a3a 10%, var(--surface));
+  opacity: 0.85;
+}
+
+.quiz-explain {
+  display: none;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--border);
+  font-size: 0.92rem;
+}
+.quiz.is-answered .quiz-explain { display: block; }
+
+/* ----- 5.5 ボタン / パンくず / 前後ナビ / 進捗 ----- */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 22px;
+  border-radius: 999px;
+  font: inherit;
+  font-weight: 700;
+  font-size: 0.95rem;
+  text-decoration: none;
+  cursor: pointer;
+  border: 1.5px solid transparent;
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+.btn:hover { transform: translateY(-1px); }
+
+.btn-primary { background: var(--primary); color: #fff; }
+[data-theme="dark"] .btn-primary { color: var(--bg); }
+
+.btn-outline { border-color: var(--border); color: var(--text); background: var(--surface); }
+.btn-outline:hover { border-color: var(--primary); }
+
+.btn-level { background: var(--level-color); color: #fff; }
+[data-theme="dark"] .btn-level { color: var(--bg); }
+
+/* テーマ切替 */
+.theme-toggle {
+  display: grid;
+  place-items: center;
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  cursor: pointer;
+  font-size: 1rem;
+}
+
+/* パンくず */
+.breadcrumbs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin: 24px 0 8px;
+}
+.breadcrumbs a { color: var(--text-muted); }
+.breadcrumbs .sep { opacity: 0.5; }
+
+/* 前後レッスンナビ (main.js が生成) */
+.lesson-nav {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin-top: 3.5rem;
+}
+
+.lesson-nav a {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px 18px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  text-decoration: none;
+  color: var(--text);
+  transition: border-color 0.15s ease;
+}
+.lesson-nav a:hover { border-color: var(--level-color); }
+.lesson-nav .nav-dir { font-size: 0.75rem; color: var(--text-muted); }
+.lesson-nav .nav-title { font-weight: 700; font-size: 0.92rem; }
+.lesson-nav .nav-next { text-align: right; grid-column: 2; }
+.lesson-nav .nav-prev { grid-column: 1; }
+
+/* 進捗バー */
+.progress-bar {
+  position: relative;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  overflow: hidden;
+  min-width: 60px;
+}
+.progress-bar > span {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 0%;
+  border-radius: inherit;
+  background: var(--lv, var(--level-color));
+  transition: width 0.4s ease;
+}
+
+/* 「このレッスンを完了にする」 */
+.complete-area {
+  margin-top: 3rem;
+  padding: 20px;
+  text-align: center;
+  border: 1.5px dashed var(--border);
+  border-radius: var(--radius);
+}
+.complete-area.is-done {
+  border-color: var(--level0);
+  background: color-mix(in srgb, var(--level0) 7%, transparent);
+}
+.complete-area .complete-note { font-size: 0.82rem; color: var(--text-muted); margin: 8px 0 0; }
+
+/* 学習目標 / 前提知識 (レッスン冒頭) */
+.lesson-goals {
+  display: grid;
+  gap: 12px;
+  margin: 1.5rem 0 0;
+  padding: 18px 20px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 0.92rem;
+}
+.lesson-goals h2 {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--level-color);
+  border: none;
+  padding: 0;
+}
+.lesson-goals ul { margin: 0; padding-left: 1.3em; }
+.lesson-goals .prereq { font-size: 0.85rem; color: var(--text-muted); }
+.lesson-goals .prereq a { color: var(--level-color); }
+
+/* ============================ §6 その他 ============================ */
+.text-center { text-align: center; }
+.mt-0 { margin-top: 0; }
+.muted { color: var(--text-muted); }
+
+/* ヒーロー (トップページ) */
+.hero {
+  position: relative;
+  padding: 72px 0 56px;
+  overflow: hidden;
+}
+
+.hero .hero-formula {
+  position: absolute;
+  right: -40px;
+  top: 12px;
+  font-family: var(--font-serif);
+  font-size: 7rem;
+  font-weight: 700;
+  color: color-mix(in srgb, var(--primary) 7%, transparent);
+  pointer-events: none;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.hero h1 {
+  font-size: 2.5rem;
+  letter-spacing: 0.02em;
+  margin-bottom: 0.4em;
+}
+
+.hero .hero-lead {
+  max-width: 560px;
+  font-size: 1.05rem;
+  color: var(--text-muted);
+}
+
+.hero .hero-actions { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 28px; }
+
+/* 特徴カード (トップページ) */
+.feature-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 18px;
+  margin: 1.5rem 0 3rem;
+}
+.feature-card {
+  padding: 20px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.feature-card .feature-icon { font-size: 1.6rem; }
+.feature-card h3 { margin: 0.4em 0 0.3em; font-size: 1rem; }
+.feature-card p { margin: 0; font-size: 0.88rem; color: var(--text-muted); }
+
+/* セクション見出し (トップページ) */
+.section-title {
+  font-family: var(--font-serif);
+  font-size: 1.5rem;
+  margin: 3.5rem 0 0.4rem;
+}
+.section-title + .section-lead { color: var(--text-muted); margin-bottom: 1.5rem; }
+
+/* モバイル用サイドバートグル */
+.sidebar-toggle {
+  display: none;
+  place-items: center;
+  width: 36px; height: 36px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  cursor: pointer;
+  font-size: 1.05rem;
+}
+
+/* --- レスポンシブ --- */
+@media (max-width: 1100px) {
+  .layout { grid-template-columns: var(--sidebar-w) minmax(0, 1fr); }
+  .toc { display: none; }
+}
+
+@media (max-width: 840px) {
+  .layout { grid-template-columns: minmax(0, 1fr); }
+
+  .sidebar-toggle { display: grid; }
+
+  .sidebar {
+    position: fixed;
+    left: 0;
+    top: var(--header-h);
+    z-index: 90;
+    width: min(82vw, 320px);
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    padding: 20px 16px 60px;
+    transform: translateX(-100%);
+    transition: transform 0.22s ease;
+    box-shadow: none;
+  }
+  .sidebar.is-open { transform: translateX(0); box-shadow: var(--shadow-lift); }
+
+  .hero h1 { font-size: 1.8rem; }
+  .hero .hero-formula { font-size: 4rem; top: auto; bottom: -10px; }
+  .brand .brand-tagline { display: none; }
+  .header-progress .progress-bar { display: none; }
+  .lesson-nav { grid-template-columns: 1fr; }
+  .lesson-nav .nav-next { grid-column: 1; }
+  .lesson-list a { flex-wrap: wrap; }
+  .lesson-list .ls-summary { margin-left: 0; text-align: left; width: 100%; }
+}
+
+/* --- 印刷 --- */
+@media print {
+  .site-header, .sidebar, .toc, .lesson-nav, .complete-area, .quiz, .theme-toggle { display: none !important; }
+  .layout { display: block; }
+  body { background: #fff; color: #000; }
+  .box { break-inside: avoid; }
+}

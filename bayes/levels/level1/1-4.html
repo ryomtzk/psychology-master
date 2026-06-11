@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>1-4 事前確率・尤度・事後確率 | ベイズの階段</title>
+  <meta name="description" content="ベイズの定理の各部品に名前と意味を与える">
+  <script>
+    document.documentElement.dataset.theme =
+      localStorage.getItem("bayes-stairs-theme") ||
+      (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Noto+Serif+JP:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../assets/css/main.css">
+
+  <!-- KaTeX: 数式を使うページでは必ずこの3行を入れる -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+          onload="renderMathInElement(document.body, {delimiters: [
+            {left: '$$', right: '$$', display: true},
+            {left: '\\(', right: '\\)', display: false}
+          ]});"></script>
+</head>
+<body data-root="../../" data-level="1" data-lesson-id="1-4">
+
+  <header class="site-header">
+    <button class="sidebar-toggle" id="sidebar-toggle" aria-label="メニュー">☰</button>
+    <a class="brand" href="../../index.html">
+      <span class="brand-mark">階</span>
+      <span>ベイズの階段</span>
+    </a>
+    <div class="header-spacer"></div>
+    <div class="header-progress" id="header-progress"></div>
+    <button class="theme-toggle" id="theme-toggle" aria-label="テーマ切替">🌙</button>
+  </header>
+
+  <div class="layout">
+
+    <!-- サイドバー: main.js がカリキュラムから自動生成 -->
+    <aside class="sidebar"><nav id="sidebar-nav" aria-label="カリキュラム"></nav></aside>
+
+    <main class="lesson">
+
+      <nav class="breadcrumbs" aria-label="パンくず">
+        <a href="../../index.html">ホーム</a><span class="sep">›</span>
+        <a href="index.html">Level 1 条件付き確率とベイズの定理</a><span class="sep">›</span>
+        <span>1-4 事前確率・尤度・事後確率</span>
+      </nav>
+
+      <header class="lesson-header">
+        <div class="lesson-meta">
+          <span class="level-badge">Level 1</span>
+          <span class="small">レッスン 1-4</span>
+        </div>
+        <h1>事前確率・尤度・事後確率</h1>
+
+        <div class="lesson-goals">
+          <h2>このレッスンでできるようになること</h2>
+          <ul>
+            <li>ベイズの定理の4つの部品(事前確率・尤度・周辺尤度・事後確率)を名前で言える</li>
+            <li>それぞれの部品が「どんな意味の確率か」を自分の言葉で説明できる</li>
+            <li>比例形「事後 ∝ 尤度 × 事前」を読み、何が省かれているか理解できる</li>
+          </ul>
+          <p class="prereq">前提: <a href="1-3.html">1-3 ベイズの定理の導出</a> を読んでいること</p>
+        </div>
+      </header>
+
+      <!-- ▼▼▼ ここからレッスン本文 ▼▼▼ -->
+      <div class="lesson-body">
+
+        <h2>式は導けた。でも、まだ「使える」気がしない</h2>
+
+        <p>前のレッスンで、ベイズの定理を自分の手で導きました。式そのものはもう書けます。でも、こんな気持ちが残っていませんか。</p>
+
+        <p>「分子と分母に確率がいくつも出てくるけど、どれが何だっけ?」</p>
+
+        <p>これは当然です。式の形を覚えても、それぞれの確率が<strong>何を表しているのか</strong>に名前がついていないと、頭の中で迷子になります。料理でいえば、材料はそろったのに、どれが砂糖でどれが塩か区別できていない状態です。</p>
+
+        <p>このレッスンの仕事は、ベイズの定理に出てくる4つの確率に、ひとつずつ名前と意味を与えることです。名前がつけば、式は「覚えるもの」から「読めるもの」に変わります。</p>
+
+        <div class="box box-intuition">
+          <div class="box-title">直感でつかむ</div>
+          <p>ベイズの定理は、ひとことで言えば<strong>「考えを更新する手続き」</strong>です。</p>
+          <p>まず、データを見る前に「たぶんこうだろう」という見当があります。次に新しいデータが届きます。すると見当が更新されて、「データを見たあとはこう思う」という新しい考えになります。</p>
+          <p>この<strong>前</strong>の考えが事前確率、<strong>後</strong>の考えが事後確率です。そして両者をつなぐのが尤度(ゆうど)。名前はこの「前・つなぎ・後」の流れさえつかめば、もう半分わかったようなものです。</p>
+        </div>
+
+        <h2>登場人物を「仮説」と「データ」にそろえる</h2>
+
+        <p>これまで条件付き確率を \(P(A \mid B)\) と書いてきました。\(A\) や \(B\) は何でもよい事象でした。ここからは言葉を統一します。</p>
+
+        <p>知りたいことのほうを<span class="term">仮説(かせつ)</span>と呼び、記号 \(H\) で表します。\(H\) は Hypothesis(仮説)の頭文字です。たとえば「この人は病気だ」「このコインは表が出やすい」などが仮説です。</p>
+
+        <p>そして、観測して手に入った事実のほうを<span class="term">データ</span>と呼び、記号 \(D\) で表します。\(D\) は Data の頭文字です。「検査が陽性だった」「コインを投げたら表が出た」などがデータです。</p>
+
+        <div class="box box-warn">
+          <div class="box-title">つまずき注意</div>
+          <p>仮説 \(H\) は「<strong>確かめたいけれど直接は見えないこと</strong>」、データ \(D\) は「<strong>実際に目で見えた・観測できたこと</strong>」です。この向きを逆にすると、式の意味がまるごとひっくり返ります。</p>
+          <p>迷ったら「自分が知りたいのはどっち?」と問えば \(H\) が決まります。知りたいほうが仮説です。</p>
+        </div>
+
+        <p>この言葉でベイズの定理を書くと、こうなります。記号 \(P(H \mid D)\) は『\(D\) のもとでの \(H\) の確率』と読みます。</p>
+
+        <div class="formula">
+          <span class="formula-label">ベイズの定理(仮説とデータの言葉で)</span>
+          $$ P(H \mid D) = \frac{P(D \mid H)\, P(H)}{P(D)} $$
+        </div>
+
+        <p>この式の右辺と左辺には、それぞれ専用の名前があります。順番に見ていきましょう。</p>
+
+        <h2>4つの部品に名前をつける</h2>
+
+        <div class="box box-def">
+          <div class="box-title">定義 — 事前確率</div>
+          <p>データを見る<strong>前</strong>に、その仮説 \(H\) をどれくらい確からしいと思っているかを表す確率 \(P(H)\) を<span class="term">事前確率(じぜんかくりつ)</span>と呼びます。英語では prior(プライアー)です。</p>
+          <p>「もともとの見当」「出発点の信念」と思ってください。データが届く前の、いわばスタート地点の確率です。</p>
+        </div>
+
+        <div class="box box-def">
+          <div class="box-title">定義 — 尤度</div>
+          <p>仮説 \(H\) が<strong>正しいと仮定したとき</strong>に、手元のデータ \(D\) が観測される確率 \(P(D \mid H)\) を<span class="term">尤度(ゆうど)</span>と呼びます。英語では likelihood(ライクリフッド)です。</p>
+          <p>「もし \(H\) が本当だとしたら、このデータはどれくらい出やすい?」を測る量です。仮説からデータへ、という<strong>順向き</strong>の確率になっている点がポイントです。</p>
+        </div>
+
+        <div class="box box-def">
+          <div class="box-title">定義 — 周辺尤度</div>
+          <p>仮説が何であれ、とにかくデータ \(D\) が観測される確率 \(P(D)\) を<span class="term">周辺尤度(しゅうへんゆうど)</span>と呼びます。「データ全体の出やすさ」とも言えます。</p>
+          <p>これは式の<strong>分母</strong>にあたり、計算結果の合計をきちんと1に整える「割り算の相手」の役割をします。<span class="term">正規化定数(せいきかていすう)</span>と呼ばれることもあります。</p>
+        </div>
+
+        <div class="box box-def">
+          <div class="box-title">定義 — 事後確率</div>
+          <p>データ \(D\) を見た<strong>後</strong>に、仮説 \(H\) がどれくらい確からしいかを表す確率 \(P(H \mid D)\) を<span class="term">事後確率(じごかくりつ)</span>と呼びます。英語では posterior(ポステリアー)です。</p>
+          <p>これがベイズの定理で<strong>最終的に知りたい答え</strong>です。データを取り込んで更新された、新しい信念だと考えてください。</p>
+        </div>
+
+        <p>4つの部品を、ベイズの定理の上に並べて見てみましょう。式のどの位置にどの名前が来るか、一目でわかります。</p>
+
+        <div class="formula">
+          <span class="formula-label">名前つきのベイズの定理</span>
+          $$ \underbrace{P(H \mid D)}_{\text{事後確率}} = \frac{\overbrace{P(D \mid H)}^{\text{尤度}} \times \overbrace{P(H)}^{\text{事前確率}}}{\underbrace{P(D)}_{\text{周辺尤度}}} $$
+          <div class="formula-parts">
+            <span class="part"><b>事前確率</b> \(P(H)\): データを見る前の信念</span>
+            <span class="part"><b>尤度</b> \(P(D\mid H)\): 仮説のもとでのデータの出やすさ</span>
+            <span class="part"><b>周辺尤度</b> \(P(D)\): データ全体の出やすさ(分母・正規化)</span>
+            <span class="part"><b>事後確率</b> \(P(H\mid D)\): データを見た後の信念</span>
+          </div>
+        </div>
+
+        <p>言葉だけで読み直すと、ベイズの定理はこう言っています。</p>
+
+        <div class="figure">
+          <figure class="figure">
+            <svg viewBox="0 0 520 150" width="520" aria-label="事前から事後への更新の流れ">
+              <!-- 事前 -->
+              <rect x="20" y="50" width="120" height="50" rx="8" fill="none" stroke="var(--level-color)" stroke-width="2.5"/>
+              <text x="80" y="72" text-anchor="middle" font-size="15" font-weight="700" fill="var(--text)">事前確率</text>
+              <text x="80" y="90" text-anchor="middle" font-size="12" fill="var(--text-muted)">P(H)</text>
+              <!-- 矢印1 -->
+              <line x1="145" y1="75" x2="200" y2="75" stroke="var(--border)" stroke-width="2.5"/>
+              <polygon points="200,75 190,70 190,80" fill="var(--border)"/>
+              <!-- 尤度(つなぎ) -->
+              <rect x="205" y="50" width="110" height="50" rx="8" fill="none" stroke="var(--level-color)" stroke-width="2.5" stroke-dasharray="5 4"/>
+              <text x="260" y="72" text-anchor="middle" font-size="14" font-weight="700" fill="var(--text)">尤度を掛ける</text>
+              <text x="260" y="90" text-anchor="middle" font-size="12" fill="var(--text-muted)">P(D|H)</text>
+              <!-- 矢印2 -->
+              <line x1="320" y1="75" x2="375" y2="75" stroke="var(--border)" stroke-width="2.5"/>
+              <polygon points="375,75 365,70 365,80" fill="var(--border)"/>
+              <!-- 事後 -->
+              <rect x="380" y="50" width="120" height="50" rx="8" fill="var(--level-color)" stroke="var(--level-color)" stroke-width="2.5"/>
+              <text x="440" y="72" text-anchor="middle" font-size="15" font-weight="700" fill="#fff">事後確率</text>
+              <text x="440" y="90" text-anchor="middle" font-size="12" fill="#fff">P(H|D)</text>
+              <!-- ラベル -->
+              <text x="80" y="125" text-anchor="middle" font-size="11" fill="var(--text-muted)">データを見る前</text>
+              <text x="260" y="125" text-anchor="middle" font-size="11" fill="var(--text-muted)">データが届く</text>
+              <text x="440" y="125" text-anchor="middle" font-size="11" fill="var(--text-muted)">データを見た後</text>
+            </svg>
+            <figcaption>図1: 事前確率に尤度を掛けて、事後確率へ更新する流れ。周辺尤度 P(D) は最後に全体を1にそろえる割り算として働く。</figcaption>
+          </figure>
+        </div>
+
+        <h2>比例形 — 「事後 ∝ 尤度 × 事前」</h2>
+
+        <p>ここで、とても便利な書き方を紹介します。分母の周辺尤度 \(P(D)\) は、仮説 \(H\) が何であっても<strong>同じ値</strong>です。データ \(D\) はもう手元に決まっているからです。</p>
+
+        <p>つまり \(P(D)\) は、すべての仮説に共通でかかる「ただの割り算の相手」にすぎません。仮説どうしを比べるとき、分母は誰にとっても同じなので、いったん脇に置いても大小関係は変わりません。</p>
+
+        <p>そこで分母を省略し、記号 \(\propto\)(比例する、proportional)を使ってこう書きます。\(\propto\) は『左辺は右辺に比例する』と読みます。</p>
+
+        <div class="formula">
+          <span class="formula-label">ベイズの定理の比例形</span>
+          $$ \underbrace{P(H \mid D)}_{\text{事後確率}} \;\propto\; \underbrace{P(D \mid H)}_{\text{尤度}} \times \underbrace{P(H)}_{\text{事前確率}} $$
+          <div class="formula-parts">
+            <span class="part">日本語にすると「<b>事後</b> は <b>尤度</b> × <b>事前</b> に比例する」</span>
+            <span class="part">分母 \(P(D)\) は全体を1にそろえるための定数なので省略できる</span>
+          </div>
+        </div>
+
+        <div class="box box-intuition">
+          <div class="box-title">直感でつかむ</div>
+          <p>比例形は、ベイズ統計でいちばんよく口にする合言葉です。<strong>「事後は尤度かける事前」</strong>。これだけは音で覚えてしまいましょう。</p>
+          <p>イメージは、てんびんです。事前確率という「もとの重み」に、尤度という「データからの後押し」を掛け算します。データが仮説をよく説明するほど尤度は大きく、事後確率はぐっと持ち上がります。</p>
+        </div>
+
+        <div class="box box-warn">
+          <div class="box-title">つまずき注意</div>
+          <p>\(\propto\) は「=(イコール)」ではありません。比例形で求めた \(P(D\mid H)\times P(H)\) は、まだ確率の合計が1になっていない<strong>途中の値</strong>です。</p>
+          <p>本当の事後確率にするには、最後に全部の合計で割って合計を1にそろえます。この「合計で割る」作業こそ、省略していた分母 \(P(D)\) の正体です。例題で実際にやってみます。</p>
+        </div>
+
+        <h2>例題で部品を見分ける</h2>
+
+        <div class="box box-ex">
+          <div class="box-title">例題</div>
+          <p>2種類の袋があります。袋Aには赤玉が多く、袋Bには白玉が多いとします。目の前に置かれた袋がどちらかは見えません。事前には、AかBかは半々だと考えています。</p>
+          <ul>
+            <li>仮説 \(H_A\):「この袋はAだ」、仮説 \(H_B\):「この袋はBだ」</li>
+            <li>事前確率: \(P(H_A) = 0.5\)、\(P(H_B) = 0.5\)</li>
+            <li>袋Aから玉を1個引くと赤が出る確率は \(0.8\)、袋Bだと \(0.3\)</li>
+          </ul>
+          <p>実際に1個引いたら<strong>赤</strong>でした。これがデータ \(D\)=「赤が出た」です。各部品を名前で言い当て、事後確率 \(P(H_A \mid D)\) を求めましょう。</p>
+
+          <p><strong>解</strong>: まず部品を見分けます。</p>
+          <ul>
+            <li><b>事前確率</b>: \(P(H_A)=0.5\)、\(P(H_B)=0.5\)(引く前の見当)</li>
+            <li><b>尤度</b>: \(P(D \mid H_A)=0.8\)、\(P(D \mid H_B)=0.3\)(その袋なら赤がどれくらい出るか)</li>
+          </ul>
+
+          <p>比例形「事後 ∝ 尤度 × 事前」で、各仮説の重みを計算します。</p>
+          <p>$$ P(D \mid H_A)\,P(H_A) = 0.8 \times 0.5 = 0.40 $$</p>
+          <p>$$ P(D \mid H_B)\,P(H_B) = 0.3 \times 0.5 = 0.15 $$</p>
+
+          <p>この2つの和が、省略していた<b>周辺尤度</b> \(P(D)\) です。</p>
+          <p>$$ P(D) = 0.40 + 0.15 = 0.55 $$</p>
+
+          <p>最後に、合計1にそろえる(0.55 で割る)と<b>事後確率</b>が出ます。</p>
+          <p>$$ P(H_A \mid D) = \frac{0.40}{0.55} \approx 0.73, \qquad P(H_B \mid D) = \frac{0.15}{0.55} \approx 0.27 $$</p>
+
+          <p>引く前は半々(0.5)だったAへの信念が、赤が出たことで<strong>約0.73まで上がりました</strong>。赤は袋Aで出やすいデータなので、Aの尤度が大きく、事後確率が持ち上がったわけです。これがまさに「考えの更新」です。</p>
+        </div>
+
+        <h2>理解度チェック</h2>
+
+        <div class="quiz" data-answer="c">
+          <p class="quiz-q">問1: 「データを見た後の、仮説に対する信念」を表す確率はどれですか?</p>
+          <button class="quiz-option" data-key="a">事前確率 \(P(H)\)</button>
+          <button class="quiz-option" data-key="b">尤度 \(P(D \mid H)\)</button>
+          <button class="quiz-option" data-key="c">事後確率 \(P(H \mid D)\)</button>
+          <div class="quiz-explain"><p>正解はc。データ \(D\) を見た<strong>後</strong>の仮説 \(H\) の確率 \(P(H \mid D)\) が事後確率です。aはデータを見る前の信念、bは仮説からデータの出やすさを測る量です。</p></div>
+        </div>
+
+        <div class="quiz" data-answer="b">
+          <p class="quiz-q">問2: \(P(D \mid H)\) の名前と意味として正しいものはどれですか?</p>
+          <button class="quiz-option" data-key="a">事前確率。データを見る前の見当</button>
+          <button class="quiz-option" data-key="b">尤度。仮説 \(H\) が正しいときにデータ \(D\) が出る確率</button>
+          <button class="quiz-option" data-key="c">事後確率。データを見た後の信念</button>
+          <div class="quiz-explain"><p>正解はb。\(P(D \mid H)\) は「もし \(H\) が本当なら、このデータ \(D\) はどれくらい出やすいか」を表す尤度です。条件の向き(\(H\) が与えられ、\(D\) を見る)に注目すると見分けられます。</p></div>
+        </div>
+
+        <div class="quiz" data-answer="a">
+          <p class="quiz-q">問3: 比例形「事後 ∝ 尤度 × 事前」で省略されているものは何ですか?</p>
+          <button class="quiz-option" data-key="a">分母の周辺尤度 \(P(D)\)。全体を1にそろえる役割</button>
+          <button class="quiz-option" data-key="b">分子の事前確率 \(P(H)\)。もとの見当</button>
+          <button class="quiz-option" data-key="c">尤度 \(P(D \mid H)\)。データの出やすさ</button>
+          <div class="quiz-explain"><p>正解はa。\(\propto\) を使うと分母 \(P(D)\) が省かれます。\(P(D)\) はどの仮説でも同じ値なので、仮説どうしの比較には影響しません。最後に合計で割って確率にそろえるとき、この \(P(D)\) が戻ってきます。</p></div>
+        </div>
+
+        <h2>演習</h2>
+
+        <div class="box box-practice">
+          <div class="box-title">演習1</div>
+          <p>次の文の中から、事前確率・尤度・事後確率にあたる部分をそれぞれ選んでください。</p>
+          <p>「もともと、このメールが迷惑メールである確率は3割だと考えていた(=ア)。迷惑メールなら『無料』という語が含まれる確率は0.6だ(=イ)。実際に『無料』が含まれていたので、迷惑メールである確率を計算し直した(=ウ)。」</p>
+          <details class="answer">
+            <summary>解答を見る</summary>
+            <p>ア = <b>事前確率</b> \(P(H)\)。データ(語の有無)を見る前の見当(3割)です。</p>
+            <p>イ = <b>尤度</b> \(P(D \mid H)\)。仮説「迷惑メールだ」のもとで、データ「『無料』が含まれる」が出る確率(0.6)です。</p>
+            <p>ウ = <b>事後確率</b> \(P(H \mid D)\)。データを見た後に更新された、迷惑メールである確率です。</p>
+          </details>
+        </div>
+
+        <div class="box box-practice">
+          <div class="box-title">演習2</div>
+          <p>例題と同じ2つの袋の設定で、事前確率は \(P(H_A)=0.5,\ P(H_B)=0.5\) のままとします。今度は1個引いたら<strong>白</strong>でした。袋Aで白が出る確率は \(0.2\)、袋Bで白が出る確率は \(0.7\) です。事後確率 \(P(H_A \mid D)\) を求めてください。</p>
+          <details class="answer">
+            <summary>解答を見る</summary>
+            <p>比例形「事後 ∝ 尤度 × 事前」で各重みを計算します。</p>
+            <p>$$ P(D \mid H_A)\,P(H_A) = 0.2 \times 0.5 = 0.10 $$</p>
+            <p>$$ P(D \mid H_B)\,P(H_B) = 0.7 \times 0.5 = 0.35 $$</p>
+            <p>周辺尤度は和なので \(P(D)=0.10+0.35=0.45\)。合計で割ると、</p>
+            <p>$$ P(H_A \mid D) = \frac{0.10}{0.45} \approx 0.22 $$</p>
+            <p>白は袋Bで出やすいデータなので、Aへの信念は0.5から約0.22へ下がりました。データが仮説と合わないと事後確率は下がる、というわけです。</p>
+          </details>
+        </div>
+
+        <div class="box box-practice">
+          <div class="box-title">演習3</div>
+          <p>「\(P(D \mid H)\) と \(P(H \mid D)\) は同じものだ」と友達が言っています。なぜ違うのか、それぞれの名前を使って一文で説明してください。</p>
+          <details class="answer">
+            <summary>解答を見る</summary>
+            <p>解答例: 「\(P(D \mid H)\) は<b>尤度</b>で、仮説が正しいときにデータが出る確率(仮説→データの順向き)。\(P(H \mid D)\) は<b>事後確率</b>で、データを見た後に仮説が正しい確率(データ→仮説の逆向き)。向きが逆なので別物です。」</p>
+            <p>この2つを取り違えると、Level 0-5 で見た「逆向きの確率」の混同が起きます。ベイズの定理は、まさにこの2つを正しく行き来するための式でした。</p>
+          </details>
+        </div>
+
+        <h2>まとめ</h2>
+        <ul>
+          <li>知りたいことを<strong>仮説 \(H\)</strong>、観測した事実を<strong>データ \(D\)</strong> と呼んで言葉を統一する。</li>
+          <li><strong>事前確率 \(P(H)\)</strong>: データを見る前の信念。出発点。</li>
+          <li><strong>尤度 \(P(D \mid H)\)</strong>: 仮説が正しいときのデータの出やすさ(仮説→データの順向き)。</li>
+          <li><strong>周辺尤度 \(P(D)\)</strong>: データ全体の出やすさ。分母で全体を1にそろえる正規化定数。</li>
+          <li><strong>事後確率 \(P(H \mid D)\)</strong>: データを見た後の信念。これが最終的な答え。</li>
+          <li>合言葉は<strong>「事後 ∝ 尤度 × 事前」</strong>。分母 \(P(D)\) は最後に合計で割って戻す。</li>
+        </ul>
+
+        <p>部品の名前が手に入りました。次のレッスン <strong>1-5</strong> では、この道具を使って有名な落とし穴に挑みます。「精度99%の検査で陽性。なのに本当に病気とは限らない」——その理由を、いま覚えた事前確率・尤度・事後確率の言葉で解き明かしていきましょう。</p>
+
+      </div>
+      <!-- ▲▲▲ レッスン本文ここまで ▲▲▲ -->
+
+      <div class="complete-area">
+        <button class="btn btn-level" id="complete-btn">このレッスンを完了にする</button>
+        <p class="complete-note">進捗はこのブラウザに保存されます</p>
+      </div>
+
+      <!-- 前後ナビ: main.js がカリキュラムから自動生成 -->
+      <nav class="lesson-nav" id="lesson-nav" aria-label="前後のレッスン"></nav>
+
+    </main>
+
+    <!-- ページ内目次: main.js が本文の h2 から自動生成 -->
+    <aside class="toc">
+      <div class="toc-title">このページの内容</div>
+      <nav id="toc"></nav>
+    </aside>
+
+  </div>
+
+  <footer class="site-footer">
+    <p>ベイズの階段 — 中学数学から最前線まで、一段ずつ。</p>
+  </footer>
+
+  <script src="../../assets/js/curriculum.js"></script>
+  <script src="../../assets/js/main.js"></script>
+</body>
+</html>

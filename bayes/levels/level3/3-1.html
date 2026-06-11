@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>3-1 ベイズ更新 — 学習する確率 | ベイズの階段</title>
+  <meta name="description" content="事後分布が次の事前分布になる、逐次更新の考え方">
+  <script>
+    document.documentElement.dataset.theme =
+      localStorage.getItem("bayes-stairs-theme") ||
+      (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Noto+Serif+JP:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../assets/css/main.css">
+
+  <!-- KaTeX: 数式を使うページでは必ずこの3行を入れる -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+          onload="renderMathInElement(document.body, {delimiters: [
+            {left: '$$', right: '$$', display: true},
+            {left: '\\(', right: '\\)', display: false}
+          ]});"></script>
+</head>
+<body data-root="../../" data-level="3" data-lesson-id="3-1">
+
+  <header class="site-header">
+    <button class="sidebar-toggle" id="sidebar-toggle" aria-label="メニュー">☰</button>
+    <a class="brand" href="../../index.html">
+      <span class="brand-mark">階</span>
+      <span>ベイズの階段</span>
+    </a>
+    <div class="header-spacer"></div>
+    <div class="header-progress" id="header-progress"></div>
+    <button class="theme-toggle" id="theme-toggle" aria-label="テーマ切替">🌙</button>
+  </header>
+
+  <div class="layout">
+
+    <!-- サイドバー: main.js がカリキュラムから自動生成 -->
+    <aside class="sidebar"><nav id="sidebar-nav" aria-label="カリキュラム"></nav></aside>
+
+    <main class="lesson">
+
+      <nav class="breadcrumbs" aria-label="パンくず">
+        <a href="../../index.html">ホーム</a><span class="sep">›</span>
+        <a href="index.html">Level 3 ベイズ推定の基礎</a><span class="sep">›</span>
+        <span>3-1 ベイズ更新 — 学習する確率</span>
+      </nav>
+
+      <header class="lesson-header">
+        <div class="lesson-meta">
+          <span class="level-badge">Level 3</span>
+          <span class="small">レッスン 3-1</span>
+        </div>
+        <h1>ベイズ更新 — 学習する確率</h1>
+
+        <div class="lesson-goals">
+          <h2>このレッスンでできるようになること</h2>
+          <ul>
+            <li>「事後 ∝ 尤度 × 事前」の形でベイズの定理を読み書きできる</li>
+            <li>今回の事後分布を次回の事前分布として使う、逐次更新のしくみを説明できる</li>
+            <li>データが増えるほど分布が尖っていく様子を、図とつなげて理解できる</li>
+          </ul>
+          <p class="prereq">前提: <a href="../level1/1-4.html">1-4 事前確率・尤度・事後確率</a> と <a href="../level2/2-6.html">2-6 ベータ分布 — 確率の確率</a> を読んでいること</p>
+        </div>
+      </header>
+
+      <div class="lesson-body">
+
+        <h2>見るたびに、考えが変わる</h2>
+        <p>知らない人と話していて、「この人、関西の人かな?」と感じたとします。最初はただの予感です。でも、たこ焼きの話で盛り上がり、イントネーションが少し独特だと気づくたびに、その予感はだんだん確信に変わっていきますよね。</p>
+        <p>これは、新しい情報を1つ受け取るたびに、頭の中の「もっともらしさ」を少しずつ書きかえている、ということです。じつはこの「少しずつ書きかえる」作業こそ、ベイズ統計の心臓部です。</p>
+        <p>このレッスンでは、コインを1回ずつ投げながら「表の出やすさ」についての考えを更新していきます。データが増えるたびに、私たちの分布がどう変わっていくのかを見ていきましょう。</p>
+
+        <div class="box box-intuition">
+          <div class="box-title">直感でつかむ</div>
+          <p>ベイズ更新は「予想 → 答え合わせ → 予想を直す」のくり返しです。テスト勉強と同じですね。最初の予想（事前）に、実際のデータ（尤度）をかけ合わせて、新しい予想（事後）を作ります。</p>
+          <p>そして大事なのが、できあがった新しい予想を<strong>次の予想のスタート地点</strong>にすることです。考えがどんどん磨かれていく。だから「学習する確率」と呼ぶわけです。</p>
+        </div>
+
+        <h2>ベイズの定理を「更新の式」として読む</h2>
+        <p><a href="../level1/1-4.html">1-4</a> で、事前確率・尤度・事後確率という3つの言葉を学びました。ここではそれを、データを受け取って信念を更新する道具として読み直します。</p>
+
+        <div class="box box-def">
+          <div class="box-title">定義 — ベイズ更新（こうしん）</div>
+          <p><span class="term">ベイズ更新</span>とは、データ \(D\) を観測したときに、ベイズの定理を使って事前分布を事後分布に作りかえる手続きのことです。仮説を \(H\) として、次の式で計算します。</p>
+          $$ P(H \mid D) = \frac{P(D \mid H)\, P(H)}{P(D)} $$
+          <p>\(P(H \mid D)\) は『データ \(D\) を見たあとの \(H\) の確率』、つまり<span class="term">事後確率</span>です。これがベイズ更新の答えになります。</p>
+        </div>
+
+        <p>この式には、毎回同じ値になる部品がひとつあります。分母の \(P(D)\) です。これはデータ \(D\) が出る全体的な確率で、仮説 \(H\) の中身が変わっても変化しません。仮説ごとの大小を比べたいだけなら、ここはいったん脇に置けます。</p>
+
+        <div class="box box-thm">
+          <div class="box-title">公式 — 事後 ∝ 尤度 × 事前</div>
+          <p>分母 \(P(D)\) は仮説によらない定数なので、それを省くと、ベイズの定理は次のすっきりした形になります。</p>
+          $$ \underbrace{P(H \mid D)}_{\text{事後}} \;\propto\; \underbrace{P(D \mid H)}_{\text{尤度}} \times \underbrace{P(H)}_{\text{事前}} $$
+          <p>記号 \(\propto\) は『比例する』と読みます。「事後分布は、尤度と事前分布のかけ算に比例する」という意味です。最後に全体の合計が \(1\) になるように調整（正規化）すれば、ちゃんとした確率分布に戻ります。</p>
+        </div>
+
+        <div class="box box-warn">
+          <div class="box-title">つまずき注意</div>
+          <p>\(\propto\) は「イコール」ではありません。「形は同じで、全体の大きさだけ後で直す」という約束ごとです。分母 \(P(D)\) を省いたぶん、かけ算した値の合計は \(1\) になっていません。それを足して \(1\) になるように割り直す作業が<span class="term">正規化（せいきか）</span>です。「比べるときは省略、答えを出すときは正規化」と覚えましょう。</p>
+        </div>
+
+        <h2>今回の事後が、次回の事前になる</h2>
+        <p>ベイズ更新がいちばん輝くのは、データを1個ずつ受け取るときです。ここで、このレッスンの主役となる考え方が登場します。</p>
+
+        <div class="box box-def">
+          <div class="box-title">定義 — 逐次更新（ちくじこうしん）</div>
+          <p><span class="term">逐次更新</span>とは、データを1つずつ取り込みながら、ベイズ更新をくり返すことです。このとき、<strong>今回計算した事後分布を、そのまま次回の事前分布として使います</strong>。</p>
+          <p>図にすると、こんなバトンリレーです。</p>
+          $$ \text{事前}_1 \xrightarrow{\;D_1\;} \text{事後}_1 = \text{事前}_2 \xrightarrow{\;D_2\;} \text{事後}_2 = \text{事前}_3 \xrightarrow{\;D_3\;} \cdots $$
+        </div>
+
+        <p>\(D_1\) を見て得た事後分布が、そのまま \(D_2\) を見るときの事前分布になります。前回までに学んだことを引き継いで、次のデータに向き合う。まさに、経験から学習していくイメージそのものですね。</p>
+
+        <div class="box box-intuition">
+          <div class="box-title">直感でつかむ</div>
+          <p>うれしいことに、データを「1個ずつ順番に」更新しても、「まとめて一気に」更新しても、最終的な事後分布は同じになります。順番は気にしなくてよいのです。</p>
+          <p>だから安心して、データが来たそばから少しずつ取り込めます。全部そろうのを待たなくていい。これが逐次更新の便利なところです。</p>
+        </div>
+
+        <h2>コインで体験する — 分布が尖っていく</h2>
+        <p>では、実際にコインで更新を体験しましょう。あるコインの「表が出る確率」を \(\theta\)（シータ）とします。\(\theta\) は \(0\) から \(1\) のどこかにある数ですが、その値はわかりません。そこで \(\theta\) 自体を分布で表します。これが <a href="../level2/2-6.html">2-6</a> で学んだ<span class="term">ベータ分布</span>の出番です。</p>
+        <p>最初は「表も裏も同じくらい出そう」くらいの軽い気持ちから始めます。これを事前分布とします。下の図は、コインを1回ずつ投げて結果を取り込むたびに、\(\theta\) の分布がどう変わるかを表したものです。</p>
+
+        <figure class="figure">
+          <svg viewBox="0 0 520 280" width="520" aria-label="コインを観測するたびに事後分布が尖っていく様子">
+            <!-- 軸 -->
+            <line x1="40" y1="230" x2="490" y2="230" stroke="var(--border)" stroke-width="2"/>
+            <line x1="40" y1="20" x2="40" y2="230" stroke="var(--border)" stroke-width="2"/>
+            <!-- x軸目盛り 0 / 0.5 / 1 -->
+            <line x1="40"  y1="230" x2="40"  y2="236" stroke="var(--border)" stroke-width="1"/>
+            <line x1="265" y1="230" x2="265" y2="236" stroke="var(--border)" stroke-width="1"/>
+            <line x1="490" y1="230" x2="490" y2="236" stroke="var(--border)" stroke-width="1"/>
+            <text x="40"  y="250" text-anchor="middle" font-size="11" fill="var(--text-muted)">0</text>
+            <text x="265" y="250" text-anchor="middle" font-size="11" fill="var(--text-muted)">0.5</text>
+            <text x="490" y="250" text-anchor="middle" font-size="11" fill="var(--text-muted)">1</text>
+            <text x="265" y="270" text-anchor="middle" font-size="12" fill="var(--text-muted)">表の出やすさ θ</text>
+            <text x="20"  y="125" text-anchor="middle" font-size="12" fill="var(--text-muted)" transform="rotate(-90 20 125)">もっともらしさ</text>
+
+            <!-- 最初(事前): 平らな分布 -->
+            <line x1="40" y1="200" x2="490" y2="200" fill="none" stroke="var(--text-muted)" stroke-width="2" stroke-dasharray="5 4"/>
+            <text x="150" y="192" font-size="11" fill="var(--text-muted)">最初(平ら)</text>
+
+            <!-- 1回観測後: なだらかな山 (θ=0.5あたり、低くて幅広) -->
+            <path d="M40,200 C150,200 200,150 265,150 C330,150 380,200 490,200"
+                  fill="none" stroke="var(--level-color)" stroke-width="2" opacity="0.45"/>
+            <!-- 数回観測後: 中くらいの山 -->
+            <path d="M40,225 C190,225 220,95 295,95 C360,95 380,225 490,225"
+                  fill="none" stroke="var(--level-color)" stroke-width="2.5" opacity="0.7"/>
+            <!-- たくさん観測後: 高くて細い山 (θ=0.6あたりに集中) -->
+            <path d="M40,228 C260,228 290,35 310,35 C335,35 360,228 490,228"
+                  fill="none" stroke="var(--level-color)" stroke-width="3"/>
+            <text x="360" y="55" font-size="11" fill="var(--level-color)" font-weight="700">たくさん観測後</text>
+          </svg>
+          <figcaption>図1: コインを観測するたびに、\(\theta\) の分布が尖っていく様子。最初は平ら（どの値も同じくらいありそう）。観測を重ねるほど山が高く細くなり、ありそうな \(\theta\) の範囲がぎゅっと絞られていきます。</figcaption>
+        </figure>
+
+        <p>ポイントは、山が<strong>高く細く</strong>なっていくことです。山が細いほど、「\(\theta\) はこのあたり」と自信を持って言える、という意味になります。データが少ないうちは幅広く、増えるほど一点に絞り込まれる。これが「学習」の正体です。</p>
+
+        <div class="box box-warn">
+          <div class="box-title">つまずき注意</div>
+          <p>分布が尖るのは「データが増えたから」であって、「答えがわかったから」ではありません。たまたま序盤に表が続けば、山は一時的に表寄り（\(\theta\) が大きいほう）にずれます。でも投げ続ければ、山はだんだん本当の値の近くに落ち着いていきます。1回の結果で慌てないことが大切です。</p>
+        </div>
+
+        <h2>手を動かして1回更新してみる</h2>
+        <p>ベータ分布には、コイン投げの結果をとても簡単に取り込める性質があります。<a href="../level2/2-6.html">2-6</a> で見たとおり、表が出たら片方の数を \(1\) 増やし、裏が出たらもう片方を \(1\) 増やすだけです。これを使って、実際に1回更新してみましょう。</p>
+
+        <div class="box box-ex">
+          <div class="box-title">例題</div>
+          <p>あるコインの \(\theta\) について、事前分布を「表も裏も同じくらい」を表す \(\mathrm{Beta}(1, 1)\) とします（\(\mathrm{Beta}\) の2つの数は、ざっくり「これまでに見た表の数+1」「裏の数+1」だと思ってください）。いま、コインを1回投げたら<strong>表</strong>が出ました。事後分布を求め、その意味を説明しましょう。</p>
+          <p><strong>解</strong>: 「事後 ∝ 尤度 × 事前」を使います。事前は \(\mathrm{Beta}(1, 1)\)。観測したデータは「表が1回」なので、尤度は \(\theta\) に比例します（表が出る確率が \(\theta\) だからです）。</p>
+          <p>ベータ分布の更新ルールにあてはめると、表が出たので最初の数を \(1\) 増やします。</p>
+          $$ \mathrm{Beta}(1, 1) \;\xrightarrow{\;\text{表が1回}\;}\; \mathrm{Beta}(1+1,\; 1) = \mathrm{Beta}(2, 1) $$
+          <p>これが事後分布です。\(\mathrm{Beta}(2, 1)\) は \(\theta\) が大きいほど高くなる、右上がりの形をしています。つまり「表が1回出たぶん、\(\theta\) は少し大きめかも」と、ほんの少し考えを更新したわけです。</p>
+          <p>そして大事なのはここから。次にもう1回投げるときは、この \(\mathrm{Beta}(2, 1)\) を<strong>新しい事前分布</strong>として使います。もし次が裏なら、もう片方を増やして \(\mathrm{Beta}(2, 2)\) になります。これが逐次更新です。</p>
+        </div>
+
+        <p>表が \(h\) 回、裏が \(t\) 回出たなら、\(\mathrm{Beta}(1, 1)\) から始めた事後分布は \(\mathrm{Beta}(1 + h,\; 1 + t)\) になります。1個ずつ更新しても、最後にまとめて足しても、同じ答えにたどり着きます。順番によらない、という性質がここでも効いていますね。</p>
+
+        <h2>理解度チェック</h2>
+
+        <div class="quiz" data-answer="b">
+          <p class="quiz-q">問1: 「事後 ∝ 尤度 × 事前」の \(\propto\) の意味として正しいものはどれですか?</p>
+          <button class="quiz-option" data-key="a">左辺と右辺がぴったり等しい</button>
+          <button class="quiz-option" data-key="b">形は同じで、あとで全体の合計が1になるように直せばよい</button>
+          <button class="quiz-option" data-key="c">左辺は右辺より必ず大きい</button>
+          <div class="quiz-explain"><p>\(\propto\) は「比例する」という記号です。分母 \(P(D)\) を省いたぶん合計が \(1\) になっていないので、最後に正規化して確率分布に戻します。「形は合っているが大きさは未調整」というのがポイントです。</p></div>
+        </div>
+
+        <div class="quiz" data-answer="c">
+          <p class="quiz-q">問2: 逐次更新では、1回目のデータから得た事後分布を、2回目では何として使いますか?</p>
+          <button class="quiz-option" data-key="a">2回目の尤度として使う</button>
+          <button class="quiz-option" data-key="b">使わずに、また平らな分布から始める</button>
+          <button class="quiz-option" data-key="c">2回目の事前分布として使う</button>
+          <div class="quiz-explain"><p>逐次更新の心臓部は「今回の事後を、次回の事前にする」ことです。前回までの学習を引き継いで次のデータに向き合うので、考えがどんどん磨かれていきます。</p></div>
+        </div>
+
+        <div class="quiz" data-answer="a">
+          <p class="quiz-q">問3: コインを投げ続けて観測を重ねると、\(\theta\) の事後分布はどう変化していきますか?</p>
+          <button class="quiz-option" data-key="a">山が高く細くなり、ありそうな範囲が絞られていく</button>
+          <button class="quiz-option" data-key="b">山が低く幅広くなり、どんどん曖昧になる</button>
+          <button class="quiz-option" data-key="c">いつも平らなまま、まったく変化しない</button>
+          <div class="quiz-explain"><p>データが増えるほど、分布は高く細くなります。山が細いほど「\(\theta\) はこのあたり」と自信を持って言える、という意味です。データが少ないうちは幅広く、増えるほど一点に絞り込まれます。</p></div>
+        </div>
+
+        <h2>演習</h2>
+
+        <div class="box box-practice">
+          <div class="box-title">演習1</div>
+          <p>事前分布 \(\mathrm{Beta}(3, 2)\) から始めて、コインを1回投げたら<strong>裏</strong>が出ました。事後分布を答えなさい。（ヒント: 裏が出たら2つ目の数を \(1\) 増やします。）</p>
+          <details class="answer">
+            <summary>解答を見る</summary>
+            <p>裏が出たので2つ目の数を \(1\) 増やします。よって事後分布は \(\mathrm{Beta}(3,\; 2+1) = \mathrm{Beta}(3, 3)\) です。\(\mathrm{Beta}(3, 3)\) は \(\theta = 0.5\) を中心とした左右対称の山で、「表も裏も同じくらい」という見方に戻ったことを表します。</p>
+          </details>
+        </div>
+
+        <div class="box box-practice">
+          <div class="box-title">演習2</div>
+          <p>\(\mathrm{Beta}(1, 1)\) から始めて、コインを「表・表・裏」の順で投げました。1回ずつ逐次更新したとき、各ステップの分布を順に書きなさい。</p>
+          <details class="answer">
+            <summary>解答を見る</summary>
+            <p>表が出たら1つ目を、裏が出たら2つ目を \(1\) 増やします。</p>
+            <p>スタート \(\mathrm{Beta}(1, 1)\) → 表で \(\mathrm{Beta}(2, 1)\) → 表で \(\mathrm{Beta}(3, 1)\) → 裏で \(\mathrm{Beta}(3, 2)\)。</p>
+            <p>最終的に \(\mathrm{Beta}(3, 2)\) になりました。表が2回・裏が1回なので、\(\mathrm{Beta}(1+2,\; 1+1) = \mathrm{Beta}(3, 2)\) とまとめて計算した結果と一致します。</p>
+          </details>
+        </div>
+
+        <div class="box box-practice">
+          <div class="box-title">演習3</div>
+          <p>「データを1個ずつ順に更新した事後分布」と「同じデータをまとめて一気に更新した事後分布」は、一致しますか? それとも順番によって変わりますか? 理由も簡単に書きなさい。</p>
+          <details class="answer">
+            <summary>解答を見る</summary>
+            <p>一致します。順番によって変わりません。理由は、各ステップでやっているのは尤度のかけ算であり、かけ算は順番を入れかえても結果が同じだからです。そのため「データが来たそばから少しずつ取り込む」ことが安心してできます。</p>
+          </details>
+        </div>
+
+        <div class="box box-practice">
+          <div class="box-title">演習4</div>
+          <p>友達が「コインを2回投げて2回とも表だった。だから \(\theta\) はちょうど1（必ず表が出る）に違いない」と言っています。ベイズ更新の考え方から、この主張のどこが行きすぎか説明しなさい。</p>
+          <details class="answer">
+            <summary>解答を見る</summary>
+            <p>たった2回のデータでは、分布はまだ大きく尖っていません。\(\mathrm{Beta}(1, 1)\) から始めると事後分布は \(\mathrm{Beta}(3, 1)\) で、\(\theta\) が大きいほうに偏ってはいますが、\(\theta = 1\) と決めつけるほど細くはありません。\(\theta\) が \(0.6\) や \(0.8\) である可能性もまだ十分残っています。「データが増えるほど分布が尖る」のであって、序盤の数回で答えを断定するのは行きすぎです。</p>
+          </details>
+        </div>
+
+        <h2>まとめ</h2>
+        <ul>
+          <li><span class="term">ベイズ更新</span>は、データを観測して事前分布を事後分布に作りかえる手続きです。</li>
+          <li>分母 \(P(D)\) を省くと、ベイズの定理は <strong>事後 ∝ 尤度 × 事前</strong> というすっきりした形になります（\(\propto\) は「比例する」、最後に正規化します）。</li>
+          <li><span class="term">逐次更新</span>では、<strong>今回の事後分布を、次回の事前分布として使います</strong>。経験を引き継いで学習していくイメージです。</li>
+          <li>データを1個ずつ更新しても、まとめて更新しても、最終的な事後分布は同じ。順番によりません。</li>
+          <li>観測を重ねるほど、分布は<strong>高く細く</strong>なり、ありそうな値の範囲が絞られていきます。これが「学習する確率」の正体です。</li>
+        </ul>
+        <p>ベイズ統計は「考えを少しずつ更新する」道具だ、という芯がつかめれば大成功です。つぎの <a href="3-2.html">3-2</a> では、この更新を具体的なベータ・二項モデルとしてきちんと組み立て、事後分布から答えを読み取る方法へ進みます。</p>
+
+      </div>
+
+      <div class="complete-area">
+        <button class="btn btn-level" id="complete-btn">このレッスンを完了にする</button>
+        <p class="complete-note">進捗はこのブラウザに保存されます</p>
+      </div>
+
+      <!-- 前後ナビ: main.js がカリキュラムから自動生成 -->
+      <nav class="lesson-nav" id="lesson-nav" aria-label="前後のレッスン"></nav>
+
+    </main>
+
+    <!-- ページ内目次: main.js が本文の h2 から自動生成 -->
+    <aside class="toc">
+      <div class="toc-title">このページの内容</div>
+      <nav id="toc"></nav>
+    </aside>
+
+  </div>
+
+  <footer class="site-footer">
+    <p>ベイズの階段 — 中学数学から最前線まで、一段ずつ。</p>
+  </footer>
+
+  <script src="../../assets/js/curriculum.js"></script>
+  <script src="../../assets/js/main.js"></script>
+</body>
+</html>

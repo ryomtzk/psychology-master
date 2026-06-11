@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>4-1 解析的に解けない事後分布 | ベイズの階段</title>
+  <meta name="description" content="なぜ計算手法が必要なのか。正規化定数の壁">
+  <script>
+    document.documentElement.dataset.theme =
+      localStorage.getItem("bayes-stairs-theme") ||
+      (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Noto+Serif+JP:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../assets/css/main.css">
+
+  <!-- KaTeX: 数式を使うページでは必ずこの3行を入れる -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+          onload="renderMathInElement(document.body, {delimiters: [
+            {left: '$$', right: '$$', display: true},
+            {left: '\\(', right: '\\)', display: false}
+          ]});"></script>
+</head>
+<body data-root="../../" data-level="4" data-lesson-id="4-1">
+
+  <header class="site-header">
+    <button class="sidebar-toggle" id="sidebar-toggle" aria-label="メニュー">☰</button>
+    <a class="brand" href="../../index.html">
+      <span class="brand-mark">階</span>
+      <span>ベイズの階段</span>
+    </a>
+    <div class="header-spacer"></div>
+    <div class="header-progress" id="header-progress"></div>
+    <button class="theme-toggle" id="theme-toggle" aria-label="テーマ切替">🌙</button>
+  </header>
+
+  <div class="layout">
+
+    <!-- サイドバー: main.js がカリキュラムから自動生成 -->
+    <aside class="sidebar"><nav id="sidebar-nav" aria-label="カリキュラム"></nav></aside>
+
+    <main class="lesson">
+
+      <nav class="breadcrumbs" aria-label="パンくず">
+        <a href="../../index.html">ホーム</a><span class="sep">›</span>
+        <a href="index.html">Level 4 計算ベイズ — MCMCと近似推論</a><span class="sep">›</span>
+        <span>4-1 解析的に解けない事後分布</span>
+      </nav>
+
+      <header class="lesson-header">
+        <div class="lesson-meta">
+          <span class="level-badge">Level 4</span>
+          <span class="small">レッスン 4-1</span>
+        </div>
+        <h1>解析的に解けない事後分布</h1>
+
+        <div class="lesson-goals">
+          <h2>このレッスンでできるようになること</h2>
+          <ul>
+            <li>ベイズの定理の分母 \(P(D)\)（正規化定数）がなぜ計算の壁になるのかを説明できる</li>
+            <li>手で書けるのは「尤度 × 事前」までで、事後分布が解析的に解けない理由を述べられる</li>
+            <li>だからサンプリングや近似が必要になる、という次レベルへの動機づけを言葉にできる</li>
+          </ul>
+          <p class="prereq">前提: <a href="../level1/1-3.html">1-3 ベイズの定理の導出</a> と <a href="../level3/3-2.html">3-2 ベータ・二項モデル</a> を読んでいること</p>
+        </div>
+      </header>
+
+      <!-- ▼▼▼ ここからレッスン本文 ▼▼▼ -->
+      <div class="lesson-body">
+
+        <h2>ここまでは、なぜ計算できたのか</h2>
+        <p>Level 3 では、コインの表が出る確率を当てる問題を手計算で解ききりました。事前分布にベータ分布を選び、データを掛けると、事後分布もきれいなベータ分布になりました。紙とペンだけで答えが出たのです。</p>
+        <p>でも、ちょっと不思議だと思いませんか。世の中の問題が、いつもあんなにうまく解けるのでしょうか。</p>
+        <p>答えは「いいえ」です。むしろ、手で解けたあの問題のほうが特別でした。現実のモデルでは、ベイズの定理を書き下せても、その式の<strong>最後の計算が終わらない</strong>のです。このレッスンでは、その「壁」の正体を見にいきます。</p>
+
+        <div class="box box-intuition">
+          <div class="box-title">直感でつかむ</div>
+          <p>ケーキのレシピを思い浮かべてください。材料の<strong>「混ぜ方」</strong>は完璧にわかっています。砂糖をこれだけ、卵をこれだけ…と、分量の比はすべて手元にあります。</p>
+          <p>ところが、できあがったケーキ全体を「1人前ぴったり」に切り分けようとすると、<strong>全体の重さ</strong>がわからないと割合が決まりません。そして、この全体の重さを量る作業が、なぜか途方もなく大変なのです。</p>
+          <p>ベイズ統計でも同じことが起きます。事後分布の「形」は書けるのに、全体を1にそろえる<strong>割り算</strong>のところで詰まります。今日の主役は、この割る数です。</p>
+        </div>
+
+        <h2>ベイズの定理を、もう一度ながめる</h2>
+        <p>まず、これまで何度も出てきたベイズの定理を書きます。\(\theta\)（シータ）は知りたいパラメータ、\(D\) は手に入ったデータです。</p>
+
+        <div class="formula">
+          <span class="formula-label">ベイズの定理</span>
+          $$ \underbrace{P(\theta \mid D)}_{\text{事後分布}} = \frac{\overbrace{P(D \mid \theta)}^{\text{尤度}} \times \overbrace{P(\theta)}^{\text{事前分布}}}{\underbrace{P(D)}_{\text{正規化定数}}} $$
+          <div class="formula-parts">
+            <span class="part"><b>事前分布</b> \(P(\theta)\): データを見る前の信念</span>
+            <span class="part"><b>尤度</b> \(P(D \mid \theta)\): その \(\theta\) でデータが出る出やすさ</span>
+            <span class="part"><b>事後分布</b> \(P(\theta \mid D)\): データを見た後の信念</span>
+          </div>
+        </div>
+
+        <p>ここで分母の \(P(D)\) に注目します。これを <span class="term">正規化定数（せいきかていすう）</span> と呼びます。<span class="term">周辺尤度（しゅうへんゆうど）</span> とも言います。読み方は「ピー・ディー」、データ \(D\) 全体が観測される確率のことです。</p>
+        <p>大事なのは、\(P(D)\) のなかに \(\theta\) が含まれていないことです。\(\theta\) で値が変わらない、ただの<strong>定数</strong>です。分子だけが \(\theta\) によって上下し、分母は全体を押し下げる「割る数」として働きます。</p>
+
+        <div class="box box-def">
+          <div class="box-title">定義 — 正規化定数 \(P(D)\)</div>
+          <p>正規化定数は、分子（尤度 × 事前分布）を、考えられるすべての \(\theta\) について足し合わせた（積分した）ものです。</p>
+          <p>\(\theta\) が連続な値をとるとき、次の積分で与えられます:</p>
+          $$ P(D) = \int P(D \mid \theta)\, P(\theta)\; d\theta $$
+          <p>この積分があるおかげで、事後分布を全部足すとちょうど 1 になります。確率分布として成立させる「つじつま合わせ」の役割です。<a href="../../appendix/a-2.html">付録 a-2 微分積分の最小限</a> も必要なら見てください。</p>
+        </div>
+
+        <div class="box box-intuition">
+          <div class="box-title">直感でつかむ — なぜ「足し合わせ」なのか</div>
+          <p>\(P(D)\) は、Level 1 で学んだ <a href="../level1/1-2.html">周辺確率</a> そのものです。「どの \(\theta\) だったとしても、とにかくデータ \(D\) が出る確率」を知りたい。だから、ありうる \(\theta\) を全部試して、それぞれの起こりやすさで重みづけして合計します。</p>
+          <p>\(\theta\) がとびとびの値なら \(\sum\)（シグマ、合計）で足せます。連続なら \(\int\)（インテグラル、積分）でなめらかに足します。やっていることは同じ、「全部の場合をならして1本にまとめる」だけです。</p>
+        </div>
+
+        <h2>壁の正体 — 分子は書けるのに、分母が解けない</h2>
+        <p>ここからが本題です。分子の「尤度 × 事前分布」は、いつでも書けます。\(\theta\) をひとつ決めれば、その値での尤度も事前分布も計算できるからです。掛けるだけです。</p>
+        <p>問題は分母の \(\int P(D \mid \theta)\, P(\theta)\, d\theta\) です。この積分が、現実のモデルでは<strong>ほとんど解けません</strong>。理由は2つあります。</p>
+
+        <h3>理由1: 多くの関数は積分の式が存在しない</h3>
+        <p>高校で習う積分は、答えがきれいな式で書ける問題ばかりでした。でも、それは選ばれた例だけです。尤度と事前分布を掛けた関数は、たいてい<strong>原始関数（積分した式）が初等関数で書けない</strong>形になります。式として閉じないのです。</p>
+
+        <h3>理由2: パラメータが増えると「多次元の積分」になる</h3>
+        <p>現実のモデルは、知りたいパラメータが1個では済みません。回帰なら傾きと切片と誤差の大きさ…と、すぐに何十個にもなります。すると \(P(D)\) は次のような<strong>多次元の積分</strong>になります。</p>
+
+        <div class="formula">
+          <span class="formula-label">パラメータが \(k\) 個あるときの正規化定数</span>
+          $$ P(D) = \int \!\! \int \cdots \int P(D \mid \theta_1, \dots, \theta_k)\, P(\theta_1, \dots, \theta_k)\; d\theta_1 \, d\theta_2 \cdots d\theta_k $$
+        </div>
+
+        <p>積分記号が \(k\) 個ならぶことに注目してください。各パラメータの軸を、すべての組み合わせについてくまなく足し上げる必要があります。</p>
+
+        <div class="box box-warn">
+          <div class="box-title">つまずき注意 — 「グリッドで全部足せばいいのでは?」</div>
+          <p>「コンピュータで \(\theta\) を細かく刻んで、全部足せば積分できる」と思うかもしれません。1次元なら、それで十分です。たとえば各軸を100点に刻むとします。</p>
+          <p>でも2次元なら \(100 \times 100 = 1\text{万}\) 点、10次元なら \(100^{10} = 1\) のあとに 0 が20個。これは1垓（がい）という、宇宙の星の数に迫る点数です。次元が増えるたびに必要な計算量が爆発的に増える——これを <span class="term">次元の呪い（じげんののろい）</span> と呼びます。総当たりは、すぐに不可能になります。</p>
+        </div>
+
+        <figure class="figure">
+          <svg viewBox="0 0 460 200" width="460" aria-label="次元が上がると格子点が爆発する様子">
+            <!-- 1D -->
+            <text x="55" y="22" text-anchor="middle" font-size="13" fill="var(--text-muted)">1次元: 5点</text>
+            <line x1="15" y1="60" x2="95" y2="60" stroke="var(--border)" stroke-width="2"/>
+            <circle cx="15" cy="60" r="4" fill="var(--level-color)"/>
+            <circle cx="35" cy="60" r="4" fill="var(--level-color)"/>
+            <circle cx="55" cy="60" r="4" fill="var(--level-color)"/>
+            <circle cx="75" cy="60" r="4" fill="var(--level-color)"/>
+            <circle cx="95" cy="60" r="4" fill="var(--level-color)"/>
+            <!-- 2D -->
+            <text x="230" y="22" text-anchor="middle" font-size="13" fill="var(--text-muted)">2次元: 25点</text>
+            <g>
+              <!-- 5x5 grid -->
+              <g fill="var(--level-color)">
+                <circle cx="185" cy="40" r="3.5"/><circle cx="205" cy="40" r="3.5"/><circle cx="225" cy="40" r="3.5"/><circle cx="245" cy="40" r="3.5"/><circle cx="265" cy="40" r="3.5"/>
+                <circle cx="185" cy="60" r="3.5"/><circle cx="205" cy="60" r="3.5"/><circle cx="225" cy="60" r="3.5"/><circle cx="245" cy="60" r="3.5"/><circle cx="265" cy="60" r="3.5"/>
+                <circle cx="185" cy="80" r="3.5"/><circle cx="205" cy="80" r="3.5"/><circle cx="225" cy="80" r="3.5"/><circle cx="245" cy="80" r="3.5"/><circle cx="265" cy="80" r="3.5"/>
+                <circle cx="185" cy="100" r="3.5"/><circle cx="205" cy="100" r="3.5"/><circle cx="225" cy="100" r="3.5"/><circle cx="245" cy="100" r="3.5"/><circle cx="265" cy="100" r="3.5"/>
+                <circle cx="185" cy="120" r="3.5"/><circle cx="205" cy="120" r="3.5"/><circle cx="225" cy="120" r="3.5"/><circle cx="245" cy="120" r="3.5"/><circle cx="265" cy="120" r="3.5"/>
+              </g>
+            </g>
+            <!-- 3D...kD -->
+            <text x="385" y="22" text-anchor="middle" font-size="13" fill="var(--text-muted)">10次元</text>
+            <text x="385" y="78" text-anchor="middle" font-size="22" font-weight="700" fill="var(--level-color)">10²⁰ 点</text>
+            <text x="385" y="100" text-anchor="middle" font-size="12" fill="var(--text-muted)">（総当たり不能）</text>
+          </svg>
+          <figcaption>図1: 各軸を5点に刻んだだけでも、次元が上がると格子点の総数は爆発的に増える（次元の呪い）。</figcaption>
+        </figure>
+
+        <h2>でも、分子だけは必ず書ける</h2>
+        <p>ここで希望が見えます。分母 \(P(D)\) は \(\theta\) を含まない、ただの定数でした。ということは、事後分布の「形」は分子だけで決まっているのです。分母は形を変えず、高さを一律に調整するだけです。</p>
+        <p>そこで、分母を省いた式に名前をつけます。これを <span class="term">非正規化事後分布（ひせいきかじごぶんぷ）</span> と呼びます。読み方のとおり「正規化されていない事後分布」です。</p>
+
+        <div class="box box-thm">
+          <div class="box-title">公式 — 事後分布は「尤度 × 事前」に比例する</div>
+          <p>記号 \(\propto\)（プロポーショナル）は「〜に比例する」と読みます。割る数 \(P(D)\) が \(\theta\) によらない定数なので、次が成り立ちます:</p>
+          $$ \underbrace{P(\theta \mid D)}_{\text{事後分布}} \;\propto\; \underbrace{P(D \mid \theta)\, P(\theta)}_{\text{非正規化事後分布(=尤度 \times 事前)}} $$
+          <p>つまり、事後分布の<strong>形そのもの</strong>は、面倒な積分をしなくても完全に手に入ります。わからないのは「全体の高さ」だけです。</p>
+        </div>
+
+        <div class="box box-intuition">
+          <div class="box-title">直感でつかむ — 比例だけでも十分なことがある</div>
+          <p>山の地形図を思い浮かべてください。各地点の「相対的な高さの比」さえわかれば、頂上がどこか、尾根がどう走るかは完璧に読めます。海抜の基準（ゼロ点）を知らなくても、山の<strong>形</strong>はわかるのです。</p>
+          <p>非正規化事後分布は、まさにこの「基準なしの地形図」です。\(P(D)\) は海抜ゼロの基準にあたります。形がわかれば、ピーク（最も信じられる \(\theta\)）や、どのあたりに信念が集中しているかは、分母なしで議論できます。</p>
+        </div>
+
+        <h2>例題で「壁」を体感する</h2>
+
+        <div class="box box-ex">
+          <div class="box-title">例題1 — 簡単な場合: コインの表が出る確率</div>
+          <p>コインを5回投げて、表が3回出ました。表が出る確率 \(\theta\)（\(0 \le \theta \le 1\)）を推定します。事前分布は「何もわからない」として一様分布 \(P(\theta)=1\) とします。このとき正規化定数 \(P(D)\) を求めましょう。</p>
+          <p><strong>解</strong>: 表3回・裏2回が出る尤度は、二項分布の形から \(P(D \mid \theta) \propto \theta^3 (1-\theta)^2\) です。事前分布は \(1\) なので、非正規化事後分布は \(\theta^3(1-\theta)^2\)。正規化定数は、これを \(0\) から \(1\) まで積分したものです:</p>
+          $$ P(D) = \int_0^1 \theta^3 (1-\theta)^2 \, d\theta = \frac{1}{60} $$
+          <p>この積分は、展開すれば多項式なので手で解けます。これが Level 3 でやっていた「うまくいく世界」です。事後分布はベータ分布になり、答えがきれいに閉じました。</p>
+        </div>
+
+        <div class="box box-ex">
+          <div class="box-title">例題2 — 解けなくなる場合</div>
+          <p>同じコインの問題でも、事前分布を「\(\theta=0.5\) のあたりが少し怪しい」という凝った形にしたとします。たとえば事前分布を \(P(\theta) \propto e^{-10(\theta-0.5)^2}\)（\(e\) は自然対数の底）のような正規分布ふうの山にしてみます。すると非正規化事後分布は次の形です:</p>
+          $$ P(\theta \mid D) \;\propto\; \theta^3 (1-\theta)^2 \, e^{-10(\theta-0.5)^2} $$
+          <p><strong>解</strong>: 分子（非正規化事後分布）は、\(\theta\) をひとつ決めれば<strong>すぐ計算できます</strong>。\(\theta=0.6\) を入れれば一つの数が返ってきます。形はわかるのです。</p>
+          <p>ところが、正規化定数 \(\displaystyle P(D) = \int_0^1 \theta^3 (1-\theta)^2 e^{-10(\theta-0.5)^2}\, d\theta\) は、<strong>初等関数では書けません</strong>。多項式と \(e\) のかけ算を含む積分で、きれいな式に閉じないのです。たった1次元、たった1個のパラメータでも、事前分布を少しいじっただけで壁にぶつかります。</p>
+          <p>現実のモデルは、ここにパラメータが何十個も加わり、多次元の積分になります。手計算は完全にあきらめるしかありません。</p>
+        </div>
+
+        <div class="box box-warn">
+          <div class="box-title">つまずき注意 — 「解けない」は「無理」ではない</div>
+          <p>誤解しないでください。「\(P(D)\) が計算できない」のは、<strong>手できれいな式に書けない</strong>という意味です。事後分布が存在しないわけでも、答えがないわけでもありません。分布はちゃんとそこにあります。</p>
+          <p>だから方針を変えます。「式で正確に求める」のをやめ、「<strong>近似的に、でも実用十分な精度で</strong>事後分布をつかまえる」道へ進むのです。それが Level 4 のテーマです。</p>
+        </div>
+
+        <h2>だから、サンプリングと近似が要る</h2>
+        <p>壁を整理しましょう。私たちが手にできるのは、非正規化事後分布（尤度 × 事前）まで。割る数 \(P(D)\) は、多次元の積分のせいで計算できない。これがベイズ統計の中心にある計算問題です。</p>
+        <p>この壁を回避する道は、大きく2つあります。どちらも、これから先のレッスンで学びます。</p>
+
+        <table>
+          <thead>
+            <tr><th>アプローチ</th><th>考え方</th><th>主に学ぶ場所</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>サンプリング（MCMC）</td><td>事後分布から「サンプル」をたくさん取り出し、その点の集まりで分布を代表させる。\(P(D)\) を計算せずに済む</td><td>4-2 〜 4-6</td></tr>
+            <tr><td>近似（変分推論）</td><td>解ける簡単な分布で、本物の事後分布をできるだけ似せる。積分を最適化問題に置きかえる</td><td>4-7</td></tr>
+          </tbody>
+        </table>
+
+        <p>共通する発想はこうです。<strong>「分母を求めるのをあきらめる」</strong>。形だけわかっている非正規化事後分布を手がかりに、答えに近づく。次のレッスンからは、その具体的なやり方を一つずつ手に入れていきます。</p>
+
+        <h2>理解度チェック</h2>
+
+        <div class="quiz" data-answer="b">
+          <p class="quiz-q">問1: ベイズの定理の分母 \(P(D)\)（正規化定数）について、正しいのはどれ?</p>
+          <button class="quiz-option" data-key="a">\(\theta\) の値によって大きく変わる関数である</button>
+          <button class="quiz-option" data-key="b">\(\theta\) を含まない定数で、事後分布の「形」は変えない</button>
+          <button class="quiz-option" data-key="c">尤度より先に、必ず最初に計算する必要がある</button>
+          <div class="quiz-explain"><p>正解はB。\(P(D) = \int P(D\mid\theta)P(\theta)\,d\theta\) は \(\theta\) で積分してしまうので、結果に \(\theta\) は残りません。ただの定数です。だから事後分布の形（ピークの位置など）は分子だけで決まり、\(P(D)\) は全体の高さを 1 にそろえる役割だけを担います。</p></div>
+        </div>
+
+        <div class="quiz" data-answer="c">
+          <p class="quiz-q">問2: パラメータの数が増えると正規化定数の計算が急に難しくなる、一番の理由は?</p>
+          <button class="quiz-option" data-key="a">尤度の計算が複雑になり、ひとつの \(\theta\) の値すら計算できなくなるから</button>
+          <button class="quiz-option" data-key="b">事前分布を決められなくなるから</button>
+          <button class="quiz-option" data-key="c">パラメータの数だけ積分が重なり、格子で総当たりすると点の数が爆発するから（次元の呪い）</button>
+          <div class="quiz-explain"><p>正解はC。分子（尤度 × 事前）は、\(\theta\) をひとつ決めればいつでも計算できます。問題は分母の多次元積分です。各軸を100点に刻むだけでも、10次元なら \(100^{10}\) 点と爆発します。これが次元の呪いで、総当たりが不可能になる主因です。</p></div>
+        </div>
+
+        <div class="quiz" data-answer="a">
+          <p class="quiz-q">問3: 「非正規化事後分布」とは何を指す?</p>
+          <button class="quiz-option" data-key="a">尤度 × 事前分布（分母 \(P(D)\) で割る前の式）</button>
+          <button class="quiz-option" data-key="b">事前分布だけのこと</button>
+          <button class="quiz-option" data-key="c">\(P(D)\) そのもの</button>
+          <div class="quiz-explain"><p>正解はA。\(P(\theta\mid D) \propto P(D\mid\theta)\,P(\theta)\) の右辺、つまり「尤度 × 事前分布」が非正規化事後分布です。\(P(D)\) で割っていないので合計が 1 になりませんが、形は本物の事後分布と同じ。MCMCはこの式だけを手がかりに動きます。</p></div>
+        </div>
+
+        <h2>演習</h2>
+
+        <div class="box box-practice">
+          <div class="box-title">演習1</div>
+          <p>「事後分布の形は手に入るのに、答えが確定しない」と言われます。何が手に入っていて、何が足りないのか、自分の言葉で説明してください。</p>
+          <details class="answer">
+            <summary>解答を見る</summary>
+            <p>手に入っているのは <strong>非正規化事後分布（尤度 × 事前分布）</strong> です。\(\theta\) をどこに入れても値が計算でき、どの \(\theta\) が相対的に信じられるか（形・ピークの位置）はすべてわかります。</p>
+            <p>足りないのは <strong>正規化定数 \(P(D)\)</strong>、つまり全体を足すと 1 になるように高さをそろえる「割る数」です。これは多次元の積分なので解析的に求まりません。山の地形図の「形」はあるが「海抜ゼロの基準」がない、という状態です。</p>
+          </details>
+        </div>
+
+        <div class="box box-practice">
+          <div class="box-title">演習2</div>
+          <p>あるモデルでパラメータが3個あり、正規化定数を「各軸を50点に刻んで総当たりで足す」方法で計算したいとします。足し算は何回必要ですか。さらにパラメータが6個になると何回ですか。気づいたことを書いてください。</p>
+          <details class="answer">
+            <summary>解答を見る</summary>
+            <p>3個なら \(50^3 = 125{,}000\) 回。6個なら \(50^6 = 15{,}625{,}000{,}000\)（約156億）回です。</p>
+            <p>パラメータが2倍になっただけで、計算量は約12万倍に跳ね上がります。次元が上がるたびに必要な点数が指数的に増える——これが<strong>次元の呪い</strong>です。総当たり（グリッド)は低次元でしか通用せず、現実のモデルではすぐに破綻するとわかります。</p>
+          </details>
+        </div>
+
+        <div class="box box-practice">
+          <div class="box-title">演習3</div>
+          <p>例題1（事前分布が一様）は手計算で解けたのに、例題2（事前分布を正規分布ふうにした）は解けませんでした。「ベイズの定理の式が書けること」と「答えが式で求まること」は同じではない、という点をふまえて、両者の違いを説明してください。</p>
+          <details class="answer">
+            <summary>解答を見る</summary>
+            <p>どちらのケースでも、ベイズの定理の式そのものは同じように書けます。違うのは<strong>分母の積分が初等関数で閉じるかどうか</strong>です。</p>
+            <p>例題1では非正規化事後分布が \(\theta^3(1-\theta)^2\) という多項式で、積分すれば \(1/60\) ときれいに求まりました（事後分布はベータ分布）。例題2では \(e^{-10(\theta-0.5)^2}\) が掛かり、多項式と指数関数の積になります。これは原始関数が初等関数で書けず、\(P(D)\) が式に閉じません。</p>
+            <p>つまり「式が書ける（定理は成り立つ）」ことと「式で答えが出る（積分が解ける）」ことは別問題。前者はいつでも成り立ち、後者は特別な場合（共役な組み合わせなど）にしか成り立ちません。</p>
+          </details>
+        </div>
+
+        <h2>まとめ</h2>
+        <ul>
+          <li>ベイズの定理の分母 \(P(D) = \int P(D\mid\theta)P(\theta)\,d\theta\) を <strong>正規化定数（周辺尤度)</strong> と呼ぶ。全体を 1 にそろえる割る数で、\(\theta\) を含まない定数。</li>
+          <li>分子の「尤度 × 事前分布」=<strong>非正規化事後分布</strong>はいつでも書ける。事後分布は \(P(\theta\mid D) \propto P(D\mid\theta)P(\theta)\) と、これに<strong>比例</strong>する。形は分母なしで手に入る。</li>
+          <li>正規化定数の積分は、関数の形が初等関数で閉じないことが多く、パラメータが増えると<strong>多次元積分</strong>になる。総当たりは<strong>次元の呪い</strong>で破綻する。</li>
+          <li>だから「分母を正確に求める」のはあきらめ、<strong>サンプリング（MCMC)</strong>や<strong>近似（変分推論)</strong>で事後分布をつかまえる。これが Level 4 の道筋。</li>
+        </ul>
+        <p>次のレッスン <strong>4-2 モンテカルロ法の考え方</strong> では、いよいよ「乱数で積分を近似する」という発想に踏み込みます。分母を計算せずに事後分布を相手にする、その第一歩です。</p>
+
+      </div>
+      <!-- ▲▲▲ レッスン本文ここまで ▲▲▲ -->
+
+      <div class="complete-area">
+        <button class="btn btn-level" id="complete-btn">このレッスンを完了にする</button>
+        <p class="complete-note">進捗はこのブラウザに保存されます</p>
+      </div>
+
+      <!-- 前後ナビ: main.js がカリキュラムから自動生成 -->
+      <nav class="lesson-nav" id="lesson-nav" aria-label="前後のレッスン"></nav>
+
+    </main>
+
+    <!-- ページ内目次: main.js が本文の h2 から自動生成 -->
+    <aside class="toc">
+      <div class="toc-title">このページの内容</div>
+      <nav id="toc"></nav>
+    </aside>
+
+  </div>
+
+  <footer class="site-footer">
+    <p>ベイズの階段 — 中学数学から最前線まで、一段ずつ。</p>
+  </footer>
+
+  <script src="../../assets/js/curriculum.js"></script>
+  <script src="../../assets/js/main.js"></script>
+</body>
+</html>

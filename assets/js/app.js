@@ -188,9 +188,10 @@
     boot() {
       if (this._booted) return;
       this._booted = true;
-      // テーマ
+      // テーマ（未設定ならベイズの階段サブサイトの設定を引き継ぐ）
       const prefs = this.loadPrefs();
-      if (prefs.theme === "dark") document.documentElement.setAttribute("data-theme", "dark");
+      const theme = prefs.theme || localStorage.getItem("bayes-stairs-theme");
+      if (theme === "dark") document.documentElement.setAttribute("data-theme", "dark");
       this.updateThemeIcon();
       document.getElementById("theme-toggle").addEventListener("click", () => this.toggleTheme());
       window.addEventListener("hashchange", () => this.route());
@@ -203,6 +204,8 @@
       if (dark) document.documentElement.removeAttribute("data-theme");
       else document.documentElement.setAttribute("data-theme", "dark");
       const p = this.loadPrefs(); p.theme = dark ? "light" : "dark"; this.savePrefs(p);
+      // ベイズの階段サブサイトにもテーマを反映
+      try { localStorage.setItem("bayes-stairs-theme", p.theme); } catch (e) {}
       this.updateThemeIcon();
     },
     updateThemeIcon() {
@@ -290,6 +293,9 @@
         html += `</div></div>`;
       });
 
+      // 特別コース: ベイズの階段（bayes/ 配下のサブサイト）
+      html += this.bayesCourseBanner();
+
       // 未分類
       const others = this.modules.filter((m) => !CATEGORIES.some((c) => c.id === (m.category || "found")));
       if (others.length) {
@@ -344,6 +350,29 @@
       app.querySelectorAll("[data-goto]").forEach((c) =>
         c.addEventListener("click", () => { location.hash = c.dataset.goto; }));
       this.animateCounts(app);
+    },
+
+    // ベイズの階段（サブサイト）の進捗は bayes-stairs-progress（完了レッスンID配列）を参照
+    bayesCourseBanner() {
+      const BAYES_TOTAL = 38; // bayes/assets/js/curriculum.js の本編レッスン数（付録を除く）
+      let done = 0;
+      try { done = (JSON.parse(localStorage.getItem("bayes-stairs-progress")) || []).length; }
+      catch (e) {}
+      done = Math.min(done, BAYES_TOTAL);
+      const pct = Math.round((done / BAYES_TOTAL) * 100);
+      return `<div class="cat-block">
+        <div class="cat-head"><i class="cat-dot" style="--cat:#2f6fde"></i>特別コース</div>
+        <a class="course-banner" href="bayes/index.html">
+          <div class="course-banner-icon">🪜</div>
+          <div class="course-banner-body">
+            <h3>ベイズの階段 <span class="course-banner-tag">ベイズ統計 専用コース</span></h3>
+            <p>中学数学の確率から出発し、条件付き確率・ベイズの定理・MCMC・PyMCによる実践モデリングまでを全6レベル・${BAYES_TOTAL}レッスンで一段ずつ。心理統計の先にあるベイズ統計を、腰を据えて学べる読み物形式のコース。</p>
+            <div class="card-meta"><span>完了レッスン</span><span class="mastery-num">${done} / ${BAYES_TOTAL}（${pct}%）</span></div>
+            <div class="mini-bar"><span style="width:${pct}%"></span></div>
+          </div>
+          <span class="course-banner-cta btn btn-primary">コースを開く →</span>
+        </a>
+      </div>`;
     },
 
     moduleCard(m) {

@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>1-2 同時確率と周辺確率 | ベイズの階段</title>
+  <meta name="description" content="P(A,B) と P(A) の関係を分割表で理解する">
+  <script>
+    document.documentElement.dataset.theme =
+      localStorage.getItem("bayes-stairs-theme") ||
+      (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Noto+Serif+JP:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../assets/css/main.css">
+
+  <!-- KaTeX: 数式を使うページでは必ずこの3行を入れる -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+          onload="renderMathInElement(document.body, {delimiters: [
+            {left: '$$', right: '$$', display: true},
+            {left: '\\(', right: '\\)', display: false}
+          ]});"></script>
+</head>
+<body data-root="../../" data-level="1" data-lesson-id="1-2">
+
+  <header class="site-header">
+    <button class="sidebar-toggle" id="sidebar-toggle" aria-label="メニュー">☰</button>
+    <a class="brand" href="../../index.html">
+      <span class="brand-mark">階</span>
+      <span>ベイズの階段</span>
+    </a>
+    <div class="header-spacer"></div>
+    <div class="header-progress" id="header-progress"></div>
+    <button class="theme-toggle" id="theme-toggle" aria-label="テーマ切替">🌙</button>
+  </header>
+
+  <div class="layout">
+
+    <!-- サイドバー: main.js がカリキュラムから自動生成 -->
+    <aside class="sidebar"><nav id="sidebar-nav" aria-label="カリキュラム"></nav></aside>
+
+    <main class="lesson">
+
+      <nav class="breadcrumbs" aria-label="パンくず">
+        <a href="../../index.html">ホーム</a><span class="sep">›</span>
+        <a href="index.html">Level 1 条件付き確率とベイズの定理</a><span class="sep">›</span>
+        <span>1-2 同時確率と周辺確率</span>
+      </nav>
+
+      <header class="lesson-header">
+        <div class="lesson-meta">
+          <span class="level-badge">Level 1</span>
+          <span class="small">レッスン 1-2</span>
+        </div>
+        <h1>同時確率と周辺確率</h1>
+
+        <div class="lesson-goals">
+          <h2>このレッスンでできるようになること</h2>
+          <ul>
+            <li>同時確率 \(P(A \cap B)\) と周辺確率 \(P(A)\) を分割表から読み分けられる</li>
+            <li>乗法定理 \(P(A \cap B) = P(A \mid B)\,P(B)\) を使って同時確率を計算できる</li>
+            <li>2つの事象が「独立」かどうかを式で確かめられる</li>
+          </ul>
+          <p class="prereq">前提: <a href="1-1.html">1-1 条件付き確率</a> と <a href="../level0/0-4.html">0-4 表で整理する確率</a> を読んでいること</p>
+        </div>
+      </header>
+
+      <div class="lesson-body">
+
+        <h2>2つの「割合」を1枚の表で見渡す</h2>
+        <p>あるクラスの生徒について、こんな問いを考えてみます。「メガネをかけていて、しかも犬を飼っている人」は全体の何割でしょうか。</p>
+        <p>これは2つの条件が同時にそろう割合です。前回の <a href="1-1.html">1-1</a> では「メガネの人のうち犬を飼っている割合」を考えました。似ているようで、これとは別物です。</p>
+        <p>このレッスンでは、こうした「2つの事象の確率」を1枚の表で整理します。表のマス目に入る確率と、表の端っこ（行や列の合計）に現れる確率。この2つに名前を付けるところから始めましょう。</p>
+
+        <div class="box box-intuition">
+          <div class="box-title">直感でつかむ</div>
+          <p>クラス全員を、表の4つのマスに振り分けるイメージです。「メガネ × 犬」「メガネ × 犬なし」「メガネなし × 犬」「メガネなし × 犬なし」。</p>
+          <p>マスの中の割合が<strong>同時確率</strong>。「メガネの人」全体の割合は、メガネの行を横に足した<strong>合計</strong>です。表の端（マージン）に書くので<strong>周辺確率</strong>と呼びます。</p>
+        </div>
+
+        <h2>同時確率 — 2つが同時に起きる確率</h2>
+
+        <div class="box box-def">
+          <div class="box-title">定義 — 同時確率</div>
+          <p>事象 \(A\) と事象 \(B\) が<strong>両方とも</strong>起きる確率を<span class="term">同時確率</span>（どうじかくりつ）と呼び、\(P(A \cap B)\) と書きます。</p>
+          <p>\(A \cap B\) は「\(A\) かつ \(B\)」を表す記号で、\(P(A \cap B)\) は『\(A\) かつ \(B\) の確率』と読みます。\(P(A, B)\) と書くこともあり、意味は同じです。</p>
+        </div>
+
+        <p>たとえば40人のクラスで、メガネをかけていて犬も飼っている人が6人いたとします。1人を無作為に選ぶとき、その人が「メガネ かつ 犬」である確率は \( \dfrac{6}{40} = 0.15 \) です。これが同時確率です。</p>
+
+        <h2>周辺確率 — 表の端に現れる確率</h2>
+
+        <div class="box box-def">
+          <div class="box-title">定義 — 周辺確率</div>
+          <p>同時確率の表で、片方の条件だけに注目した確率を<span class="term">周辺確率</span>（しゅうへんかくりつ）と呼びます。\(P(A)\) や \(P(B)\) のように、条件が1つだけのふつうの確率のことです。</p>
+          <p>分割表では、ある行（または列）の同時確率を<strong>すべて足し合わせる</strong>と、その周辺確率になります。</p>
+        </div>
+
+        <p>言葉だけだと分かりにくいので、実際の表で見てみましょう。次は40人のクラスを「メガネ」「犬」の有無で分けた人数の表です。</p>
+
+        <table>
+          <thead>
+            <tr><th></th><th>犬あり</th><th>犬なし</th><th>合計</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>メガネあり</td><td>6</td><td>10</td><td>16</td></tr>
+            <tr><td>メガネなし</td><td>9</td><td>15</td><td>24</td></tr>
+            <tr><td><strong>合計</strong></td><td>15</td><td>25</td><td>40</td></tr>
+          </tbody>
+        </table>
+
+        <p>真ん中の4つのマス（6・10・9・15）が、それぞれの同時確率のもとになる人数です。たとえば「メガネあり かつ 犬あり」は6人なので、\( P(\text{メガネ} \cap \text{犬}) = \dfrac{6}{40} \)。</p>
+        <p>いっぽう右端と下端の「合計」が周辺確率のもとです。「メガネあり」は \(6 + 10 = 16\) 人なので、\( P(\text{メガネ}) = \dfrac{16}{40} = 0.4 \)。行を横に足すと、犬の条件が消えてメガネだけの確率になりました。</p>
+
+        <div class="box box-thm">
+          <div class="box-title">公式 — 周辺確率は同時確率の合計</div>
+          <p>事象 \(B\) が「\(B\) が起きる／起きない」の2通りなら、\(A\) の周辺確率は次のように同時確率を足して求められます。</p>
+          $$ P(A) = P(A \cap B) + P(A \cap \overline{B}) $$
+          <p>ここで \(\overline{B}\)（バー・ビー）は「\(B\) が起きない」を表します。表の1つの行を、犬あり・犬なしの列で横に足す操作にあたります。</p>
+        </div>
+
+        <p>この「足して条件を消す」操作を<span class="term">周辺化</span>（しゅうへんか）と呼びます。じゃまな条件を合計で消して、知りたい確率だけを残す。あとのレベルでも何度も出てくる大事な考え方です。</p>
+
+        <figure class="figure">
+          <svg viewBox="0 0 360 200" width="360" aria-label="同時確率と周辺確率の分割表のイメージ">
+            <!-- 外枠グリッド -->
+            <line x1="40" y1="40" x2="320" y2="40" stroke="var(--border)" stroke-width="2"/>
+            <line x1="40" y1="100" x2="320" y2="100" stroke="var(--border)" stroke-width="2"/>
+            <line x1="40" y1="160" x2="320" y2="160" stroke="var(--border)" stroke-width="2"/>
+            <line x1="40" y1="40" x2="40" y2="160" stroke="var(--border)" stroke-width="2"/>
+            <line x1="180" y1="40" x2="180" y2="160" stroke="var(--border)" stroke-width="2"/>
+            <line x1="260" y1="40" x2="260" y2="160" stroke="var(--border)" stroke-width="2"/>
+            <line x1="320" y1="40" x2="320" y2="160" stroke="var(--border)" stroke-width="2"/>
+            <!-- 同時確率のマス（強調） -->
+            <rect x="40" y="40" width="140" height="60" fill="var(--level-color)" opacity="0.18"/>
+            <text x="110" y="75" text-anchor="middle" font-size="13" fill="var(--text)">P(A∩B)</text>
+            <text x="220" y="75" text-anchor="middle" font-size="12" fill="var(--text-muted)">P(A∩B̄)</text>
+            <text x="110" y="135" text-anchor="middle" font-size="12" fill="var(--text-muted)">P(Ā∩B)</text>
+            <text x="220" y="135" text-anchor="middle" font-size="12" fill="var(--text-muted)">P(Ā∩B̄)</text>
+            <!-- 周辺確率（端） -->
+            <rect x="260" y="40" width="60" height="60" fill="var(--level-color)" opacity="0.35"/>
+            <text x="290" y="75" text-anchor="middle" font-size="13" fill="var(--text)">P(A)</text>
+            <text x="290" y="135" text-anchor="middle" font-size="12" fill="var(--text-muted)">P(Ā)</text>
+            <!-- 矢印: 横に足す -->
+            <text x="223" y="33" text-anchor="middle" font-size="11" fill="var(--level-color)">→ 横に足すと周辺確率</text>
+          </svg>
+          <figcaption>図1: 表の中のマスが同時確率、行を横に足した端の値が周辺確率 \(P(A)\)。</figcaption>
+        </figure>
+
+        <h2>乗法定理 — 同時確率を「掛け算」で作る</h2>
+        <p>同時確率は、表の人数を数えなくても計算できます。鍵になるのが <a href="1-1.html">1-1</a> で学んだ条件付き確率です。条件付き確率の定義を思い出しましょう。</p>
+
+        <div class="formula">
+          <span class="formula-label">条件付き確率の定義（復習）</span>
+          $$ P(A \mid B) = \frac{P(A \cap B)}{P(B)} $$
+        </div>
+
+        <p>\(P(A \mid B)\) は『\(B\) のもとでの \(A\) の確率』と読みます。この式の両辺に \(P(B)\) を掛けると、分母が消えて同時確率の式になります。</p>
+
+        <div class="box box-thm">
+          <div class="box-title">定理 — 乗法定理</div>
+          <p>同時確率は、条件付き確率と周辺確率の掛け算で表せます。</p>
+          $$ P(A \cap B) = P(A \mid B)\, P(B) $$
+          <p>\(A\) と \(B\) を入れ替えても成り立ちます。</p>
+          $$ P(A \cap B) = P(B \mid A)\, P(A) $$
+        </div>
+
+        <p>言葉にすると、こうです。「\(A\) かつ \(B\) が起きる確率は、まず \(B\) が起きて（\(P(B)\)）、そのうえで \(B\) のもとで \(A\) も起きる（\(P(A \mid B)\)）確率を掛けたもの」。順番に起きていくイメージです。</p>
+
+        <div class="box box-warn">
+          <div class="box-title">つまずき注意</div>
+          <p>\( P(A \cap B) \) と \( P(A \mid B) \) を混同しないでください。前者は<strong>全体</strong>を分母にした割合、後者は<strong>\(B\) の中だけ</strong>を分母にした割合です。先ほどの表なら、\( P(\text{メガネ} \cap \text{犬}) = \dfrac{6}{40} \) ですが、\( P(\text{メガネ} \mid \text{犬}) = \dfrac{6}{15} \) です。分母がちがいます。</p>
+        </div>
+
+        <h2>独立 — 片方を知っても確率が変わらないとき</h2>
+
+        <div class="box box-intuition">
+          <div class="box-title">直感でつかむ</div>
+          <p>コインを投げた結果は、サイコロの目に影響しません。こういう「片方の結果を知っても、もう片方の確率が変わらない」関係を<span class="term">独立</span>（どくりつ）と呼びます。</p>
+          <p>独立なら、条件を付けても確率は変わりません。つまり \( P(A \mid B) = P(A) \) です。これを乗法定理に入れると、同時確率がただの掛け算になります。</p>
+        </div>
+
+        <div class="box box-def">
+          <div class="box-title">定義 — 事象の独立</div>
+          <p>2つの事象 \(A\), \(B\) が次を満たすとき、\(A\) と \(B\) は<strong>独立</strong>であるといいます。</p>
+          $$ P(A \cap B) = P(A)\, P(B) $$
+          <p>同時確率が、周辺確率どうしの単なる掛け算になる。これが独立のしるしです。逆にこの式が成り立たなければ、2つの事象は関係しあっています。</p>
+        </div>
+
+        <p>さきほどのメガネと犬の表は独立でしょうか。確かめてみましょう。\( P(\text{メガネ}) = \dfrac{16}{40} = 0.4 \)、\( P(\text{犬}) = \dfrac{15}{40} = 0.375 \)。掛けると \(0.4 \times 0.375 = 0.15\)。いっぽう \( P(\text{メガネ} \cap \text{犬}) = \dfrac{6}{40} = 0.15 \)。ぴったり一致したので、この表ではメガネと犬は独立です。</p>
+
+        <div class="box box-ex">
+          <div class="box-title">例題</div>
+          <p>あるカフェの来客100人を調べたところ、次の表になりました。「コーヒー」を頼んだか、「ケーキ」を頼んだかの人数です。</p>
+          <table>
+            <thead>
+              <tr><th></th><th>ケーキあり</th><th>ケーキなし</th><th>合計</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>コーヒーあり</td><td>30</td><td>30</td><td>60</td></tr>
+              <tr><td>コーヒーなし</td><td>10</td><td>30</td><td>40</td></tr>
+              <tr><td><strong>合計</strong></td><td>40</td><td>60</td><td>100</td></tr>
+            </tbody>
+          </table>
+          <p>（1）同時確率 \( P(\text{コーヒー} \cap \text{ケーキ}) \) を求めましょう。<br>
+             （2）周辺確率 \( P(\text{コーヒー}) \) を求めましょう。<br>
+             （3）コーヒーとケーキは独立でしょうか。</p>
+
+          <p><strong>解</strong></p>
+          <p>（1）「コーヒー かつ ケーキ」は表の左上、30人です。全体は100人なので
+          $$ P(\text{コーヒー} \cap \text{ケーキ}) = \frac{30}{100} = 0.3 $$</p>
+          <p>（2）コーヒーの行を横に足すと \(30 + 30 = 60\) 人。これが周辺確率のもとです。
+          $$ P(\text{コーヒー}) = \frac{60}{100} = 0.6 $$</p>
+          <p>（3）独立かどうかは \( P(A \cap B) = P(A)P(B) \) で確かめます。\( P(\text{ケーキ}) = \dfrac{40}{100} = 0.4 \) なので、
+          $$ P(\text{コーヒー}) \times P(\text{ケーキ}) = 0.6 \times 0.4 = 0.24 $$
+          いっぽう同時確率は \(0.3\)。\(0.3 \neq 0.24\) なので<strong>独立ではありません</strong>。コーヒーを頼んだ人のほうが、ケーキも頼みやすい傾向があるとわかります。</p>
+        </div>
+
+        <div class="quiz" data-answer="b">
+          <p class="quiz-q">問: 周辺確率 \(P(A)\) を分割表から求めるには、どうすればよいですか?</p>
+          <button class="quiz-option" data-key="a">\(A\) の行の同時確率から、\(B\) の列の同時確率を引く</button>
+          <button class="quiz-option" data-key="b">\(A\) の行にある同時確率をすべて足し合わせる</button>
+          <button class="quiz-option" data-key="c">\(A\) の同時確率を、全体の人数で割る</button>
+          <div class="quiz-explain"><p>周辺確率は、その行（または列）の同時確率をすべて足したものです。\( P(A) = P(A \cap B) + P(A \cap \overline{B}) \)。じゃまな条件 \(B\) を合計で消す「周辺化」にあたります。</p></div>
+        </div>
+
+        <div class="quiz" data-answer="c">
+          <p class="quiz-q">問: 事象 \(A\), \(B\) が独立であることと同じ意味の式はどれですか?</p>
+          <button class="quiz-option" data-key="a">\( P(A \cap B) = P(A) + P(B) \)</button>
+          <button class="quiz-option" data-key="b">\( P(A \mid B) = P(B \mid A) \)</button>
+          <button class="quiz-option" data-key="c">\( P(A \cap B) = P(A)\,P(B) \)</button>
+          <div class="quiz-explain"><p>独立とは「同時確率が周辺確率どうしの掛け算になる」こと、つまり \( P(A \cap B) = P(A)P(B) \) です。aは足し算になっていて誤り。bは一般には成り立たず、独立の定義でもありません。</p></div>
+        </div>
+
+        <div class="box box-practice">
+          <div class="box-title">演習1</div>
+          <p>ある工場の製品100個を「Aライン製／Bライン製」と「良品／不良品」で分けた表です。<br>
+          Aライン・良品が48個、Aライン・不良品が2個、Bライン・良品が45個、Bライン・不良品が5個でした。<br>
+          同時確率 \( P(\text{Bライン} \cap \text{不良品}) \) と、周辺確率 \( P(\text{不良品}) \) を求めなさい。</p>
+          <details class="answer">
+            <summary>解答を見る</summary>
+            <p>表に整理すると、不良品の列は「Aライン2個 + Bライン5個 = 7個」です。</p>
+            <p>同時確率は、Bライン かつ 不良品の5個を全体100で割って
+            $$ P(\text{Bライン} \cap \text{不良品}) = \frac{5}{100} = 0.05 $$</p>
+            <p>周辺確率は、不良品の列を縦に足した7個を全体で割って
+            $$ P(\text{不良品}) = \frac{7}{100} = 0.07 $$</p>
+          </details>
+        </div>
+
+        <div class="box box-practice">
+          <div class="box-title">演習2</div>
+          <p>くじが20本あり、当たりが4本です。1本目を引いて元に戻さず、続けて2本目を引きます。<br>
+          乗法定理を使って「1本目も2本目も当たり」の同時確率を求めなさい。</p>
+          <details class="answer">
+            <summary>解答を見る</summary>
+            <p>事象 \(A\) を「1本目が当たり」、\(B\) を「2本目が当たり」とします。乗法定理 \( P(A \cap B) = P(A)\,P(B \mid A) \) を使います。</p>
+            <p>まず1本目が当たる確率は \( P(A) = \dfrac{4}{20} = \dfrac{1}{5} \)。</p>
+            <p>1本目が当たったあと、残りは19本で当たりは3本。よって \( P(B \mid A) = \dfrac{3}{19} \)。</p>
+            <p>掛け合わせて
+            $$ P(A \cap B) = \frac{1}{5} \times \frac{3}{19} = \frac{3}{95} \approx 0.032 $$</p>
+            <p>元に戻さないので1本目の結果が2本目に影響します。つまりこの2つは独立<strong>ではない</strong>ことに注意しましょう。</p>
+          </details>
+        </div>
+
+        <div class="box box-practice">
+          <div class="box-title">演習3</div>
+          <p>コインを1回投げる事象 \(A\)（表が出る）と、サイコロを1回振る事象 \(B\)（6が出る）を考えます。<br>
+          「表 かつ 6」の同時確率 \( P(A \cap B) \) を求め、\(A\) と \(B\) が独立であることを式で確かめなさい。</p>
+          <details class="answer">
+            <summary>解答を見る</summary>
+            <p>コインとサイコロはお互いに影響しないので独立です。独立なら同時確率は周辺確率の掛け算で計算できます。</p>
+            <p>\( P(A) = \dfrac{1}{2} \)、\( P(B) = \dfrac{1}{6} \) なので
+            $$ P(A \cap B) = P(A)\,P(B) = \frac{1}{2} \times \frac{1}{6} = \frac{1}{12} $$</p>
+            <p>このように \( P(A \cap B) = P(A)P(B) \) が成り立つことが、まさに独立の定義です。片方の結果を知っても、もう片方の確率は変わりません。</p>
+          </details>
+        </div>
+
+        <h2>まとめ</h2>
+        <ul>
+          <li><span class="term">同時確率</span> \(P(A \cap B)\) は、2つの事象が両方とも起きる確率。分割表の中のマスにあたります。</li>
+          <li><span class="term">周辺確率</span> \(P(A)\) は、条件1つだけのふつうの確率。表の行（列）の同時確率を足して求めます（周辺化）。</li>
+          <li><span class="term">乗法定理</span> \( P(A \cap B) = P(A \mid B)\,P(B) \) で、条件付き確率から同時確率を計算できます。</li>
+          <li>2つの事象が<span class="term">独立</span>なら \( P(A \cap B) = P(A)\,P(B) \)。同時確率が周辺確率どうしの掛け算になります。</li>
+          <li>\(P(A \cap B)\) と \(P(A \mid B)\) は分母がちがう別物。混同に注意。</li>
+        </ul>
+        <p>同時確率・周辺確率・条件付き確率がそろいました。この3つの関係を逆向きにたどると、いよいよベイズの定理が姿を現します。次の <a href="1-3.html">1-3 ベイズの定理の導出</a> で、その式を自分の手で導いてみましょう。</p>
+
+      </div>
+
+      <div class="complete-area">
+        <button class="btn btn-level" id="complete-btn">このレッスンを完了にする</button>
+        <p class="complete-note">進捗はこのブラウザに保存されます</p>
+      </div>
+
+      <!-- 前後ナビ: main.js がカリキュラムから自動生成 -->
+      <nav class="lesson-nav" id="lesson-nav" aria-label="前後のレッスン"></nav>
+
+    </main>
+
+    <!-- ページ内目次: main.js が本文の h2 から自動生成 -->
+    <aside class="toc">
+      <div class="toc-title">このページの内容</div>
+      <nav id="toc"></nav>
+    </aside>
+
+  </div>
+
+  <footer class="site-footer">
+    <p>ベイズの階段 — 中学数学から最前線まで、一段ずつ。</p>
+  </footer>
+
+  <script src="../../assets/js/curriculum.js"></script>
+  <script src="../../assets/js/main.js"></script>
+</body>
+</html>

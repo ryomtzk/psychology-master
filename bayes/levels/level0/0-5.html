@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>0-5 「逆向き」の確率 — ベイズへの入り口 | ベイズの階段</title>
+  <meta name="description" content="「結果から原因を推測する」というベイズの核心を数えて体験する">
+  <script>
+    document.documentElement.dataset.theme =
+      localStorage.getItem("bayes-stairs-theme") ||
+      (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Noto+Serif+JP:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../assets/css/main.css">
+
+  <!-- KaTeX: 数式を使うページでは必ずこの3行を入れる -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+          onload="renderMathInElement(document.body, {delimiters: [
+            {left: '$$', right: '$$', display: true},
+            {left: '\\(', right: '\\)', display: false}
+          ]});"></script>
+</head>
+<body data-root="../../" data-level="0" data-lesson-id="0-5">
+
+  <header class="site-header">
+    <button class="sidebar-toggle" id="sidebar-toggle" aria-label="メニュー">☰</button>
+    <a class="brand" href="../../index.html">
+      <span class="brand-mark">階</span>
+      <span>ベイズの階段</span>
+    </a>
+    <div class="header-spacer"></div>
+    <div class="header-progress" id="header-progress"></div>
+    <button class="theme-toggle" id="theme-toggle" aria-label="テーマ切替">🌙</button>
+  </header>
+
+  <div class="layout">
+
+    <!-- サイドバー: main.js がカリキュラムから自動生成 -->
+    <aside class="sidebar"><nav id="sidebar-nav" aria-label="カリキュラム"></nav></aside>
+
+    <main class="lesson">
+
+      <nav class="breadcrumbs" aria-label="パンくず">
+        <a href="../../index.html">ホーム</a><span class="sep">›</span>
+        <a href="index.html">Level 0 確率の直感をつくる</a><span class="sep">›</span>
+        <span>0-5 「逆向き」の確率 — ベイズへの入り口</span>
+      </nav>
+
+      <header class="lesson-header">
+        <div class="lesson-meta">
+          <span class="level-badge">Level 0</span>
+          <span class="small">レッスン 0-5</span>
+        </div>
+        <h1>「逆向き」の確率 — ベイズへの入り口</h1>
+
+        <div class="lesson-goals">
+          <h2>このレッスンでできるようになること</h2>
+          <ul>
+            <li>「原因 → 結果」の確率と「結果 → 原因」の確率が別物だと説明できる</li>
+            <li>表で数え上げて、観察した結果からその原因を推測できる</li>
+            <li>ベイズの考え方がどんな問いに答える道具なのかを自分の言葉で言える</li>
+          </ul>
+          <p class="prereq">前提: <a href="0-4.html">0-4 表で整理する確率</a> を読んでいること</p>
+        </div>
+      </header>
+
+      <!-- ▼▼▼ ここからレッスン本文 ▼▼▼ -->
+      <div class="lesson-body">
+
+        <h2>「どっちから引いた？」という問い</h2>
+        <p>目の前に、見た目が同じ袋が2つあります。中身だけがちがいます。あなたは目をつぶって、どちらか一方の袋から玉を1個引きました。</p>
+        <p>引いた玉は <strong>赤</strong> でした。さて、その玉は「どちらの袋」から来たのでしょう？</p>
+        <p>これは、いつもの確率の問いとは向きが反対です。ふつうは「この袋から引いたら赤が出る確率は？」と問います。でも今回は、<strong>赤が出たという結果から、もとの袋を当てたい</strong>のです。これが、これから学ぶベイズの考え方の入り口です。</p>
+
+        <div class="box box-intuition">
+          <div class="box-title">直感でつかむ</div>
+          <p>探偵を思い浮かべてください。探偵は「犯人がこう動けば、こんな足あとが残る」と知っています。でも実際の仕事は逆です。<strong>残された足あとから、犯人を言い当てる</strong>のが探偵の仕事です。</p>
+          <p>ベイズの考え方も同じです。「原因 → 結果」の知識を使って、目の前の「結果 → 原因」をたどります。難しい計算はいりません。ていねいに <strong>数えるだけ</strong> でたどり着けます。</p>
+        </div>
+
+        <h2>2つの向きは別物</h2>
+        <p>ここで言葉を1つ用意します。ある条件のもとでの確率を <span class="term">条件付き確率（じょうけんつきかくりつ）</span> と呼びます。0-4 で表を使って練習したあの確率です。</p>
+        <p>大事なのは、<strong>向きをひっくり返すと、ふつうは答えが変わる</strong>ということです。次の2つは、まったく別の問いです。</p>
+
+        <div class="box box-warn">
+          <div class="box-title">つまずき注意 — 向きを混同しない</div>
+          <p>「<strong>A の袋から引いたとき、赤が出る</strong>割合」と、「<strong>赤が出たとき、それが A の袋だった</strong>割合」は別物です。</p>
+          <p>前者は「原因 → 結果」、後者は「結果 → 原因」。この2つを同じだと思い込むのが、最初の大きなつまずきです。今日はこの「逆向き」を、表でしっかり区別します。</p>
+        </div>
+
+        <h2>設定をはっきりさせる</h2>
+        <p>袋の中身を決めましょう。話を数えやすくするため、玉の個数を具体的にします。</p>
+        <ul>
+          <li><strong>袋A</strong>: 赤玉 3個、白玉 1個（合わせて4個）</li>
+          <li><strong>袋B</strong>: 赤玉 1個、白玉 3個（合わせて4個）</li>
+        </ul>
+        <p>どちらの袋を選ぶかは、コインで決めるとします。つまり袋Aを選ぶ確率も、袋Bを選ぶ確率も、ちょうど半分ずつです。この「選ぶ前の見込み」を <span class="term">事前確率（じぜんかくりつ）</span> と呼びます。玉を見る前にもっている、原因についての見込みのことです。</p>
+
+        <div class="box box-def">
+          <div class="box-title">定義 — 事前確率と事後確率</div>
+          <p><span class="term">事前確率</span>: データ（引いた玉の色）を <strong>見る前</strong> の、原因についての見込み。ここでは「袋Aだろう／袋Bだろう」の半々の見込みです。</p>
+          <p><span class="term">事後確率（じごかくりつ）</span>: データを <strong>見た後</strong> に更新した、原因についての見込み。ここでは「赤を見たあとで、どちらの袋だったと思うか」です。</p>
+          <p>ベイズの考え方とは、ひとことで言えば <strong>事前確率を、観察した結果で更新して事後確率にする</strong> ことです。</p>
+        </div>
+
+        <h2>同じ条件で何回もやってみる、と考える</h2>
+        <p>確率を「数えて」つかむコツは、<strong>同じことを何回もくり返した世界</strong>を想像することです（0-1で出てきた考え方ですね）。</p>
+        <p>いま「袋を1つ選んで玉を1個引く」を、ぜんぶで <strong>800回</strong> くり返すと考えます。コインで袋を選ぶので、おおよそ次のように分かれます。</p>
+        <ul>
+          <li>袋Aを選ぶ回: 400回（半分）</li>
+          <li>袋Bを選ぶ回: 400回（半分）</li>
+        </ul>
+        <p>袋Aの中身は「赤3：白1」なので、袋Aを選んだ400回のうち、赤が出るのは \(\frac{3}{4}\) で300回、白が出るのは100回。袋Bの中身は「赤1：白3」なので、袋Bを選んだ400回のうち、赤が出るのは \(\frac{1}{4}\) で100回、白が出るのは300回。これを表にまとめます。</p>
+
+        <figure class="figure">
+          <svg viewBox="0 0 360 170" width="360" aria-label="袋Aと袋Bの中身のイメージ図">
+            <!-- 袋A -->
+            <text x="60" y="22" text-anchor="middle" font-size="15" font-weight="700" fill="var(--level-color)">袋A（赤3：白1）</text>
+            <rect x="18" y="34" width="120" height="80" rx="10" fill="none" stroke="var(--level-color)" stroke-width="2.5"/>
+            <circle cx="48" cy="62" r="11" fill="var(--level-color)"/>
+            <circle cx="78" cy="62" r="11" fill="var(--level-color)"/>
+            <circle cx="108" cy="62" r="11" fill="var(--level-color)"/>
+            <circle cx="63" cy="92" r="11" fill="none" stroke="var(--level-color)" stroke-width="2"/>
+            <text x="60" y="138" text-anchor="middle" font-size="12" fill="var(--text-muted, #888)">●=赤  ○=白</text>
+            <!-- 袋B -->
+            <text x="295" y="22" text-anchor="middle" font-size="15" font-weight="700" fill="var(--level-color)">袋B（赤1：白3）</text>
+            <rect x="222" y="34" width="135" height="80" rx="10" fill="none" stroke="var(--level-color)" stroke-width="2.5"/>
+            <circle cx="252" cy="62" r="11" fill="var(--level-color)"/>
+            <circle cx="282" cy="62" r="11" fill="none" stroke="var(--level-color)" stroke-width="2"/>
+            <circle cx="312" cy="62" r="11" fill="none" stroke="var(--level-color)" stroke-width="2"/>
+            <circle cx="297" cy="92" r="11" fill="none" stroke="var(--level-color)" stroke-width="2"/>
+            <text x="289" y="138" text-anchor="middle" font-size="12" fill="var(--text-muted, #888)">●=赤  ○=白</text>
+          </svg>
+          <figcaption>図1: 2つの袋の中身。袋Aは赤が多く、袋Bは白が多い。</figcaption>
+        </figure>
+
+        <table>
+          <thead>
+            <tr><th></th><th>赤が出た</th><th>白が出た</th><th>合計</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>袋Aだった</td><td>300</td><td>100</td><td>400</td></tr>
+            <tr><td>袋Bだった</td><td>100</td><td>300</td><td>400</td></tr>
+            <tr><td><strong>合計</strong></td><td><strong>400</strong></td><td><strong>400</strong></td><td><strong>800</strong></td></tr>
+          </tbody>
+        </table>
+        <p>この表が今日の主役です。表のマス目を数えるだけで、逆向きの問いに答えられます。</p>
+
+        <h2>表を「赤の列」で読む</h2>
+        <p>さあ、本題です。引いた玉は赤でした。ということは、800回ぜんぶではなく、<strong>赤が出た回だけ</strong>に注目すればよいのです。赤が出たのは、表のいちばん下の合計を見ると <strong>400回</strong> です。</p>
+        <p>その400回の内わけを見ます。</p>
+        <ul>
+          <li>赤が出て、しかも袋Aだった回: <strong>300回</strong></li>
+          <li>赤が出て、しかも袋Bだった回: <strong>100回</strong></li>
+        </ul>
+        <p>つまり、赤が出た400回のうち、もとが袋Aだったのは300回。割合にすると \(\frac{300}{400}=\frac{3}{4}\) です。袋Bだったのは100回で \(\frac{1}{4}\)。これが、赤を見たあとの <span class="term">事後確率</span> です。</p>
+
+        <div class="formula">
+          <span class="formula-label">赤を見たあとの事後確率（数えるだけ）</span>
+          $$ P(\text{袋A} \mid \text{赤}) = \frac{300}{300+100} = \frac{3}{4} $$
+          <div class="formula-parts">
+            <span class="part"><b>\(P(\text{袋A} \mid \text{赤})\)</b>: 「赤が出たもとで、袋Aだった確率」と読みます</span>
+            <span class="part"><b>分母</b>: 赤が出た回の合計（袋A由来＋袋B由来）</span>
+            <span class="part"><b>分子</b>: そのうち袋A由来だった回</span>
+          </div>
+        </div>
+
+        <p>玉を見る前は「袋Aの見込みは半々（\(\frac{1}{2}\)）」でした。赤を1個見ただけで、その見込みが \(\frac{3}{4}\) まで上がりました。これが <strong>更新</strong> です。新しい結果が、原因への見込みを動かしたのです。</p>
+
+        <div class="box box-intuition">
+          <div class="box-title">直感でつかむ — なぜ袋Aが有力？</div>
+          <p>袋Aは赤が多い袋です。だから「赤が出た」という事実は、袋Aにとって都合のよい証拠です。赤を見たら、赤が多い袋Aの見込みが上がる。当たり前に聞こえますが、これがベイズの更新そのものです。</p>
+        </div>
+
+        <div class="box box-ex">
+          <div class="box-title">例題 — 白が出たら？</div>
+          <p>同じ2つの袋で、今度は引いた玉が <strong>白</strong> でした。もとが袋Aだった確率と、袋Bだった確率を、表から求めましょう。</p>
+          <p><strong>解</strong>: 白が出た回だけに注目します。表の「白が出た」の列を縦に見ると、合計は \(100+300=400\) 回です。</p>
+          <p>その内わけは、袋A由来が100回、袋B由来が300回。よって、</p>
+          <p>$$ P(\text{袋A} \mid \text{白}) = \frac{100}{400} = \frac{1}{4}, \qquad P(\text{袋B} \mid \text{白}) = \frac{300}{400} = \frac{3}{4} $$</p>
+          <p>白を見たら、白が多い袋Bの見込みが \(\frac{1}{2}\) から \(\frac{3}{4}\) に上がりました。赤のときとちょうど立場が入れかわっていますね。2つの袋が「赤3：白1」と「赤1：白3」で対称だからです。</p>
+        </div>
+
+        <div class="quiz" data-answer="b">
+          <p class="quiz-q">問: 赤が出たとき「もとは袋Aだった」確率 \(P(\text{袋A} \mid \text{赤})\) を表から求めるには、どこをどこで割りますか？</p>
+          <button class="quiz-option" data-key="a">袋Aで赤が出た回（300）を、袋Aの合計（400）で割る</button>
+          <button class="quiz-option" data-key="b">袋Aで赤が出た回（300）を、赤が出た回の合計（400）で割る</button>
+          <button class="quiz-option" data-key="c">袋Aで赤が出た回（300）を、全体（800）で割る</button>
+          <div class="quiz-explain">
+            <p>正解はBです。求めたいのは「<strong>赤が出たという結果のもとで</strong>、袋Aだった割合」。だから注目するのは「赤が出た回」だけ。その合計400を分母に、そのうち袋A由来の300を分子にします。</p>
+            <p>Aは「袋Aから赤が出る割合（\(\frac{300}{400}=\frac{3}{4}\)）」で、これは逆向き（原因 → 結果）の確率。Cの分母800は「赤も白もぜんぶ」なので、条件を絞れていません。</p>
+          </div>
+        </div>
+
+        <h2>「原因 → 結果」と「結果 → 原因」を表で見比べる</h2>
+        <p>同じ表から、向きのちがう2つの確率が読めます。ここを混同しないことが、今日いちばん大事なポイントです。</p>
+
+        <div class="box box-warn">
+          <div class="box-title">つまずき注意 — どこで割るかで向きが決まる</div>
+          <p><strong>横（行）で割ると「原因 → 結果」</strong>。たとえば袋Aの行で \(\frac{300}{400}\) は「袋Aから赤が出る割合」。</p>
+          <p><strong>縦（列）で割ると「結果 → 原因」</strong>。たとえば赤の列で \(\frac{300}{400}\) は「赤が出たとき袋Aだった割合」。</p>
+          <p>たまたま今回はどちらも \(\frac{3}{4}\) ですが、これは数字の偶然です。ふつうは一致しません（次の演習で確かめます）。<strong>向きを決めるのは「どの方向で割るか」</strong>だと覚えてください。</p>
+        </div>
+
+        <div class="quiz" data-answer="c">
+          <p class="quiz-q">問: 玉を引く前と、赤を1個見た後で、「袋Aだろう」という見込みはどう変わりましたか？</p>
+          <button class="quiz-option" data-key="a">\(\frac{1}{2}\) のまま変わらない</button>
+          <button class="quiz-option" data-key="b">\(\frac{1}{2}\) から \(\frac{1}{4}\) に下がった</button>
+          <button class="quiz-option" data-key="c">\(\frac{1}{2}\) から \(\frac{3}{4}\) に上がった</button>
+          <div class="quiz-explain">
+            <p>正解はCです。引く前の事前確率は半々の \(\frac{1}{2}\)。赤（袋Aに有利な証拠）を見たことで、事後確率は \(\frac{3}{4}\) に上がりました。結果が見込みを更新する、これがベイズの心臓部です。</p>
+          </div>
+        </div>
+
+        <div class="box box-practice">
+          <div class="box-title">演習1 — かたよった袋</div>
+          <p>袋Aと袋Bの中身を、次のように変えます。袋を選ぶ確率は半々のままです。</p>
+          <ul>
+            <li>袋A: 赤4個、白0個（ぜんぶ赤）</li>
+            <li>袋B: 赤2個、白2個</li>
+          </ul>
+          <p>「袋を選んで1個引く」を800回くり返した表を作り、<strong>赤が出たとき袋Aだった確率</strong>を求めなさい。</p>
+          <details class="answer">
+            <summary>解答を見る</summary>
+            <p>袋Aは400回ぜんぶ赤（赤400、白0）。袋Bは赤白半々なので赤200、白200。</p>
+            <table>
+              <thead><tr><th></th><th>赤</th><th>白</th><th>合計</th></tr></thead>
+              <tbody>
+                <tr><td>袋A</td><td>400</td><td>0</td><td>400</td></tr>
+                <tr><td>袋B</td><td>200</td><td>200</td><td>400</td></tr>
+                <tr><td><strong>合計</strong></td><td><strong>600</strong></td><td><strong>200</strong></td><td><strong>800</strong></td></tr>
+              </tbody>
+            </table>
+            <p>赤が出たのは合計600回、うち袋A由来は400回。よって \(P(\text{袋A} \mid \text{赤}) = \dfrac{400}{600} = \dfrac{2}{3}\)。</p>
+            <p>袋Aは赤だらけなのに、答えは1ではありません。袋Bからも赤は出るからです。証拠は袋Aを有利にしますが、決定打ではない、ということです。</p>
+          </details>
+        </div>
+
+        <div class="box box-practice">
+          <div class="box-title">演習2 — 向きはふつう一致しない</div>
+          <p>演習1の表を使います。次の2つを求めて、値がちがうことを確かめなさい。</p>
+          <p>(1) 袋Aから赤が出る割合（原因 → 結果）<br>(2) 赤が出たとき袋Aだった割合（結果 → 原因）</p>
+          <details class="answer">
+            <summary>解答を見る</summary>
+            <p>(1) 袋Aの <strong>行</strong> で割ります: \(\dfrac{400}{400} = 1\)。袋Aはぜんぶ赤なので、必ず赤が出ます。</p>
+            <p>(2) 赤の <strong>列</strong> で割ります: \(\dfrac{400}{600} = \dfrac{2}{3}\)。</p>
+            <p>\(1 \neq \dfrac{2}{3}\)。同じ「300や400」を使っていても、<strong>横で割るか縦で割るか</strong>で答えはまるで違います。これが「逆向きの確率は別物」ということです。本文の例で両方が \(\frac{3}{4}\) になったのは、たまたまの一致でした。</p>
+          </details>
+        </div>
+
+        <div class="box box-practice">
+          <div class="box-title">演習3 — 言葉で説明する</div>
+          <p>「ベイズの考え方とは何か」を、袋の例を使わずに、身のまわりの例で1〜2文で説明しなさい。</p>
+          <details class="answer">
+            <summary>解答例を見る</summary>
+            <p>解答例: 「外に出たら地面がぬれていた。だから、たぶんさっき雨が降ったのだろう」と考えるのがベイズです。<strong>目に見える結果（ぬれた地面）から、見えない原因（雨）を推測し、見込みを更新している</strong>からです。</p>
+            <p>ほかにも「体温が高い → かぜかも」「足あとがある → だれか通った」など、結果から原因をたどる例ならどれも正解です。</p>
+          </details>
+        </div>
+
+        <h2>まとめ</h2>
+        <ul>
+          <li>ふつうの確率は「原因 → 結果」。ベイズは <strong>「結果 → 原因」</strong> という逆向きの推測をする。</li>
+          <li>この2つの向きは <strong>別物</strong>。ふつうは値も一致しない。</li>
+          <li>データを見る前の見込みが <span class="term">事前確率</span>、見た後の見込みが <span class="term">事後確率</span>。ベイズは事前を結果で <strong>更新</strong> して事後にする。</li>
+          <li>表を作って <strong>「結果が出た列」だけで数える</strong>と、事後確率は割り算1回で求まる。式はいらない。</li>
+          <li>更新の向きは直感どおり: 赤を見たら、赤の多い袋の見込みが上がる。</li>
+        </ul>
+        <p>ここまでで「逆向きの確率」を、数えるだけで体験できました。次のレベルでは、この更新をきちんとした言葉と式で書き直し、いよいよ <strong>ベイズの定理</strong> へ進みます。今日数えた表が、その式の正体です。お楽しみに。</p>
+
+      </div>
+      <!-- ▲▲▲ レッスン本文ここまで ▲▲▲ -->
+
+      <div class="complete-area">
+        <button class="btn btn-level" id="complete-btn">このレッスンを完了にする</button>
+        <p class="complete-note">進捗はこのブラウザに保存されます</p>
+      </div>
+
+      <!-- 前後ナビ: main.js がカリキュラムから自動生成 -->
+      <nav class="lesson-nav" id="lesson-nav" aria-label="前後のレッスン"></nav>
+
+    </main>
+
+    <!-- ページ内目次: main.js が本文の h2 から自動生成 -->
+    <aside class="toc">
+      <div class="toc-title">このページの内容</div>
+      <nav id="toc"></nav>
+    </aside>
+
+  </div>
+
+  <footer class="site-footer">
+    <p>ベイズの階段 — 中学数学から最前線まで、一段ずつ。</p>
+  </footer>
+
+  <script src="../../assets/js/curriculum.js"></script>
+  <script src="../../assets/js/main.js"></script>
+</body>
+</html>

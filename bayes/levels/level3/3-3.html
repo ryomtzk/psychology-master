@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>3-3 共役事前分布 | ベイズの階段</title>
+  <meta name="description" content="計算がきれいに閉じる事前分布のファミリー">
+  <script>
+    document.documentElement.dataset.theme =
+      localStorage.getItem("bayes-stairs-theme") ||
+      (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Noto+Serif+JP:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../assets/css/main.css">
+
+  <!-- KaTeX: 数式を使うページでは必ずこの3行を入れる -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+          onload="renderMathInElement(document.body, {delimiters: [
+            {left: '$$', right: '$$', display: true},
+            {left: '\\(', right: '\\)', display: false}
+          ]});"></script>
+</head>
+<body data-root="../../" data-level="3" data-lesson-id="3-3">
+
+  <header class="site-header">
+    <button class="sidebar-toggle" id="sidebar-toggle" aria-label="メニュー">☰</button>
+    <a class="brand" href="../../index.html">
+      <span class="brand-mark">階</span>
+      <span>ベイズの階段</span>
+    </a>
+    <div class="header-spacer"></div>
+    <div class="header-progress" id="header-progress"></div>
+    <button class="theme-toggle" id="theme-toggle" aria-label="テーマ切替">🌙</button>
+  </header>
+
+  <div class="layout">
+
+    <!-- サイドバー: main.js がカリキュラムから自動生成 -->
+    <aside class="sidebar"><nav id="sidebar-nav" aria-label="カリキュラム"></nav></aside>
+
+    <main class="lesson">
+
+      <nav class="breadcrumbs" aria-label="パンくず">
+        <a href="../../index.html">ホーム</a><span class="sep">›</span>
+        <a href="index.html">Level 3 ベイズ推定の基礎</a><span class="sep">›</span>
+        <span>3-3 共役事前分布</span>
+      </nav>
+
+      <header class="lesson-header">
+        <div class="lesson-meta">
+          <span class="level-badge">Level 3</span>
+          <span class="small">レッスン 3-3</span>
+        </div>
+        <h1>共役事前分布</h1>
+
+        <div class="lesson-goals">
+          <h2>このレッスンでできるようになること</h2>
+          <ul>
+            <li>共役事前分布が「事後が事前と同じ分布族になる事前」だと説明できる</li>
+            <li>ベータ・二項、ガンマ・ポアソン、正規・正規という代表的な3組を挙げられる</li>
+            <li>共役の便利さと、その限界（次のレベルへの動機）を言葉にできる</li>
+          </ul>
+          <p class="prereq">前提: <a href="3-2.html">3-2 ベータ・二項モデル</a> と <a href="../level2/2-6.html">2-6 ベータ分布</a> を読んでいること</p>
+        </div>
+      </header>
+
+      <div class="lesson-body">
+
+        <h2>更新するたびに、計算が同じ形に戻ってくる</h2>
+        <p>前のレッスンで、コインの表が出る確率を当てる計算をしました。事前分布にベータ分布を選び、データを見たら、事後分布もまたベータ分布になりましたね。</p>
+        <p>これ、よく考えると不思議です。事前確率に尤度（ゆうど）をかけて、最後に割り算をして整える。途中はけっこう複雑な式でした。それなのに、出てきた答えはまた同じ「ベータ分布」という形でした。</p>
+        <p>じつはこれは偶然ではありません。ある事前分布の選び方をすると、事後分布が必ず事前と同じ仲間に戻ってくるのです。この相性のよい組み合わせを<span class="term">共役事前分布（きょうやくじぜんぶんぷ）</span>と呼びます。今日はこの「計算がきれいに閉じる」しくみを見ていきます。</p>
+
+        <div class="box box-intuition">
+          <div class="box-title">直感でつかむ</div>
+          <p>整数どうしの足し算を思い出してください。整数に整数を足すと、答えはまた整数です。けっして小数や分数に化けたりしません。「整数の世界の中で、計算が閉じている」わけです。</p>
+          <p>共役事前分布も同じ感覚です。<strong>ベータ分布の事前にデータを足すと、答えはまたベータ分布</strong>。分布の「形の名前」が更新の前後で変わりません。変わるのは中身の数（パラメータ）だけ。だから何度更新しても、いつも見慣れた同じ形を相手にできます。</p>
+        </div>
+
+        <h2>共役の正体 — 事後が事前と同じ分布族</h2>
+        <p>まずは言葉をきちんと決めましょう。「分布族」という言い方が出てきます。これは、形の名前は同じで、中の数だけ違う分布の集まりのことです。たとえばベータ分布は \( \mathrm{Beta}(\alpha, \beta) \) と書け、\(\alpha,\beta\) の値を変えるといろいろな形になりますが、どれも「ベータ分布族」の仲間です。</p>
+
+        <div class="box box-def">
+          <div class="box-title">定義 — 共役事前分布</div>
+          <p>ある尤度（データの出やすさ）に対して、事前分布をうまく選んだとき、<strong>事後分布が事前分布と同じ分布族になる</strong>ことがあります。このときの事前分布を、その尤度に対する<span class="term">共役事前分布</span>と呼びます。</p>
+          <p>記号で言うと、事前分布と事後分布がどちらも同じファミリー（たとえばどちらもベータ分布）に属する、ということです。</p>
+        </div>
+
+        <p>ベイズの定理は、いつも次の形でしたね。\( P(\theta \mid D) \) は『データ \(D\) を見たあとのパラメータ \(\theta\)（シータ）の確率』と読みます。</p>
+
+        <div class="formula">
+          <span class="formula-label">ベイズ更新（おなじみの形）</span>
+          $$ \underbrace{P(\theta \mid D)}_{\text{事後分布}} \;\propto\; \underbrace{P(D \mid \theta)}_{\text{尤度}} \times \underbrace{P(\theta)}_{\text{事前分布}} $$
+          <div class="formula-parts">
+            <span class="part"><b>事前分布</b>: データを見る前の信念</span>
+            <span class="part"><b>尤度</b>: \(\theta\) のもとでのデータの出やすさ</span>
+            <span class="part"><b>事後分布</b>: データを見た後の信念</span>
+          </div>
+        </div>
+
+        <p>記号 \( \propto \)（読み: 比例する）は『左辺は右辺に比例する』という意味です。最後に全体を足して \(1\) にそろえる割り算が残っていますが、形を見るうえではこの比例の関係だけで十分です。共役とは、この右辺（尤度 × 事前）を計算したら、また事前と同じ形が顔を出す、という性質のことなのです。</p>
+
+        <h2>例1: ベータ・二項モデル(復習と一般化)</h2>
+        <p>いちばんなじみのある例から始めましょう。コインの表が出る確率 \(\theta\) を当てる問題です。<a href="3-2.html">3-2</a> でやった計算を、結論だけ取り出します。</p>
+
+        <div class="box box-thm">
+          <div class="box-title">公式 — ベータは二項の共役事前分布</div>
+          <p>事前分布を \( \mathrm{Beta}(\alpha, \beta) \) とします。コインを投げて、表が \(k\) 回、裏が \(n-k\) 回出たとします（二項分布の尤度）。すると事後分布は</p>
+          $$ \mathrm{Beta}(\alpha + k,\; \beta + (n-k)) $$
+          <p>になります。事前も事後も、どちらもベータ分布。これがベータ・二項モデルの共役性です。</p>
+        </div>
+
+        <p>更新のルールが、たし算だけになっているのに注目してください。<strong>表の回数を \(\alpha\) に足し、裏の回数を \(\beta\) に足す</strong>。それだけです。難しい積分は要りません。\(\alpha,\beta\) を「これまでに見たことにしておく、表・裏の手持ち枚数」だと思うと、データのぶんを足していくイメージそのものになります。</p>
+
+        <figure class="figure">
+          <svg viewBox="0 0 380 220" width="380" aria-label="ベータ分布の事前から事後への更新">
+            <!-- 軸 -->
+            <line x1="40" y1="180" x2="360" y2="180" stroke="var(--border)" stroke-width="2"/>
+            <line x1="40" y1="20" x2="40" y2="180" stroke="var(--border)" stroke-width="2"/>
+            <!-- x軸ラベル -->
+            <text x="40" y="196" text-anchor="middle" font-size="11" fill="var(--text-muted)">0</text>
+            <text x="200" y="196" text-anchor="middle" font-size="11" fill="var(--text-muted)">0.5</text>
+            <text x="360" y="196" text-anchor="middle" font-size="11" fill="var(--text-muted)">1</text>
+            <text x="200" y="214" text-anchor="middle" font-size="11" fill="var(--text-muted)">表が出る確率 θ</text>
+            <!-- 事前 Beta(2,2): なだらかな山、中央 0.5 -->
+            <path d="M40,180 C120,80 280,80 360,180" fill="none" stroke="var(--text-muted)" stroke-width="2.5" stroke-dasharray="5 4"/>
+            <!-- 事後 Beta(7,4): 右寄りの鋭い山、ピーク約 0.6 -->
+            <path d="M40,180 C150,178 200,40 240,38 C280,36 320,150 360,180" fill="none" stroke="var(--level-color)" stroke-width="3"/>
+            <!-- 凡例 -->
+            <line x1="240" y1="32" x2="268" y2="32" stroke="var(--text-muted)" stroke-width="2.5" stroke-dasharray="5 4"/>
+            <text x="272" y="36" font-size="11" fill="var(--text-muted)">事前 Beta(2,2)</text>
+            <line x1="240" y1="50" x2="268" y2="50" stroke="var(--level-color)" stroke-width="3"/>
+            <text x="272" y="54" font-size="11" fill="var(--level-color)">事後 Beta(7,4)</text>
+          </svg>
+          <figcaption>図1: 事前 \( \mathrm{Beta}(2,2) \) に「表5回・裏2回」を観測した場合の更新。事後は \( \mathrm{Beta}(7,4) \) で、やはりベータ分布のまま。山が右に寄り、鋭くなって、表寄りという確信が強まったことがわかります。</figcaption>
+        </figure>
+
+        <h2>例2: ガンマ・ポアソンモデル</h2>
+        <p>共役なのはコインの話だけではありません。「ある時間内に何回起きるか」を数える場面でも、同じことが起こります。たとえば1時間あたりの問い合わせメールの件数、1ページあたりの誤字の数などです。</p>
+        <p>こうした「回数」は、<a href="../level2/2-2.html">2-2</a> で学んだ<span class="term">ポアソン分布</span>でよく表せます。ポアソン分布の主役は、平均の発生回数 \(\lambda\)（ラムダ）です。この \(\lambda\) がいくつなのかを、ベイズで当てにいきます。</p>
+
+        <div class="box box-thm">
+          <div class="box-title">公式 — ガンマはポアソンの共役事前分布</div>
+          <p>平均回数 \(\lambda\) の事前分布を <span class="term">ガンマ分布</span> \( \mathrm{Gamma}(\alpha, \beta) \) とします。観測期間が \(n\) 回ぶんで、合計 \(s\) 回の出来事が起きたとします（ポアソン分布の尤度）。すると事後分布は</p>
+          $$ \mathrm{Gamma}(\alpha + s,\; \beta + n) $$
+          <p>になります。事前も事後もガンマ分布。ベータ・二項とそっくりの、たし算だけの更新です。</p>
+        </div>
+
+        <p>ガンマ分布は、\(0\) 以上の量（回数の平均など、マイナスにならない数）を表すのに向いた分布です。形はベータと似て、片側に山があるなだらかな曲線です。ここで覚えてほしいのは中身の式ではなく、<strong>「件数の合計 \(s\) を \(\alpha\) に、観測した期間の数 \(n\) を \(\beta\) に足すだけ」</strong>というリズムです。ベータ・二項とまったく同じ呼吸ですね。</p>
+
+        <div class="box box-warn">
+          <div class="box-title">つまずき注意</div>
+          <p>「共役」は、事前分布だけで決まる性質ではありません。<strong>尤度（データの種類）とセットで初めて決まります</strong>。ベータが共役になるのは二項の尤度に対してであり、ガンマが共役になるのはポアソンの尤度に対してです。相手が変われば、相性のよい事前分布も変わります。「この尤度には、この事前」という組で覚えましょう。</p>
+        </div>
+
+        <h2>例3: 正規・正規モデル</h2>
+        <p>3つめは、身長や測定値のように連続した量の例です。データが<a href="../level2/2-3.html">2-3</a> で学んだ<span class="term">正規分布</span>に従う場合を考えます。ここでは話を簡単にするため、ばらつき（分散）はわかっていて、平均 \(\mu\)（ミュー）だけが未知だとします。</p>
+
+        <div class="box box-thm">
+          <div class="box-title">公式 — 正規は正規の共役事前分布(平均が未知の場合)</div>
+          <p>未知の平均 \(\mu\) について、事前分布を正規分布にとります。すると、正規分布に従うデータを観測したあとの事後分布も、また正規分布になります。</p>
+          <p>$$ \text{事前: 正規分布} \;\xrightarrow{\;\text{データ}\;}\; \text{事後: 正規分布} $$</p>
+          <p>事前の平均とデータの平均を、それぞれの「確かさ」で重みづけして混ぜた値が、事後の平均になります。</p>
+        </div>
+
+        <p>細かい式は次のレベル以降で扱いますが、感覚だけつかんでおきましょう。事後の平均は、<strong>「最初の予想」と「データが示す平均」の間のどこか</strong>に来ます。データが多いほど、答えはデータ寄りに動きます。事前の自信が強いほど、最初の予想寄りにとどまります。綱引きのバランスで決まる、というイメージです。</p>
+
+        <p>ここまでの3組を、表にまとめておきましょう。</p>
+
+        <table>
+          <thead>
+            <tr><th>データの尤度</th><th>共役な事前分布</th><th>事後分布</th><th>当てたいもの</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>二項分布</td><td>ベータ分布</td><td>ベータ分布</td><td>成功する確率 \(\theta\)</td></tr>
+            <tr><td>ポアソン分布</td><td>ガンマ分布</td><td>ガンマ分布</td><td>平均回数 \(\lambda\)</td></tr>
+            <tr><td>正規分布</td><td>正規分布</td><td>正規分布</td><td>平均 \(\mu\)</td></tr>
+          </tbody>
+        </table>
+
+        <p>3組とも、左の「尤度」と真ん中の「事前」の相性が共役で、その結果いちばん右どおり、事後が事前と同じ形に戻っています。</p>
+
+        <div class="box box-ex">
+          <div class="box-title">例題</div>
+          <p>あるお店に1時間あたり平均何件の電話がかかってくるか、その平均回数 \(\lambda\) を推定します。事前分布を \( \mathrm{Gamma}(3, 2) \) としました。実際に \(4\) 時間ぶん記録したところ、電話は合計 \(10\) 件でした。事後分布を求めましょう。</p>
+          <p><strong>解</strong>: ポアソンの尤度に対して、ガンマは共役事前分布でした。更新ルールは「件数の合計を \(\alpha\) に、観測した時間数を \(\beta\) に足す」です。</p>
+          <p>件数の合計は \( s = 10 \)、観測した期間は \( n = 4 \) です。よって</p>
+          $$ \alpha' = \alpha + s = 3 + 10 = 13 $$
+          $$ \beta' = \beta + n = 2 + 4 = 6 $$
+          <p>事後分布は \( \mathrm{Gamma}(13, 6) \) です。事前と同じくガンマ分布のまま、数だけが更新されました。積分は一度も使っていません。</p>
+        </div>
+
+        <h2>共役の利点 — そして、その限界</h2>
+        <p>ここまで見てきた便利さを、はっきり言葉にしておきましょう。</p>
+
+        <div class="box box-intuition">
+          <div class="box-title">直感でつかむ</div>
+          <p>共役のいちばんのごほうびは「<strong>手で解ける</strong>」ことです。事後分布が紙とえんぴつで、たし算だけで書けてしまう。これを<span class="term">解析的（かいせきてき）に解ける</span>と言います。コンピュータも近似も要りません。答えがぴったり、きれいな式で出ます。</p>
+          <p>さらに、データを1件ずつ足していっても、まとめて足しても、結果は同じです。だから<a href="3-1.html">3-1</a> で学んだ逐次更新（ちくじこうしん）とも相性ばつぐんです。「きのうの事後を、きょうの事前にする」がスムーズにつながります。</p>
+        </div>
+
+        <p>では、共役さえあれば何でも解けるのでしょうか。残念ながら、そうはいきません。</p>
+
+        <div class="box box-warn">
+          <div class="box-title">つまずき注意 — 共役の限界</div>
+          <p>共役な組み合わせは、じつはとても少数です。世の中のモデルの多くは、共役な事前分布を持ちません。たとえば未知のパラメータが2つ3つと絡みあったり、データの尤度がポアソンや正規のようなきれいな形でなかったりすると、もう「事後が事前と同じ形」にはなってくれません。</p>
+          <p>そういうとき、事後分布を割り算で整える計算（分母の積分）が、手では解けなくなります。式が閉じないのです。</p>
+        </div>
+
+        <p>では、共役が使えないモデルは諦めるしかないのでしょうか。いいえ。むしろ、現実のおもしろい問題ほど共役から外れます。そこで登場するのが、答えを<strong>数値的に近似する</strong>という発想です。手で解けないなら、コンピュータにたくさんサンプルを引かせて、事後分布の形をなぞればよい。その代表的な方法を、次のレベルで学びます。</p>
+        <p>言いかえると、共役事前分布は「運よくきれいに閉じる特別な場合」です。とても大切な土台ですが、ゴールではありません。ここで身につけた「事前 + データ → 事後」という感覚を持ったまま、近似の世界へ進んでいきます。</p>
+
+        <h2>理解度チェック</h2>
+
+        <div class="quiz" data-answer="b">
+          <p class="quiz-q">問1: 共役事前分布とは、どんな事前分布のことですか?</p>
+          <button class="quiz-option" data-key="a">いつも左右対称な形になる事前分布</button>
+          <button class="quiz-option" data-key="b">事後分布が事前分布と同じ分布族になる事前分布</button>
+          <button class="quiz-option" data-key="c">事前確率がすべて等しい事前分布</button>
+          <div class="quiz-explain"><p>共役事前分布の定義は「ある尤度に対して、事後分布が事前分布と同じ分布族になる」ことです。ベータの事前にデータを足すと、また事後もベータになる、という性質を指します。形の対称性や、確率が等しいことは関係ありません。</p></div>
+        </div>
+
+        <div class="quiz" data-answer="c">
+          <p class="quiz-q">問2: ポアソン分布で表されるデータ(回数の数え上げ)に対して、共役な事前分布はどれですか?</p>
+          <button class="quiz-option" data-key="a">ベータ分布</button>
+          <button class="quiz-option" data-key="b">正規分布</button>
+          <button class="quiz-option" data-key="c">ガンマ分布</button>
+          <div class="quiz-explain"><p>ポアソン分布の尤度には、ガンマ分布が共役です。事前を \( \mathrm{Gamma}(\alpha,\beta) \) にすると、事後も \( \mathrm{Gamma}(\alpha+s, \beta+n) \) というガンマ分布になります。ベータが共役なのは二項の尤度に対して、正規が共役なのは正規の尤度に対してです。</p></div>
+        </div>
+
+        <div class="quiz" data-answer="a">
+          <p class="quiz-q">問3: 共役事前分布を使う「いちばんの利点」として、最も適切なものはどれですか?</p>
+          <button class="quiz-option" data-key="a">事後分布を、たし算だけで解析的に(手で)求められる</button>
+          <button class="quiz-option" data-key="b">どんなモデルでも必ず使える</button>
+          <button class="quiz-option" data-key="c">事前分布を選ばなくてよくなる</button>
+          <div class="quiz-explain"><p>共役の最大の魅力は、事後分布がきれいな式で閉じて、パラメータのたし算だけで手計算できることです。一方で、共役な組み合わせは少数で、どんなモデルにも使えるわけではありません。事前分布は相変わらず自分で選びます。</p></div>
+        </div>
+
+        <h2>演習</h2>
+
+        <div class="box box-practice">
+          <div class="box-title">演習1</div>
+          <p>事前分布を \( \mathrm{Beta}(2, 2) \) とします。コインを \(7\) 回投げ、表が \(5\) 回、裏が \(2\) 回出ました。事後分布を求めなさい。</p>
+          <details class="answer">
+            <summary>解答を見る</summary>
+            <p>ベータは二項の共役事前分布です。更新ルールは「表の回数を \(\alpha\) に、裏の回数を \(\beta\) に足す」でした。\( \alpha' = 2 + 5 = 7 \)、\( \beta' = 2 + 2 = 4 \)。よって事後分布は \( \mathrm{Beta}(7, 4) \) です（図1がこの状況です）。事前も事後もベータ分布のままです。</p>
+          </details>
+        </div>
+
+        <div class="box box-practice">
+          <div class="box-title">演習2</div>
+          <p>事前分布を \( \mathrm{Gamma}(2, 1) \) とします。ある機械の故障について \(5\) 日間記録したところ、合計 \(3\) 回故障しました。1日あたりの平均故障回数 \(\lambda\) の事後分布を求めなさい。</p>
+          <details class="answer">
+            <summary>解答を見る</summary>
+            <p>故障回数はポアソン分布の尤度で表せ、ガンマが共役事前分布です。更新ルールは「故障の合計を \(\alpha\) に、観測した日数を \(\beta\) に足す」。合計 \( s = 3 \)、日数 \( n = 5 \) なので、\( \alpha' = 2 + 3 = 5 \)、\( \beta' = 1 + 5 = 6 \)。事後分布は \( \mathrm{Gamma}(5, 6) \) です。</p>
+          </details>
+        </div>
+
+        <div class="box box-practice">
+          <div class="box-title">演習3</div>
+          <p>友だちが「正規分布に従うデータの平均 \(\mu\) を、正規分布の事前を使ってベイズ推定したよ。事後分布の形は何になった?」と聞いてきました。なんと答えればよいでしょうか。理由もそえて説明しなさい。</p>
+          <details class="answer">
+            <summary>解答を見る</summary>
+            <p>「事後分布も正規分布になるよ」と答えます。理由は、平均が未知の正規分布(分散は既知)に対して、正規分布は共役事前分布だからです。共役なので、事後は事前と同じ分布族、つまり正規分布のまま、平均などの数だけが更新されます。</p>
+          </details>
+        </div>
+
+        <div class="box box-practice">
+          <div class="box-title">演習4</div>
+          <p>「共役事前分布を使えば、世の中のどんなモデルでもベイズ推定が手で解ける」。この主張は正しいですか。正しくない場合は、どこが言いすぎか説明しなさい。</p>
+          <details class="answer">
+            <summary>解答を見る</summary>
+            <p>正しくありません。共役な事前分布が存在するのは、二項とベータ、ポアソンとガンマ、正規と正規のような、ごく限られた相性のよい組み合わせだけです。多くの現実のモデルは共役な事前を持たず、その場合は事後分布が手では解けません（式が閉じません）。そういうモデルでは、数値的に近似する方法が必要になります。共役は「特別にうまくいく場合」であって、すべてではない、というのが正しい理解です。</p>
+          </details>
+        </div>
+
+        <h2>まとめ</h2>
+        <ul>
+          <li><span class="term">共役事前分布</span>とは、ある尤度に対して、事後分布が事前分布と同じ分布族になる事前分布のこと。</li>
+          <li>代表的な3組は、二項にベータ、ポアソンにガンマ、正規に正規。どれも事後が事前と同じ形に戻る。</li>
+          <li>共役だと、更新がパラメータの<strong>たし算だけ</strong>で済み、事後分布が<span class="term">解析的に解ける</span>（手で書ける）。逐次更新とも相性がよい。</li>
+          <li>共役は尤度とセットで決まる性質。相手のデータの種類が変われば、相性のよい事前も変わる。</li>
+          <li>共役な組み合わせは少数。現実の多くのモデルでは式が閉じず、これが次のレベルで近似を学ぶ動機になる。</li>
+        </ul>
+        <p>共役事前分布は、ベイズの計算がいちばん気持ちよく決まる場面です。ここで「事前 + データ → 同じ形の事後」の感覚をつかめたら、Level 3 は卒業です。次のレベルでは、共役が使えない一般のモデルに踏みこみ、コンピュータの力で事後分布をなぞる方法へと進みます。</p>
+
+      </div>
+
+      <div class="complete-area">
+        <button class="btn btn-level" id="complete-btn">このレッスンを完了にする</button>
+        <p class="complete-note">進捗はこのブラウザに保存されます</p>
+      </div>
+
+      <!-- 前後ナビ: main.js がカリキュラムから自動生成 -->
+      <nav class="lesson-nav" id="lesson-nav" aria-label="前後のレッスン"></nav>
+
+    </main>
+
+    <!-- ページ内目次: main.js が本文の h2 から自動生成 -->
+    <aside class="toc">
+      <div class="toc-title">このページの内容</div>
+      <nav id="toc"></nav>
+    </aside>
+
+  </div>
+
+  <footer class="site-footer">
+    <p>ベイズの階段 — 中学数学から最前線まで、一段ずつ。</p>
+  </footer>
+
+  <script src="../../assets/js/curriculum.js"></script>
+  <script src="../../assets/js/main.js"></script>
+</body>
+</html>

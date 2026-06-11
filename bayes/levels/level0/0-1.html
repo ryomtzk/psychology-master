@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>0-1 確率ってなんだろう | ベイズの階段</title>
+  <meta name="description" content="サイコロとくじ引きで確率の意味を体感する">
+  <script>
+    document.documentElement.dataset.theme =
+      localStorage.getItem("bayes-stairs-theme") ||
+      (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Noto+Serif+JP:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../assets/css/main.css">
+
+  <!-- KaTeX: 数式を使うページでは必ずこの3行を入れる -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+          onload="renderMathInElement(document.body, {delimiters: [
+            {left: '$$', right: '$$', display: true},
+            {left: '\\(', right: '\\)', display: false}
+          ]});"></script>
+</head>
+<body data-root="../../" data-level="0" data-lesson-id="0-1">
+
+  <header class="site-header">
+    <button class="sidebar-toggle" id="sidebar-toggle" aria-label="メニュー">☰</button>
+    <a class="brand" href="../../index.html">
+      <span class="brand-mark">階</span>
+      <span>ベイズの階段</span>
+    </a>
+    <div class="header-spacer"></div>
+    <div class="header-progress" id="header-progress"></div>
+    <button class="theme-toggle" id="theme-toggle" aria-label="テーマ切替">🌙</button>
+  </header>
+
+  <div class="layout">
+
+    <!-- サイドバー: main.js がカリキュラムから自動生成 -->
+    <aside class="sidebar"><nav id="sidebar-nav" aria-label="カリキュラム"></nav></aside>
+
+    <main class="lesson">
+
+      <nav class="breadcrumbs" aria-label="パンくず">
+        <a href="../../index.html">ホーム</a><span class="sep">›</span>
+        <a href="index.html">Level 0 確率の直感をつくる</a><span class="sep">›</span>
+        <span>0-1 確率ってなんだろう</span>
+      </nav>
+
+      <header class="lesson-header">
+        <div class="lesson-meta">
+          <span class="level-badge">Level 0</span>
+          <span class="small">レッスン 0-1</span>
+        </div>
+        <h1>確率ってなんだろう</h1>
+
+        <div class="lesson-goals">
+          <h2>このレッスンでできるようになること</h2>
+          <ul>
+            <li>確率とは「起こりやすさを 0 から 1 までの数で表したもの」だと説明できる</li>
+            <li>同様に確からしい場面で、確率を「あてはまる場合の数 ÷ 全部の場合の数」で計算できる</li>
+            <li>確率 0・確率 1 の意味と、すべての確率を足すと 1 になることを使える</li>
+          </ul>
+          <p class="prereq">前提: なし（このレッスンが最初の一段です。中学までの算数・数学だけで読めます）</p>
+        </div>
+      </header>
+
+      <!-- ▼▼▼ ここからレッスン本文 ▼▼▼ -->
+      <div class="lesson-body">
+
+        <p class="lead">
+          「明日は雨が 60% らしいよ」「このくじ、当たる気がしない」。
+          わたしたちは毎日のように「起こりやすさ」を口にしています。
+          このレッスンでは、その感覚に <strong>数</strong> という形を与えていきます。
+        </p>
+
+        <h2>身近な「起こりやすさ」から</h2>
+
+        <p>
+          サイコロを 1 回振ります。1 の目は出るでしょうか。出るかもしれないし、出ないかもしれない。
+          やってみるまで分かりません。こういう「やってみないと結果が決まらないこと」を、
+          数学では <span class="term">試行（しこう）</span> と呼びます。サイコロを振るのも、くじを引くのも試行です。
+        </p>
+
+        <p>
+          試行の結果のうち「注目している出来事」を <span class="term">事象（じしょう）</span> と呼びます。
+          たとえば「1 の目が出る」も事象、「偶数の目が出る」も事象です。
+          そして、その事象がどれくらい起こりやすいかを 1 つの数で表したものが <span class="term">確率（かくりつ）</span> です。
+        </p>
+
+        <p>
+          天気予報の「60%」も確率です。割合で言えば 0.6。
+          つまり確率とは、ぼんやりした「起こりやすさ」を、だれが見ても同じ「数」にしたものなのです。
+        </p>
+
+        <div class="box box-intuition">
+          <div class="box-title">直感でつかむ</div>
+          <p>
+            確率は「起こりやすさのものさし」です。目盛りは <strong>0 から 1 まで</strong>。
+          </p>
+          <p>
+            0 は「絶対に起きない」、1 は「絶対に起きる」。
+            その間の数が大きいほど「起こりやすい」を意味します。
+            ちょうど真ん中の 0.5 は「五分五分」。コインの表が出るくらいの感覚です。
+          </p>
+        </div>
+
+        <figure class="figure">
+          <svg viewBox="0 0 320 90" width="320" aria-label="確率の数直線。0は起きない、1は必ず起きる">
+            <line x1="20" y1="55" x2="300" y2="55" stroke="var(--level-color)" stroke-width="3"/>
+            <!-- 目盛り -->
+            <line x1="20"  y1="48" x2="20"  y2="62" stroke="var(--level-color)" stroke-width="3"/>
+            <line x1="160" y1="48" x2="160" y2="62" stroke="var(--level-color)" stroke-width="3"/>
+            <line x1="300" y1="48" x2="300" y2="62" stroke="var(--level-color)" stroke-width="3"/>
+            <text x="20"  y="80" text-anchor="middle" font-size="13" fill="currentColor">0</text>
+            <text x="160" y="80" text-anchor="middle" font-size="13" fill="currentColor">0.5</text>
+            <text x="300" y="80" text-anchor="middle" font-size="13" fill="currentColor">1</text>
+            <text x="20"  y="32" text-anchor="middle" font-size="11" fill="currentColor">起きない</text>
+            <text x="160" y="32" text-anchor="middle" font-size="11" fill="currentColor">五分五分</text>
+            <text x="300" y="32" text-anchor="middle" font-size="11" fill="currentColor">必ず起きる</text>
+          </svg>
+          <figcaption>図1: 確率は 0 から 1 までの数直線にのる。右へ行くほど起こりやすい。</figcaption>
+        </figure>
+
+        <h2>同じくらい起こりそうなら、数えればいい</h2>
+
+        <p>
+          では、確率はどうやって数にするのでしょう。いちばん基本になるのは「数えて割る」やり方です。
+          ただし、これには 1 つ大事な条件があります。
+        </p>
+
+        <p>
+          サイコロの 6 つの目は、どれもえこひいきなく同じくらい出ます。
+          コインの表と裏も同じくらい。こういう「どの結果も同じくらい起こりそう」な状態を
+          <span class="term">同様に確からしい</span> と言います。読み方はそのまま「どうように たしからしい」です。
+        </p>
+
+        <div class="box box-def">
+          <div class="box-title">定義 — 確率（同様に確からしい場合）</div>
+          <p>
+            起こりうる結果がすべて同様に確からしいとき、事象 \(A\) の確率 \(P(A)\) を次で定めます。
+            \(P(A)\) は「\(A\) の確率（probability の P）」と読みます。
+          </p>
+          $$ P(A) = \frac{A\ \text{にあてはまる場合の数}}{\text{起こりうる全部の場合の数}} $$
+        </div>
+
+        <div class="formula">
+          <span class="formula-label">確率の基本の式</span>
+          $$ P(A) = \frac{\text{あてはまる場合の数}}{\text{全部の場合の数}} $$
+          <div class="formula-parts">
+            <span class="part"><b>分子（上）</b>: 注目している事象が起きる場合の数</span>
+            <span class="part"><b>分母（下）</b>: 起こりうるすべての場合の数</span>
+          </div>
+        </div>
+
+        <p>
+          サイコロで「1 の目が出る」なら、あてはまるのは 1 通り、全部で 6 通り。だから \(P = \dfrac{1}{6}\)。
+          「偶数（2・4・6）が出る」なら、あてはまるのは 3 通りなので \(P = \dfrac{3}{6} = \dfrac{1}{2}\) です。
+          数えて割るだけ。これが確率の出発点です。
+        </p>
+
+        <div class="box box-warn">
+          <div class="box-title">つまずき注意</div>
+          <p>
+            「数えて割る」が使えるのは、<strong>どの結果も同様に確からしいとき</strong>だけです。
+            たとえば「明日が晴れか雨か」は 2 通りですが、だからといって雨の確率が \(\frac{1}{2}\) とは限りません。
+            晴れと雨は同じくらい起こるとは限らないからです。場面を選んで使いましょう。
+          </p>
+        </div>
+
+        <h2>0 と 1、そして合計が 1 になること</h2>
+
+        <p>
+          この式から、確率の大事な性質が見えてきます。
+        </p>
+
+        <div class="box box-thm">
+          <div class="box-title">確率の 3 つの性質</div>
+          <p>
+            ① どんな事象 \(A\) でも、その確率は 0 以上 1 以下です。
+            $$ 0 \le P(A) \le 1 $$
+          </p>
+          <p>
+            ② 絶対に起きない事象の確率は 0、絶対に起きる事象の確率は 1 です。
+          </p>
+          <p>
+            ③ 起こりうる結果すべての確率を足すと、ちょうど 1 になります。
+          </p>
+        </div>
+
+        <p>
+          ①は、あてはまる場合の数が「0 個から全部まで」しかないからです。
+          1 個もあてはまらなければ分子は 0、全部あてはまれば分子は分母と同じになり、答えは 1。
+          だから確率はこの 2 つの数の間にぴたりとおさまります。
+        </p>
+
+        <p>
+          ③も同じ理由です。サイコロなら、1 から 6 までの確率はすべて \(\dfrac{1}{6}\)。
+          これを 6 個足すと \(\dfrac{6}{6} = 1\)。
+          「起こりうることのどれかは必ず起きる」ので、合計は 1 になるのです。
+          この「合計 1」はあとあと何度も効いてくる、確率の屋台骨です。
+        </p>
+
+        <div class="box box-ex">
+          <div class="box-title">例題</div>
+          <p>
+            箱の中に当たりくじ 2 本、はずれくじ 3 本、合わせて 5 本が入っています。
+            よくかき混ぜて 1 本引くとき、次を求めましょう。
+          </p>
+          <p>(1) 当たりを引く確率　(2) はずれを引く確率　(3) (1) と (2) の和</p>
+
+          <p><strong>解</strong></p>
+          <p>
+            どのくじも同じくらい引かれる（同様に確からしい）ので、数えて割ります。全部で 5 本です。
+          </p>
+          <p>
+            (1) 当たりは 2 本なので
+            $$ P(\text{当たり}) = \frac{2}{5} = 0.4 $$
+          </p>
+          <p>
+            (2) はずれは 3 本なので
+            $$ P(\text{はずれ}) = \frac{3}{5} = 0.6 $$
+          </p>
+          <p>
+            (3) 引いた結果は「当たり」か「はずれ」のどちらかで、それで全部です。だから和は
+            $$ \frac{2}{5} + \frac{3}{5} = \frac{5}{5} = 1 $$
+            性質③のとおり、ちゃんと 1 になりました。
+          </p>
+        </div>
+
+        <h2>確率と割合は、実は親せき</h2>
+
+        <p>
+          ここまでで気づいた人もいるかもしれません。
+          \(\dfrac{2}{5}\) は「当たりの割合」でもあります。確率の式は、割合の式とそっくりなのです。
+        </p>
+
+        <p>
+          じつは「確率」と「割合」は、とても近い関係にあります。
+          くじを 1 本だけ引くときの当たりの<strong>確率</strong>は、箱の中の当たりの<strong>割合</strong>と同じ。
+          この橋渡しは <a href="0-3.html">0-3 割合・比・パーセント</a> でじっくり扱います。
+          いまは「確率は割合の仲間だ」とだけ覚えておけば十分です。
+        </p>
+
+        <div class="box box-sim">
+          <div class="box-title">やってみよう</div>
+          <p>
+            手元にサイコロかコインがあれば、コインを 10 回投げて表の回数を数えてみましょう。
+            5 回ちょうどになるとは限りません。でも回数を 100 回、1000 回と増やすほど、
+            表の割合は 0.5 に近づいていきます。確率はこの「たくさん試したときに落ち着く先」とも言えます。
+            この「近づいていく」話は、あとのレベルでくわしく見ます。
+          </p>
+        </div>
+
+        <h2>理解度チェック</h2>
+
+        <div class="quiz" data-answer="b">
+          <p class="quiz-q">問1: サイコロを 1 回振って「3 以上の目（3・4・5・6）」が出る確率は?</p>
+          <button class="quiz-option" data-key="a">\( \dfrac{1}{2} \)</button>
+          <button class="quiz-option" data-key="b">\( \dfrac{2}{3} \)</button>
+          <button class="quiz-option" data-key="c">\( \dfrac{1}{6} \)</button>
+          <div class="quiz-explain">
+            <p>
+              あてはまるのは 3・4・5・6 の 4 通り、全部で 6 通り。
+              よって \( \dfrac{4}{6} = \dfrac{2}{3} \) です。
+            </p>
+          </div>
+        </div>
+
+        <div class="quiz" data-answer="c">
+          <p class="quiz-q">問2: 確率について、まちがっているのはどれ?</p>
+          <button class="quiz-option" data-key="a">確率は 0 から 1 までの数で表す</button>
+          <button class="quiz-option" data-key="b">絶対に起きないことの確率は 0 である</button>
+          <button class="quiz-option" data-key="c">どんな 2 通りの出来事でも、それぞれの確率は \( \dfrac{1}{2} \) になる</button>
+          <div class="quiz-explain">
+            <p>
+              c がまちがいです。「数えて割る」やり方が使えるのは、結果が同様に確からしいときだけ。
+              たとえば「晴れか雨か」は 2 通りでも、確率が \( \dfrac{1}{2} \) ずつとは限りません。
+              a と b は確率の正しい性質です。
+            </p>
+          </div>
+        </div>
+
+        <div class="quiz" data-answer="a">
+          <p class="quiz-q">問3: ある袋から玉を 1 個取り出すと、赤・青・黄のどれかが出ます。赤が \( \dfrac{1}{4} \)、青が \( \dfrac{1}{2} \) のとき、黄が出る確率は?</p>
+          <button class="quiz-option" data-key="a">\( \dfrac{1}{4} \)</button>
+          <button class="quiz-option" data-key="b">\( \dfrac{1}{2} \)</button>
+          <button class="quiz-option" data-key="c">\( \dfrac{3}{4} \)</button>
+          <div class="quiz-explain">
+            <p>
+              起こりうる結果（赤・青・黄）の確率をぜんぶ足すと 1 になります（性質③）。
+              よって黄の確率は \( 1 - \dfrac{1}{4} - \dfrac{1}{2} = \dfrac{4}{4} - \dfrac{1}{4} - \dfrac{2}{4} = \dfrac{1}{4} \) です。
+            </p>
+          </div>
+        </div>
+
+        <h2>演習</h2>
+
+        <div class="box box-practice">
+          <div class="box-title">演習1</div>
+          <p>
+            1 から 10 までの数字が 1 つずつ書かれた 10 枚のカードがあります。
+            よく切って 1 枚引くとき、「偶数」が書かれている確率を求めなさい。
+          </p>
+          <details class="answer">
+            <summary>解答を見る</summary>
+            <p>
+              偶数は 2・4・6・8・10 の 5 通り、全部で 10 通り。どのカードも同様に確からしいので
+              $$ P(\text{偶数}) = \frac{5}{10} = \frac{1}{2} $$
+              答えは \( \dfrac{1}{2} \)（= 0.5）です。
+            </p>
+          </details>
+        </div>
+
+        <div class="box box-practice">
+          <div class="box-title">演習2</div>
+          <p>
+            当たりくじ 1 本、はずれくじ 4 本の合わせて 5 本から 1 本引きます。
+            (1) 当たる確率と (2) 当たらない（はずれる）確率を求め、(3) 2 つの和を確かめなさい。
+          </p>
+          <details class="answer">
+            <summary>解答を見る</summary>
+            <p>(1) 当たりは 1 本なので \( P(\text{当たり}) = \dfrac{1}{5} \)。</p>
+            <p>(2) はずれは 4 本なので \( P(\text{はずれ}) = \dfrac{4}{5} \)。</p>
+            <p>
+              (3) 引いた結果は当たりかはずれのどちらかで全部なので、和は
+              \( \dfrac{1}{5} + \dfrac{4}{5} = \dfrac{5}{5} = 1 \)。
+              性質③のとおり 1 になりました。
+            </p>
+            <p>
+              ちなみに「当たらない確率」は「1 から当たる確率を引く」でも出せます。
+              \( 1 - \dfrac{1}{5} = \dfrac{4}{5} \)。同じ答えですね。
+            </p>
+          </details>
+        </div>
+
+        <div class="box box-practice">
+          <div class="box-title">演習3</div>
+          <p>
+            次の確率を、起こりにくい順（小さい順）に並べなさい。<br>
+            ア: サイコロで 1 の目が出る　イ: コインで表が出る　ウ: サイコロで偶数が出る
+          </p>
+          <details class="answer">
+            <summary>解答を見る</summary>
+            <p>
+              それぞれの確率を計算します。<br>
+              ア: \( \dfrac{1}{6} \approx 0.17 \)　イ: \( \dfrac{1}{2} = 0.5 \)　ウ: \( \dfrac{3}{6} = \dfrac{1}{2} = 0.5 \)
+            </p>
+            <p>
+              いちばん小さいのはア。イとウは同じ \( \dfrac{1}{2} \) です。
+              よって小さい順は <strong>ア &lt; イ ＝ ウ</strong> となります。
+              分数のままでは比べにくいときは、小数に直すと大小が見やすくなります。
+            </p>
+          </details>
+        </div>
+
+        <div class="box box-practice">
+          <div class="box-title">演習4</div>
+          <p>
+            ある事象の確率について、次の説明はそれぞれ正しいですか。理由も書きなさい。<br>
+            (1) 確率が \(1.2\) の事象がある。　(2) 確率が \(0\) の事象は「絶対に起きない」。
+          </p>
+          <details class="answer">
+            <summary>解答を見る</summary>
+            <p>
+              (1) <strong>正しくありません</strong>。確率はかならず 0 以上 1 以下（性質①）なので、
+              1 をこえる 1.2 という確率はありえません。計算でこういう数が出たら、どこかで数え方をまちがえています。
+            </p>
+            <p>
+              (2) <strong>正しい</strong>です。あてはまる場合の数が 0 のとき、確率は \( \dfrac{0}{\text{全部}} = 0 \)。
+              これは「その事象は決して起こらない」ことを表します（性質②）。
+            </p>
+          </details>
+        </div>
+
+        <h2>まとめ</h2>
+        <ul>
+          <li><span class="term">確率</span>とは、ある事象の起こりやすさを 0 から 1 までの数で表したもの。</li>
+          <li>結果が<strong>同様に確からしい</strong>ときは、\( P = \dfrac{\text{あてはまる場合の数}}{\text{全部の場合の数}} \) で計算できる。</li>
+          <li>確率は必ず \( 0 \le P \le 1 \)。0 は「起きない」、1 は「必ず起きる」を意味する。</li>
+          <li>起こりうる結果すべての確率を足すと、ちょうど <strong>1</strong> になる。</li>
+          <li>確率は「割合」の仲間。1 個引くときの確率は、中身の割合と同じになる。</li>
+        </ul>
+
+        <p>
+          次のレッスン <a href="0-2.html">0-2 場合の数の数え方</a> では、
+          この式の分子と分母である「場合の数」を、樹形図や表を使って漏れなく数える練習をします。
+          数えられれば、確率はもう半分わかったようなものです。一段ずつ上がっていきましょう。
+        </p>
+
+      </div>
+      <!-- ▲▲▲ レッスン本文ここまで ▲▲▲ -->
+
+      <div class="complete-area">
+        <button class="btn btn-level" id="complete-btn">このレッスンを完了にする</button>
+        <p class="complete-note">進捗はこのブラウザに保存されます</p>
+      </div>
+
+      <!-- 前後ナビ: main.js がカリキュラムから自動生成 -->
+      <nav class="lesson-nav" id="lesson-nav" aria-label="前後のレッスン"></nav>
+
+    </main>
+
+    <!-- ページ内目次: main.js が本文の h2 から自動生成 -->
+    <aside class="toc">
+      <div class="toc-title">このページの内容</div>
+      <nav id="toc"></nav>
+    </aside>
+
+  </div>
+
+  <footer class="site-footer">
+    <p>ベイズの階段 — 中学数学から最前線まで、一段ずつ。</p>
+  </footer>
+
+  <script src="../../assets/js/curriculum.js"></script>
+  <script src="../../assets/js/main.js"></script>
+</body>
+</html>

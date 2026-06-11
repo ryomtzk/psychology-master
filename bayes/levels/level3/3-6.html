@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>3-6 頻度論 vs ベイズ — 信頼区間と信用区間 | ベイズの階段</title>
+  <meta name="description" content="2つの統計学の考え方の違いを公平に比較する">
+  <script>
+    document.documentElement.dataset.theme =
+      localStorage.getItem("bayes-stairs-theme") ||
+      (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Noto+Serif+JP:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../assets/css/main.css">
+
+  <!-- KaTeX: 数式を使うページでは必ずこの3行を入れる -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+          onload="renderMathInElement(document.body, {delimiters: [
+            {left: '$$', right: '$$', display: true},
+            {left: '\\(', right: '\\)', display: false}
+          ]});"></script>
+</head>
+<body data-root="../../" data-level="3" data-lesson-id="3-6">
+
+  <header class="site-header">
+    <button class="sidebar-toggle" id="sidebar-toggle" aria-label="メニュー">☰</button>
+    <a class="brand" href="../../index.html">
+      <span class="brand-mark">階</span>
+      <span>ベイズの階段</span>
+    </a>
+    <div class="header-spacer"></div>
+    <div class="header-progress" id="header-progress"></div>
+    <button class="theme-toggle" id="theme-toggle" aria-label="テーマ切替">🌙</button>
+  </header>
+
+  <div class="layout">
+
+    <!-- サイドバー: main.js がカリキュラムから自動生成 -->
+    <aside class="sidebar"><nav id="sidebar-nav" aria-label="カリキュラム"></nav></aside>
+
+    <main class="lesson">
+
+      <nav class="breadcrumbs" aria-label="パンくず">
+        <a href="../../index.html">ホーム</a><span class="sep">›</span>
+        <a href="index.html">Level 3 ベイズ推定の基礎</a><span class="sep">›</span>
+        <span>3-6 頻度論 vs ベイズ — 信頼区間と信用区間</span>
+      </nav>
+
+      <header class="lesson-header">
+        <div class="lesson-meta">
+          <span class="level-badge">Level 3</span>
+          <span class="small">レッスン 3-6</span>
+        </div>
+        <h1>頻度論 vs ベイズ — 信頼区間と信用区間</h1>
+
+        <div class="lesson-goals">
+          <h2>このレッスンでできるようになること</h2>
+          <ul>
+            <li>頻度論とベイズが「確率」をどう捉えるかの違いを説明できる</li>
+            <li>信頼区間と信用区間の意味の違いを、自分の言葉で言い分けられる</li>
+            <li>どちらの立場にも長所があることを理解し、場面で使い分けを考えられる</li>
+          </ul>
+          <p class="prereq">前提: <a href="3-5.html">3-5 事後分布の要約 — MAP推定と信用区間</a> を読んでいること</p>
+        </div>
+      </header>
+
+      <!-- ▼▼▼ ここからレッスン本文 ▼▼▼ -->
+      <div class="lesson-body">
+
+        <h2>同じ問いに、ちがう答え方がある</h2>
+        <p>あるコインを100回投げたら、表が62回出ました。「このコインの表の出やすさは、だいたいどのくらい?」と聞かれたとします。</p>
+        <p>あなたなら、なんと答えますか。「62%くらい」だけでは不安です。本当の出やすさは55%かもしれないし、68%かもしれません。だから多くの人は「だいたい52%から72%のあいだ」のように、幅で答えたくなります。</p>
+        <p>じつは、この「幅で答える」やり方には、有名な流派が2つあります。<span class="term">頻度論（ひんどろん）</span>と<span class="term">ベイズ</span>です。同じデータから、ほとんど同じような数字を出すのに、その数字の<strong>意味のつけ方</strong>がまるで違います。今日はこの2つを、どちらにも肩入れせず公平に見比べます。</p>
+
+        <div class="box box-intuition">
+          <div class="box-title">直感でつかむ</div>
+          <p>違いは「<strong>何をランダム（偶然で動くもの）と考えるか</strong>」にあります。</p>
+          <p>頻度論は、コインの本当の出やすさは<strong>1つに決まった固定値</strong>だと考えます。動くのは、私たちが手にする<strong>データのほう</strong>です。投げ直せば結果は変わりますよね。</p>
+          <p>ベイズは逆です。データは<strong>もう手元にある事実</strong>として固定します。代わりに「本当の出やすさはいくつか」という<strong>私たちの信念（しんねん）</strong>を、確率で表して動かします。</p>
+          <p>同じコインを見ても、「偶然の主役」をどちらに置くかが正反対。ここがすべての出発点です。</p>
+        </div>
+
+        <h2>2つの世界観</h2>
+        <p>もう少していねいに、2つの立場を並べます。求めたい本当の出やすさを \(\theta\)（シータ）と書きます。\(\theta\) は0から1のあいだの数です。</p>
+
+        <div class="box box-def">
+          <div class="box-title">定義 — 頻度論の立場</div>
+          <p><span class="term">頻度論</span>では、確率を「同じことを何度もくり返したときの<strong>長い目で見た割合</strong>」と考えます。</p>
+          <p>このとき \(\theta\) は<strong>定まった1つの値</strong>です。ただし私たちには、その値が見えていません。\(\theta\) に確率をつけることはしません。「\(\theta\) が0.6である確率」という言い方を、頻度論はそもそも認めないのです。確率がつくのは、投げ直すたびに変わる<strong>データ</strong>のほうだけです。</p>
+        </div>
+
+        <div class="box box-def">
+          <div class="box-title">定義 — ベイズの立場</div>
+          <p><span class="term">ベイズ</span>では、確率を「ある主張に対する<strong>信じ具合（信念の度合い）</strong>」と考えます。</p>
+          <p>このとき \(\theta\) は<strong>確率変数</strong>のように扱えます。「\(\theta\) が0.55から0.68のあいだにある確率は90%」と、堂々と言えます。データを見る前の信念が<strong>事前分布</strong>、データを見た後の信念が<strong>事後分布</strong>でした(3-1で学びました)。</p>
+        </div>
+
+        <div class="box box-warn">
+          <div class="box-title">つまずき注意</div>
+          <p>「どちらが正しいの?」とつい聞きたくなりますが、これは<strong>正誤の問題ではありません</strong>。確率という言葉の<strong>意味の決め方</strong>が違うだけです。どちらも筋の通った体系で、得意な場面が違います。</p>
+        </div>
+
+        <h2>信頼区間 — 区間のほうがランダム</h2>
+        <p>頻度論が幅で答えるときの道具が<span class="term">信頼区間（しんらいくかん）</span>です。新聞の世論調査などで「支持率42%（誤差±3%）」と見かける、あの幅の正体です。</p>
+
+        <div class="box box-def">
+          <div class="box-title">定義 — 95%信頼区間</div>
+          <p>データから計算式で作る区間です。大事なのはその意味です。</p>
+          <p>「同じ調査を<strong>何度もくり返して</strong>、そのたびに区間を作ると、<strong>そのうち約95%の区間が</strong>本当の値 \(\theta\) を含む」——これが95%信頼区間の意味です。</p>
+        </div>
+
+        <div class="box box-warn">
+          <div class="box-title">つまずき注意 — いちばん間違えやすいところ</div>
+          <p>「95%信頼区間が \([0.52,\ 0.72]\) でした」と出ても、<br><strong>「\(\theta\) がこの区間に入る確率は95%」とは言えません。</strong></p>
+          <p>頻度論では \(\theta\) は固定値。区間 \([0.52,\ 0.72]\) ももう計算し終わった固定の区間です。固定の点が固定の区間に入るかどうかは、入っているか・いないかの<strong>どちらか</strong>で、そこに確率(0.95など)は入る余地がありません。確率があるのは、<strong>区間を作る手続きのほう</strong>です。投げ直すたびに区間がガチャガチャ動き、その95%が当たる、という話なのです。</p>
+        </div>
+
+        <figure class="figure">
+          <svg viewBox="0 0 360 180" width="360" aria-label="本当の値の縦線と、それを含む区間・外す区間">
+            <!-- 本当のθの縦線 -->
+            <line x1="200" y1="14" x2="200" y2="166" stroke="var(--level-color)" stroke-width="2.5" stroke-dasharray="5 4"/>
+            <text x="200" y="11" text-anchor="middle" font-size="11" fill="var(--level-color)">本当の θ</text>
+            <!-- 区間たち: 横棒。当たり=通常色、外れ=赤系(varがなければborder) -->
+            <!-- 1 当たり -->
+            <line x1="150" y1="34" x2="246" y2="34" stroke="var(--level-color)" stroke-width="3"/>
+            <line x1="150" y1="30" x2="150" y2="38" stroke="var(--level-color)" stroke-width="3"/>
+            <line x1="246" y1="30" x2="246" y2="38" stroke="var(--level-color)" stroke-width="3"/>
+            <!-- 2 当たり -->
+            <line x1="172" y1="58" x2="258" y2="58" stroke="var(--level-color)" stroke-width="3"/>
+            <line x1="172" y1="54" x2="172" y2="62" stroke="var(--level-color)" stroke-width="3"/>
+            <line x1="258" y1="54" x2="258" y2="62" stroke="var(--level-color)" stroke-width="3"/>
+            <!-- 3 外れ(右側) -->
+            <line x1="214" y1="82" x2="300" y2="82" stroke="var(--text-muted)" stroke-width="3"/>
+            <line x1="214" y1="78" x2="214" y2="86" stroke="var(--text-muted)" stroke-width="3"/>
+            <line x1="300" y1="78" x2="300" y2="86" stroke="var(--text-muted)" stroke-width="3"/>
+            <text x="312" y="86" font-size="10" fill="var(--text-muted)">外れ</text>
+            <!-- 4 当たり -->
+            <line x1="160" y1="106" x2="240" y2="106" stroke="var(--level-color)" stroke-width="3"/>
+            <line x1="160" y1="102" x2="160" y2="110" stroke="var(--level-color)" stroke-width="3"/>
+            <line x1="240" y1="102" x2="240" y2="110" stroke="var(--level-color)" stroke-width="3"/>
+            <!-- 5 当たり -->
+            <line x1="184" y1="130" x2="264" y2="130" stroke="var(--level-color)" stroke-width="3"/>
+            <line x1="184" y1="126" x2="184" y2="134" stroke="var(--level-color)" stroke-width="3"/>
+            <line x1="264" y1="126" x2="264" y2="134" stroke="var(--level-color)" stroke-width="3"/>
+            <!-- 6 外れ(左側) -->
+            <line x1="96" y1="154" x2="182" y2="154" stroke="var(--text-muted)" stroke-width="3"/>
+            <line x1="96" y1="150" x2="96" y2="158" stroke="var(--text-muted)" stroke-width="3"/>
+            <line x1="182" y1="150" x2="182" y2="158" stroke="var(--text-muted)" stroke-width="3"/>
+            <text x="68" y="158" font-size="10" fill="var(--text-muted)">外れ</text>
+          </svg>
+          <figcaption>図1: 本当の θ（縦の点線）は動かない。調査をくり返すたびに「区間」のほうが上下にずれて作られ、その多く（95%）が θ をまたぐ。たまに外す区間も出る。これが信頼区間の意味。</figcaption>
+        </figure>
+
+        <h2>信用区間 — パラメータの確率で答える</h2>
+        <p>一方、ベイズが幅で答えるときの道具が<span class="term">信用区間（しんようくかん）</span>です。3-5で計算した、あの区間です。</p>
+
+        <div class="box box-def">
+          <div class="box-title">定義 — 95%信用区間</div>
+          <p>事後分布から作る区間で、こう読みます。</p>
+          <p>「手元のデータをふまえると、<strong>\(\theta\) がこの区間に入る確率は95%</strong>」。</p>
+          <p>式で書けば、区間を \([a,\ b]\) として
+          $$ P(a \le \theta \le b \mid \text{データ}) = 0.95 $$
+          となります。\(P(\cdots \mid \text{データ})\) は「データを見たうえでの確率」と読みます。事後分布の面積が、区間の上で95%ぶんになるように \(a, b\) を選んだものです。</p>
+        </div>
+
+        <p>つまり信用区間は、多くの人が信頼区間に対して<strong>つい期待してしまう意味</strong>「この区間にθが95%入る」を、<strong>正面から言ってよい</strong>区間なのです。ベイズでは \(\theta\) に確率をつけてよいので、これが許されます。</p>
+
+        <div class="box box-thm">
+          <div class="box-title">対応表 — 何がランダムか</div>
+          <table>
+            <thead>
+              <tr><th></th><th>頻度論 / 信頼区間</th><th>ベイズ / 信用区間</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>本当の値 \(\theta\)</td><td>固定（動かない）</td><td>確率変数のように扱う</td></tr>
+              <tr><td>ランダムなのは</td><td>データと区間</td><td>θ についての信念</td></tr>
+              <tr><td>区間の読み方</td><td>くり返すと95%が θ を含む</td><td>θ がこの区間に入る確率95%</td></tr>
+              <tr><td>事前分布</td><td>使わない</td><td>必要（明示する）</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h2>p値にも少しだけ触れておく</h2>
+        <p>頻度論でよく登場する数字に<span class="term">p値（ピーち）</span>があります。ニュースや論文で「p &lt; 0.05」と見かけるあれです。</p>
+        <p>p値は、ざっくり言うと「<strong>差がないと仮定したとき</strong>に、いま見たようなデータ（かそれ以上に極端なもの）が出る出やすさ」を表します。小さいほど「差がない、では説明しにくい」という合図になります。</p>
+        <p>ここで注意。p値は「差がない確率」では<strong>ありません</strong>。これも、信頼区間と同じ勘違いの仲間です。仮説そのものに確率をつけたいなら、それはベイズの仕事になります。p値の詳しい中身は先のレベルにゆずり、今日は「頻度論の代表的な道具」とだけ覚えておけば十分です。</p>
+
+        <div class="box box-ex">
+          <div class="box-title">例題</div>
+          <p>冒頭のコイン(100回中62回が表)について、ある人がこう言いました。</p>
+          <p>「95%信頼区間が \([0.52,\ 0.72]\) と出たから、<strong>このコインの表の確率が0.52〜0.72に入る確率は95%</strong>だね」</p>
+          <p>この発言は頻度論の言葉づかいとして正しいでしょうか。正しくないなら、どう直せばよいでしょうか。</p>
+          <p><strong>解:</strong> 正しくありません。頻度論では \(\theta\)（本当の表の確率）は固定値で、\([0.52,\ 0.72]\) ももう確定した区間です。固定の値が固定の区間に「95%の確率で入る」とは言えません(入っているか、いないかのどちらか)。</p>
+          <p>正しい言い直しは「<strong>同じ実験をくり返して毎回こうやって区間を作れば、そのうち約95%の区間が本当の値を含む</strong>」です。</p>
+          <p>もし「θがこの区間に入る確率は95%」と言いたいなら、それは<strong>ベイズの信用区間</strong>として計算する必要があります。事前分布を置いて事後分布を求め、その95%区間を出せば、その読み方でOKになります。</p>
+        </div>
+
+        <h2>どちらが「勝ち」なのか</h2>
+        <p>結論から言うと、勝ち負けはありません。両方に良いところがあります。</p>
+
+        <div class="box box-intuition">
+          <div class="box-title">公平に見ると</div>
+          <p><strong>頻度論の長所:</strong> 事前分布を決めなくてよいので、立場による恣意（しい)が入りにくいと言えます。「くり返したら何%当たる」という保証は、品質管理や規制の現場で扱いやすいです。</p>
+          <p><strong>ベイズの長所:</strong> 答えの読み方が素直です。「θがこの区間に95%入る」は、人が知りたいことそのものです。事前の知識を堂々と取り込めるのも強みです。データが少ないときに特に頼りになります。</p>
+          <p><strong>共通点:</strong> データがたっぷりあると、両者の区間の<strong>数字はほとんど一致</strong>します。違いが効いてくるのは、データが少ないときや、事前知識を使いたいときです。</p>
+        </div>
+
+        <h2>理解度チェック</h2>
+
+        <div class="quiz" data-answer="b">
+          <p class="quiz-q">問1: 95%「信頼区間」が \([0.52,\ 0.72]\) と出ました。正しい読み方はどれ?</p>
+          <button class="quiz-option" data-key="a">本当の値がこの区間に入る確率は95%である</button>
+          <button class="quiz-option" data-key="b">同じ実験をくり返して区間を作ると、約95%の区間が本当の値を含む</button>
+          <button class="quiz-option" data-key="c">この区間の外に本当の値がある確率は5%である</button>
+          <div class="quiz-explain"><p>頻度論では本当の値も区間も固定なので、aやcのように「値が区間に入る確率」を語れません。確率があるのは<strong>区間を作る手続き</strong>のほうで、くり返したときの当たる割合がおよそ95%、というのが正しい意味です。</p></div>
+        </div>
+
+        <div class="quiz" data-answer="c">
+          <p class="quiz-q">問2: 「θがこの区間に入る確率は95%」と<strong>堂々と言ってよい</strong>のはどちら?</p>
+          <button class="quiz-option" data-key="a">頻度論の信頼区間</button>
+          <button class="quiz-option" data-key="b">どちらでも言ってよい</button>
+          <button class="quiz-option" data-key="c">ベイズの信用区間</button>
+          <div class="quiz-explain"><p>ベイズでは θ に確率をつけてよいので、事後分布から作った信用区間に対して「θ がこの区間に95%入る」と言えます。信頼区間ではこの読み方は誤りです。</p></div>
+        </div>
+
+        <div class="quiz" data-answer="a">
+          <p class="quiz-q">問3: 頻度論とベイズの根っこの違いを一言でいうと?</p>
+          <button class="quiz-option" data-key="a">何をランダム(偶然で動くもの)と見るか</button>
+          <button class="quiz-option" data-key="b">どちらが計算が速いか</button>
+          <button class="quiz-option" data-key="c">どちらが必ず正しい答えを出すか</button>
+          <div class="quiz-explain"><p>頻度論はデータをランダムと見て θ を固定、ベイズはデータを固定して θ についての信念を確率で動かします。計算速度や「必ず正しい」かどうかが本質的な違いではありません。</p></div>
+        </div>
+
+        <h2>演習</h2>
+
+        <div class="box box-practice">
+          <div class="box-title">演習1</div>
+          <p>友だちが「95%信用区間が \([0.55,\ 0.68]\) だったよ。だからθはこの中に95%の確率でいる」と言いました。この発言は正しいですか。正しい場合は理由も書きましょう。</p>
+          <details class="answer">
+            <summary>解答を見る</summary>
+            <p><strong>正しいです。</strong>「信用区間」はベイズの区間です。ベイズでは θ を確率で扱えるので、「θ がこの区間に入る確率は95%」という読み方がそのまま許されます。これが<strong>信頼区間</strong>だったら、同じ言い方は誤りになります。区間の名前(信用か信頼か)で読み方が変わる点がポイントです。</p>
+          </details>
+        </div>
+
+        <div class="box box-practice">
+          <div class="box-title">演習2</div>
+          <p>「うちの工場では、出荷前検査の合格率を保証したい。1万回のうち何%でちゃんと当たる手続きか、という性質を重視したい」。この目的に、頻度論とベイズのどちらの考え方がしっくり来やすいですか。理由も一言で。</p>
+          <details class="answer">
+            <summary>解答を見る</summary>
+            <p><strong>頻度論</strong>がしっくり来やすいです。信頼区間の「くり返したときに約95%が当たる」という保証は、まさに「1万回のうち何%で当たる手続きか」という<strong>長い目で見た割合</strong>の話だからです。規制や品質管理の現場でこの考え方がよく使われるのは、この性質が扱いやすいためです。(もちろんベイズで取り組むこともできますが、この問いの言葉づかいには頻度論が素直に対応します。)</p>
+          </details>
+        </div>
+
+        <div class="box box-practice">
+          <div class="box-title">演習3</div>
+          <p>新しい薬の効き目を、過去の似た薬の知識を取り込みながら、しかも少ない患者数で見積もりたい。さらに最後は「効く確率はこのくらい」と直感的に伝えたい。どちらの立場が向いていますか。理由を2つ挙げましょう。</p>
+          <details class="answer">
+            <summary>解答を見る</summary>
+            <p><strong>ベイズ</strong>が向いています。理由は2つ。</p>
+            <ol>
+              <li><strong>事前知識を取り込める:</strong> 過去の似た薬の情報を事前分布として堂々と組み込めます。</li>
+              <li><strong>読み方が素直:</strong> データが少なくても事後分布が出せ、「効く確率はこのくらい」と確率でそのまま伝えられます。これは信用区間の読み方と相性が良いです。</li>
+            </ol>
+            <p>逆に、データが大量にあって事前知識を入れたくない場面では、頻度論でも結果はほぼ同じになります。場面に合わせて選ぶのがコツです。</p>
+          </details>
+        </div>
+
+        <div class="box box-practice">
+          <div class="box-title">演習4</div>
+          <p>「p値が0.03だった。だから差がない確率は3%だ」。この読み方のどこが間違っていますか。一言で直しましょう。</p>
+          <details class="answer">
+            <summary>解答を見る</summary>
+            <p>p値は<strong>「差がない確率」ではありません</strong>。p値は「差がないと仮定したときに、いま見たような（かそれ以上に極端な）データが出る出やすさ」です。仮説そのものに確率(「差がない確率」)をつけたいなら、それはベイズの考え方が必要になります。信頼区間の勘違いと同じ種類の取り違えです。</p>
+          </details>
+        </div>
+
+        <h2>まとめ</h2>
+        <ul>
+          <li>頻度論とベイズの根本の違いは「<strong>何をランダムと見るか</strong>」。頻度論はデータ、ベイズは θ についての信念。</li>
+          <li><strong>信頼区間</strong>(頻度論)は「くり返すと約95%の区間が本当の値を含む」。<strong>区間のほうがランダム</strong>で、「θがこの区間に入る確率95%」とは言えない。</li>
+          <li><strong>信用区間</strong>(ベイズ)は「θがこの区間に入る確率は95%」と<strong>素直に言ってよい</strong>。事前分布が必要。</li>
+          <li><strong>p値</strong>は「差がない確率」ではなく、「差がないと仮定したときのデータの出やすさ」。これも取り違えやすい。</li>
+          <li>どちらが正しいかではなく<strong>得意な場面が違う</strong>。データが多ければ数字はほぼ一致する。</li>
+        </ul>
+        <p>これでLevel 3「ベイズ推定の基礎」は一区切りです。事前分布から事後分布へ、そして区間で答えるところまで、ひとつの道がつながりました。次のレベルでは、計算が手では解けない場面で<strong>コンピュータに事後分布を探させる</strong>方法へ進みます。お楽しみに。</p>
+
+      </div>
+      <!-- ▲▲▲ レッスン本文ここまで ▲▲▲ -->
+
+      <div class="complete-area">
+        <button class="btn btn-level" id="complete-btn">このレッスンを完了にする</button>
+        <p class="complete-note">進捗はこのブラウザに保存されます</p>
+      </div>
+
+      <!-- 前後ナビ: main.js がカリキュラムから自動生成 -->
+      <nav class="lesson-nav" id="lesson-nav" aria-label="前後のレッスン"></nav>
+
+    </main>
+
+    <!-- ページ内目次: main.js が本文の h2 から自動生成 -->
+    <aside class="toc">
+      <div class="toc-title">このページの内容</div>
+      <nav id="toc"></nav>
+    </aside>
+
+  </div>
+
+  <footer class="site-footer">
+    <p>ベイズの階段 — 中学数学から最前線まで、一段ずつ。</p>
+  </footer>
+
+  <script src="../../assets/js/curriculum.js"></script>
+  <script src="../../assets/js/main.js"></script>
+</body>
+</html>

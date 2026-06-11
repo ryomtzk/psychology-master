@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>5-3 ベイズロジスティック回帰 | ベイズの階段</title>
+  <meta name="description" content="分類問題と一般化線形モデルへの拡張">
+  <script>
+    document.documentElement.dataset.theme =
+      localStorage.getItem("bayes-stairs-theme") ||
+      (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Noto+Serif+JP:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../assets/css/main.css">
+
+  <!-- KaTeX: 数式を使うページでは必ずこの3行を入れる -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+          onload="renderMathInElement(document.body, {delimiters: [
+            {left: '$$', right: '$$', display: true},
+            {left: '\\(', right: '\\)', display: false}
+          ]});"></script>
+</head>
+<body data-root="../../" data-level="5" data-lesson-id="5-3">
+
+  <header class="site-header">
+    <button class="sidebar-toggle" id="sidebar-toggle" aria-label="メニュー">☰</button>
+    <a class="brand" href="../../index.html">
+      <span class="brand-mark">階</span>
+      <span>ベイズの階段</span>
+    </a>
+    <div class="header-spacer"></div>
+    <div class="header-progress" id="header-progress"></div>
+    <button class="theme-toggle" id="theme-toggle" aria-label="テーマ切替">🌙</button>
+  </header>
+
+  <div class="layout">
+
+    <!-- サイドバー: main.js がカリキュラムから自動生成 -->
+    <aside class="sidebar"><nav id="sidebar-nav" aria-label="カリキュラム"></nav></aside>
+
+    <main class="lesson">
+
+      <nav class="breadcrumbs" aria-label="パンくず">
+        <a href="../../index.html">ホーム</a><span class="sep">›</span>
+        <a href="index.html">Level 5 実践ベイズモデリング</a><span class="sep">›</span>
+        <span>5-3 ベイズロジスティック回帰</span>
+      </nav>
+
+      <header class="lesson-header">
+        <div class="lesson-meta">
+          <span class="level-badge">Level 5</span>
+          <span class="small">レッスン 5-3</span>
+        </div>
+        <h1>ベイズロジスティック回帰</h1>
+
+        <div class="lesson-goals">
+          <h2>このレッスンでできるようになること</h2>
+          <ul>
+            <li>「合格／不合格」のような二値の結果を、シグモイド関数で確率に変換するしくみを説明できる</li>
+            <li>ロジスティック回帰を、ベルヌーイ尤度を使ったベイズモデルとして組み立てられる</li>
+            <li>回帰係数を「対数オッズの変化」として解釈し、PyMCのコードに落とせる</li>
+          </ul>
+          <p class="prereq">前提: <a href="5-2.html">5-2 ベイズ線形回帰</a> と <a href="../level2/2-2.html">2-2 二項分布</a> を読んでいること</p>
+        </div>
+      </header>
+
+      <div class="lesson-body">
+
+        <h2>「いくつ?」ではなく「どっち?」を当てる</h2>
+        <p>前のレッスン <a href="5-2.html">5-2</a> では、勉強時間から「テストの点数」を予測しました。点数は連続した数です。50点も73.5点もありえます。こういう「いくつ?」を当てる問題に、ベイズ線形回帰はぴったりでした。</p>
+        <p>でも世の中には、「いくつ?」では答えられない問いもあります。「このメールは迷惑メールか、そうでないか」「この患者さんは病気か、健康か」「この学生は合格か、不合格か」。答えは2つにひとつ。こういう問題を<span class="term">二値分類（にちぶんるい）</span>と呼びます。結果が0か1の、2通りしかない予測です。</p>
+        <p>このレッスンでは、勉強時間から「合格する確率」を予測します。線形回帰のしくみを少しだけ作りかえて、確率を当てにいく。それが<span class="term">ロジスティック回帰</span>です。「ロジスティック」は読みにくいですが、いまは名前だけ覚えておけば大丈夫です。中身はこれから一段ずつ組み立てます。</p>
+
+        <div class="box box-intuition">
+          <div class="box-title">直感でつかむ</div>
+          <p>線形回帰をそのまま二値分類に使おうとすると、こまったことが起きます。直線はどこまでも上に、どこまでも下に伸びます。勉強時間をうんと増やせば「合格率120%」、減らせば「合格率マイナス30%」。確率なのに0〜1をはみ出してしまうのです。</p>
+          <p>そこで、直線が出した数を<strong>S字のカーブで0〜1の間に押し込める</strong>道具を使います。大きな正の値は1の近くへ、大きな負の値は0の近くへ、ちょうど真ん中は0.5へ。このS字が、これから学ぶシグモイド関数です。線形回帰の「直線」に、確率へ変換する「ふた」をかぶせるイメージです。</p>
+        </div>
+
+        <h2>直線から確率へ — シグモイド関数</h2>
+        <p>まず、線形回帰のときと同じ「直線の部分」を用意します。勉強時間を \( x \)、切片を \( \alpha \)（アルファ）、傾きを \( \beta \)（ベータ）として、次の値をつくります。</p>
+
+        <div class="formula">
+          <span class="formula-label">線形予測子（直線の部分）</span>
+          $$ z = \alpha + \beta x $$
+        </div>
+
+        <p>この \( z \)（ゼット）は、線形回帰の予測値とまったく同じものです。ただし、ここで止めません。\( z \) は \( -\infty \) から \( +\infty \) まで、どんな値でも取りえます。これを確率に変えるために、<span class="term">シグモイド関数</span>（ロジスティック関数とも呼びます）に通します。</p>
+
+        <div class="box box-def">
+          <div class="box-title">定義 — シグモイド関数</div>
+          <p>実数 \( z \) を受け取り、\(0\) と \(1\) のあいだの値を返す関数 \( \sigma \)（シグマ）を、次で定義します。</p>
+          $$ \sigma(z) = \frac{1}{1 + e^{-z}} $$
+          <p>記号 \( e^{-z} \) は『ネイピア数 \( e \) の \( -z \) 乗』です。\( z \) が大きいほど \( e^{-z} \) は \(0\) に近づき、\( \sigma(z) \) は \(1\) に近づきます。逆に \( z \) が小さい（大きな負）ほど \( \sigma(z) \) は \(0\) に近づきます。そして \( z = 0 \) のとき、ちょうど \( \sigma(0) = \dfrac{1}{1+1} = 0.5 \) です。</p>
+        </div>
+
+        <p>このS字こそが、ロジスティック回帰の心臓部です。直線の出力 \( z \) を、なめらかに0〜1へ折りたたんでくれます。グラフで見てみましょう。</p>
+
+        <figure class="figure">
+          <svg viewBox="0 0 420 240" width="420" aria-label="シグモイド関数のグラフ">
+            <!-- 軸 -->
+            <line x1="40" y1="200" x2="400" y2="200" stroke="var(--border)" stroke-width="2"/>
+            <line x1="220" y1="20" x2="220" y2="210" stroke="var(--border)" stroke-width="2"/>
+            <!-- y=1 と y=0.5 の補助線 -->
+            <line x1="40" y1="40" x2="400" y2="40" stroke="var(--border)" stroke-width="1" stroke-dasharray="3 3" opacity="0.6"/>
+            <line x1="40" y1="120" x2="400" y2="120" stroke="var(--border)" stroke-width="1" stroke-dasharray="3 3" opacity="0.5"/>
+            <text x="34" y="44"  text-anchor="end" font-size="11" fill="var(--text-muted)">1</text>
+            <text x="34" y="124" text-anchor="end" font-size="11" fill="var(--text-muted)">0.5</text>
+            <text x="34" y="204" text-anchor="end" font-size="11" fill="var(--text-muted)">0</text>
+            <!-- シグモイド曲線 σ(z)=1/(1+e^-z) を 200-z*30, 200-160*σ で描画 -->
+            <path d="M40,198 C110,196 150,190 185,160 C205,142 215,98 235,80 C270,50 310,44 400,42"
+                  fill="none" stroke="var(--level-color)" stroke-width="3"/>
+            <!-- z=0 で 0.5 を通る目印 -->
+            <circle cx="220" cy="120" r="4" fill="var(--level-color)"/>
+            <text x="228" y="116" font-size="11" fill="var(--level-color)">(0, 0.5)</text>
+            <text x="372" y="220" text-anchor="middle" font-size="11" fill="var(--text-muted)">z（大）</text>
+            <text x="68"  y="220" text-anchor="middle" font-size="11" fill="var(--text-muted)">z（小）</text>
+            <text x="226" y="220" text-anchor="start" font-size="11" fill="var(--text-muted)">0</text>
+          </svg>
+          <figcaption>図1: シグモイド関数 \( \sigma(z) = \dfrac{1}{1+e^{-z}} \)。直線の出力 \( z \) を、なめらかなS字で \(0\)〜\(1\) の確率に変換します。\( z=0 \) でちょうど \(0.5\) を通り、左右にいくほど \(0\) と \(1\) に貼りつきます。</figcaption>
+        </figure>
+
+        <p>2つを組み合わせると、ロジスティック回帰の「平均部分」ができあがります。合格する確率を \( p \) とすると、</p>
+
+        <div class="formula">
+          <span class="formula-label">ロジスティック回帰の平均構造</span>
+          $$ p = \sigma(\alpha + \beta x) = \frac{1}{1 + e^{-(\alpha + \beta x)}} $$
+        </div>
+
+        <p>勉強時間 \( x \) を入れると、まず直線が \( z = \alpha + \beta x \) を計算し、シグモイドがそれを「合格確率 \( p \)」に変える。この2段構えが、線形回帰との一番の違いです。</p>
+
+        <h2>結果のばらつきはベルヌーイ分布</h2>
+        <p>確率 \( p \) が決まりました。でも実際のデータは「確率」ではなく、「合格(1)」か「不合格(0)」の生(なま)の結果です。確率 \( p \) から、0か1のどちらかが出る——このばらつきを表すのが<span class="term">ベルヌーイ分布</span>です。</p>
+
+        <div class="box box-def">
+          <div class="box-title">定義 — ベルヌーイ分布と尤度</div>
+          <p>結果 \( y \) が確率 \( p \) で \(1\)、確率 \( 1-p \) で \(0\) になるとき、\( y \) はベルヌーイ分布に従うといい、\( y \sim \mathrm{Bernoulli}(p) \) と書きます。その尤度（ゆうど、データのもっともらしさ）は、1本の式でまとめられます。</p>
+          $$ p(y \mid p) = p^{\,y}\,(1-p)^{\,1-y} $$
+          <p>\( y=1 \) を入れると \( p^1 (1-p)^0 = p \)、\( y=0 \) を入れると \( p^0 (1-p)^1 = 1-p \)。たしかに、合格なら \( p \)、不合格なら \( 1-p \) のもっともらしさになっています。</p>
+        </div>
+
+        <div class="box box-intuition">
+          <div class="box-title">直感でつかむ — 二項分布の「1回版」</div>
+          <p>ベルヌーイ分布は、<a href="../level2/2-2.html">2-2</a> で学んだ二項分布の、もっとも単純な姿です。二項分布は「コインを \( n \) 回投げて何回表か」を数えました。ベルヌーイ分布は、その \( n=1 \) の場合。つまり「1回だけ投げて、表(1)か裏(0)か」です。</p>
+          <p>ロジスティック回帰では、学生ひとりひとりが「1回だけのコイン投げ」になります。ちがうのは、その表の出やすさ \( p \) が、学生ごとの勉強時間で変わること。よく勉強した人は \( p \) の高いコイン、していない人は \( p \) の低いコイン、というわけです。</p>
+        </div>
+
+        <h2>一般化線形モデルという見取り図</h2>
+        <p>ここで一歩引いて、いま作ったものを整理します。線形回帰もロジスティック回帰も、じつは同じ設計図から生まれた兄弟です。その設計図を<span class="term">一般化線形モデル（GLM、ジーエルエム）</span>と呼びます。</p>
+
+        <div class="box box-def">
+          <div class="box-title">定義 — 一般化線形モデル(GLM)の3つの部品</div>
+          <p>GLMは、次の3つを組み合わせてデータをモデル化します。</p>
+          <ul>
+            <li><strong>① 線形予測子</strong>: 説明変数を直線で混ぜた値 \( z = \alpha + \beta x \)。すべてのGLMで共通です。</li>
+            <li><strong>② リンク関数</strong>: \( z \) を「結果の平均」に対応づける変換。ロジスティック回帰ではシグモイドがこの役を担います。</li>
+            <li><strong>③ 分布（尤度）</strong>: 結果のばらつきを表す確率分布。連続なら正規分布、二値ならベルヌーイ分布。</li>
+          </ul>
+        </div>
+
+        <p>この見取り図で2つの回帰を並べると、ちがいがどこにあるかがはっきりします。</p>
+
+        <table>
+          <thead>
+            <tr><th>部品</th><th>線形回帰 (5-2)</th><th>ロジスティック回帰 (今回)</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>① 線形予測子</td><td>\( z = \alpha + \beta x \)</td><td>\( z = \alpha + \beta x \)</td></tr>
+            <tr><td>② リンク関数</td><td>そのまま（平均 \( = z \)）</td><td>シグモイド（\( p = \sigma(z) \)）</td></tr>
+            <tr><td>③ 分布（尤度）</td><td>正規分布</td><td>ベルヌーイ分布</td></tr>
+            <tr><td>当てる対象</td><td>連続した値（点数）</td><td>確率（合格率）</td></tr>
+          </tbody>
+        </table>
+
+        <p>共通しているのは①の直線部分だけ。リンク関数と分布を取りかえれば、別の問題に対応できる。これがGLMの強みです。「直線を、結果の種類に合わせて翻訳しなおす枠組み」だと思ってください。</p>
+
+        <h2>係数の意味 — 対数オッズで読む</h2>
+        <p>線形回帰では、傾き \( \beta \) は「\( x \) が1増えると \( y \) がいくつ増えるか」でした。ロジスティック回帰の \( \beta \) は、何を表すのでしょうか。シグモイドを通すぶん、少しだけひとひねりあります。</p>
+        <p>カギは<span class="term">オッズ</span>という量です。オッズとは「起こる確率」と「起こらない確率」の比、つまり \( \dfrac{p}{1-p} \) のこと。合格率が \(0.8\) なら、オッズは \( \dfrac{0.8}{0.2} = 4 \)。「合格する見込みは、しない見込みの4倍」という読み方です。競馬や賭けでおなじみの考え方ですね。</p>
+        <p>シグモイドの式 \( p = \dfrac{1}{1+e^{-z}} \) を、オッズについて解きほぐすと、おどろくほどきれいな関係が出てきます。</p>
+
+        <div class="box box-thm">
+          <div class="box-title">公式 — 線形予測子は「対数オッズ」</div>
+          <p>シグモイドの定義から、オッズの対数（log)は、ちょうど線形予測子 \( z \) に等しくなります。</p>
+          $$ \log\!\left( \frac{p}{1-p} \right) = \alpha + \beta x $$
+          <p>左辺 \( \log\dfrac{p}{1-p} \) を<span class="term">対数オッズ（ロジット）</span>と呼びます。読み方は『ロジット』。これがシグモイドの「逆向き」であり、リンク関数の正体です。</p>
+        </div>
+
+        <div class="box box-intuition">
+          <div class="box-title">直感でつかむ — だから直線になる</div>
+          <p>確率 \( p \) そのものは、シグモイドのS字でぐにゃりと曲がっていました。でも「対数オッズ」という物差しに変えると、勉強時間 \( x \) との関係が<strong>まっすぐな直線</strong>に戻ります。曲がった確率の世界を、まっすぐ扱える世界へ翻訳してくれる——それがロジット変換のごほうびです。</p>
+          <p>だから \( \beta \) の意味も、線形回帰そっくりに読めます。「\( x \) が1増えると、対数オッズが \( \beta \) だけ増える」。確率そのものの増え方は場所によって変わりますが、対数オッズで見れば一定なのです。</p>
+        </div>
+
+        <div class="box box-warn">
+          <div class="box-title">つまずき注意</div>
+          <p>\( \beta \) は「\( x \) が1増えると合格率が \( \beta \) だけ増える」ではありません。増えるのは<strong>対数オッズ</strong>です。確率の増え方はS字なので一定ではなく、\( p=0.5 \) のあたりでいちばん大きく、両端では小さくなります。\( \beta \) を確率の増分だと早とちりしないよう気をつけてください。</p>
+        </div>
+
+        <h2>ベイズにする — 係数に事前分布を置く</h2>
+        <p>ここまでは尤度の部分でした。ベイズにするには、当てたいパラメータ \( \alpha \) と \( \beta \) に<strong>事前分布</strong>を置くだけです。<a href="5-2.html">5-2</a> の線形回帰とまったく同じ流儀で進みます。</p>
+        <p>\( \alpha \) も \( \beta \) も対数オッズの世界の数なので、正の値も負の値も取りえます。こういうときは、\(0\) を中心とした正規分布をゆるめに置くのが定番です。たとえば標準偏差を大きめにした \( \mathcal{N}(0,\ 5^2) \) とすれば、「だいたい0近くだろうけれど、それなりに自由に動いてよい」というおだやかな事前分布になります。</p>
+
+        <div class="box box-def">
+          <div class="box-title">定義 — ベイズロジスティック回帰モデル（まとめ）</div>
+          <p>勉強時間 \( x_i \) と合否 \( y_i \)（合格1／不合格0）のデータに対し、モデル全体は次のように書けます。</p>
+          $$ \alpha \sim \mathcal{N}(0,\ 5^2), \qquad \beta \sim \mathcal{N}(0,\ 5^2) $$
+          $$ p_i = \sigma(\alpha + \beta x_i) $$
+          $$ y_i \sim \mathrm{Bernoulli}(p_i) $$
+          <p>上の2行が事前分布、3行目がリンクを通した平均、最後がベルヌーイ尤度です。GLMの3部品が、そのまま3行に対応しています。</p>
+        </div>
+
+        <h2>例題 — 数を入れて確かめる</h2>
+
+        <div class="box box-ex">
+          <div class="box-title">例題</div>
+          <p>ある試験のロジスティック回帰で、勉強時間 \( x \)（時間）から合格確率を予測したところ、係数の事後分布の中央値が \( \alpha = -3,\ \beta = 1 \) と求まりました。勉強時間が <strong>4時間</strong> の学生の合格確率 \( p \) を計算しましょう。また、\( \beta=1 \) の意味を対数オッズで説明しなさい。</p>
+
+          <p><strong>解</strong>: まず線形予測子 \( z \) を計算します。</p>
+          $$ z = \alpha + \beta x = -3 + 1 \times 4 = 1 $$
+          <p>つぎにシグモイドへ通します。\( e^{-1} \approx 0.368 \) なので、</p>
+          $$ p = \sigma(1) = \frac{1}{1 + e^{-1}} = \frac{1}{1 + 0.368} \approx \frac{1}{1.368} \approx 0.73 $$
+          <p>つまり、4時間勉強した学生の合格確率はおよそ <strong>73%</strong> です。</p>
+
+          <p><strong>\( \beta = 1 \) の意味</strong>: 勉強時間が1時間増えると、合格の対数オッズが \(1\) だけ増えます。対数オッズが \(1\) 増えるとは、オッズが \( e^1 \approx 2.7 \) 倍になるということ（\( \log \) の中身が \( e \) 倍）。「勉強を1時間増やすと、合格の見込み（オッズ）が約2.7倍になる」と言いかえられます。</p>
+
+          <p><strong>境目はどこ?</strong> 合格確率がちょうど \(0.5\) になるのは \( z=0 \)、すなわち \( -3 + x = 0 \) より \( x = 3 \) 時間のときです。3時間より多く勉強すれば合格寄り、少なければ不合格寄り、という境目が読み取れます。</p>
+        </div>
+
+        <h2>PyMCで実装する</h2>
+        <p>では、このモデルをコードにします。<a href="5-1.html">5-1</a> と <a href="5-2.html">5-2</a> で使ったPyMCの書き方を、ほぼそのまま流用できます。変わるのは「リンク関数」と「尤度」の2か所だけ。GLMの設計図がそのままコードに表れます。</p>
+
+        <pre><code>import pymc as pm
+import numpy as np
+
+# データ: 勉強時間 x と 合否 y(合格1 / 不合格0)
+x = np.array([1.0, 2.0, 2.5, 3.0, 4.0, 5.0, 6.0])
+y = np.array([0,    0,    0,   1,   1,   1,   1  ])
+
+with pm.Model() as logistic_model:
+    # 事前分布: 係数は対数オッズの世界。0中心の正規分布を広めに置く
+    alpha = pm.Normal("alpha", mu=0, sigma=5)   # 切片
+    beta  = pm.Normal("beta",  mu=0, sigma=5)   # 傾き
+
+    # 線形予測子 z = alpha + beta*x
+    z = alpha + beta * x
+
+    # リンク関数: シグモイドで 0〜1 の確率 p に変換
+    p = pm.math.sigmoid(z)                       # = 1 / (1 + exp(-z))
+
+    # 尤度: 結果はベルヌーイ分布(二項分布の n=1 版)
+    y_obs = pm.Bernoulli("y_obs", p=p, observed=y)
+
+    # MCMC でサンプリング
+    idata = pm.sample(2000, tune=1000)
+
+# 係数の事後分布を要約
+import arviz as az
+print(az.summary(idata, var_names=["alpha", "beta"]))</code></pre>
+
+        <p>線形回帰（<a href="5-2.html">5-2</a>）のコードと見くらべてください。直線 <code>z = alpha + beta * x</code> をつくるところまでは同じです。ちがいは <code>pm.math.sigmoid</code> でリンクをかけることと、尤度を <code>pm.Normal</code> から <code>pm.Bernoulli</code> に取りかえたこと。GLMの「リンク関数と分布を差しかえる」という発想が、2行の変更にきれいに対応しています。</p>
+
+        <div class="box box-warn">
+          <div class="box-title">つまずき注意 — 事後分布はサンプルの集まり</div>
+          <p><a href="5-1.html">5-1</a> で見たとおり、PyMCが返す \( \alpha \) や \( \beta \) は1つの数ではなく、<strong>事後分布からのサンプルの山</strong>です。だから合格確率 \( p \) も「点ひとつ」ではなく、幅のある予測になります。「勉強4時間の合格率は、だいたい70〜80%」のように、信用区間つきで語れるのがベイズの持ち味でした。点推定しか出さない普通のロジスティック回帰との、大きなちがいです。</p>
+        </div>
+
+        <h2>理解度チェック</h2>
+
+        <div class="quiz" data-answer="b">
+          <p class="quiz-q">問1: ロジスティック回帰で、線形回帰と入れかえる部品の組み合わせはどれですか?</p>
+          <button class="quiz-option" data-key="a">線形予測子 \( z=\alpha+\beta x \) を、まったく別の式に変える</button>
+          <button class="quiz-option" data-key="b">リンク関数をシグモイドに、尤度をベルヌーイ分布にする</button>
+          <button class="quiz-option" data-key="c">事前分布を必ずベータ分布にする</button>
+          <div class="quiz-explain"><p>GLMでは、線形予測子 \( z=\alpha+\beta x \) はどの回帰でも共通です。変えるのは<strong>リンク関数</strong>（→シグモイド）と<strong>分布（尤度）</strong>（→ベルヌーイ分布）の2つ。これで連続値の予測から二値分類へ切りかわります。事前分布は係数 \( \alpha,\beta \) に置くもので、ここでは0中心の正規分布を使いました。</p></div>
+        </div>
+
+        <div class="quiz" data-answer="c">
+          <p class="quiz-q">問2: 線形予測子が \( z = 0 \) のとき、シグモイドが返す合格確率 \( p \) はいくつですか?</p>
+          <button class="quiz-option" data-key="a">\( p = 0 \)</button>
+          <button class="quiz-option" data-key="b">\( p = 1 \)</button>
+          <button class="quiz-option" data-key="c">\( p = 0.5 \)</button>
+          <div class="quiz-explain"><p>\( \sigma(0) = \dfrac{1}{1 + e^{0}} = \dfrac{1}{1+1} = 0.5 \) です。\( z=0 \) はちょうど合格と不合格の境目。シグモイドはここで \(0.5\) を通り、\( z \) が正なら \(0.5\) より上（合格寄り）、負なら下（不合格寄り）になります。</p></div>
+        </div>
+
+        <div class="quiz" data-answer="a">
+          <p class="quiz-q">問3: 傾き \( \beta = 0.7 \) と推定されました。正しい解釈はどれですか?</p>
+          <button class="quiz-option" data-key="a">\( x \) が1増えると、対数オッズが \( 0.7 \) 増える</button>
+          <button class="quiz-option" data-key="b">\( x \) が1増えると、合格確率が \( 0.7 \) 増える</button>
+          <button class="quiz-option" data-key="c">\( x \) が1増えると、合格確率が \( 0.7 \) 倍になる</button>
+          <div class="quiz-explain"><p>ロジスティック回帰の \( \beta \) は、<strong>対数オッズの増分</strong>です。\( \log\dfrac{p}{1-p} = \alpha + \beta x \) なので、\( x \) が1増えれば対数オッズが \( \beta=0.7 \) 増えます。確率そのものの増え方はS字で一定ではないため、bは誤り。なお「オッズが \( e^{0.7}\approx2.0 \) 倍になる」とは言えますが、確率が0.7倍ではないのでcも誤りです。</p></div>
+        </div>
+
+        <h2>演習</h2>
+
+        <div class="box box-practice">
+          <div class="box-title">演習1</div>
+          <p>係数が \( \alpha = -2,\ \beta = 0.5 \) と推定されたロジスティック回帰モデルがあります。勉強時間 \( x = 6 \) 時間の学生の合格確率 \( p \) を求めなさい。（\( e^{-1} \approx 0.37 \) を使ってよい）</p>
+          <details class="answer">
+            <summary>解答を見る</summary>
+            <p>まず線形予測子: \( z = -2 + 0.5 \times 6 = -2 + 3 = 1 \)。<br>シグモイドへ: \( p = \sigma(1) = \dfrac{1}{1 + e^{-1}} = \dfrac{1}{1 + 0.37} = \dfrac{1}{1.37} \approx 0.73 \)。<br>よって合格確率はおよそ <strong>73%</strong> です。</p>
+          </details>
+        </div>
+
+        <div class="box box-practice">
+          <div class="box-title">演習2</div>
+          <p>同じモデル（\( \alpha = -2,\ \beta = 0.5 \)）で、合格確率がちょうど \(0.5\) になる勉強時間 \( x \) は何時間ですか? シグモイドの性質を使って求めなさい。</p>
+          <details class="answer">
+            <summary>解答を見る</summary>
+            <p>\( p = 0.5 \) になるのは、シグモイドの入力が \( z = 0 \) のときです（\( \sigma(0)=0.5 \)）。<br>よって \( z = -2 + 0.5x = 0 \) を解いて、\( 0.5x = 2 \)、\( x = 4 \)。<br>つまり <strong>4時間</strong> 勉強したところが、合格と不合格の境目になります。4時間より多ければ合格寄り、少なければ不合格寄りです。</p>
+          </details>
+        </div>
+
+        <div class="box box-practice">
+          <div class="box-title">演習3</div>
+          <p>「対数オッズ」「ベルヌーイ分布」「シグモイド関数」のそれぞれが、GLMの3部品（① 線形予測子・② リンク関数・③ 分布）のどれにあたるか、対応づけなさい。</p>
+          <details class="answer">
+            <summary>解答を見る</summary>
+            <p><strong>シグモイド関数</strong>と<strong>対数オッズ（ロジット）</strong>は、ともに②<strong>リンク関数</strong>にあたります。リンク関数は \( p = \sigma(z) \) と \( \log\dfrac{p}{1-p} = z \) という、たがいに逆向きの2つの式で表せます。シグモイドは「直線→確率」、ロジット（対数オッズ）は「確率→直線」の向きです。<br><strong>ベルヌーイ分布</strong>は③<strong>分布（尤度）</strong>です。結果が0か1かのばらつきを表します。<br>なお①<strong>線形予測子</strong>は \( z = \alpha + \beta x \) で、上の3つには含まれません。</p>
+          </details>
+        </div>
+
+        <div class="box box-practice">
+          <div class="box-title">演習4</div>
+          <p>PyMCで線形回帰（<a href="5-2.html">5-2</a>）を書いたコードを、ロジスティック回帰に作りかえます。どの行を、どう変えればよいか、2か所あげなさい。</p>
+          <details class="answer">
+            <summary>解答を見る</summary>
+            <p>変える必要があるのは、GLMの「リンク関数」と「分布」にあたる2か所です。<br>
+            ① <strong>リンク関数を追加</strong>: 直線 \( z = \alpha + \beta x \) のあとに <code>p = pm.math.sigmoid(z)</code> を入れ、確率 \( p \) に変換する。線形回帰では直線をそのまま平均に使っていました。<br>
+            ② <strong>尤度を取りかえる</strong>: 観測の分布を <code>pm.Normal("y_obs", mu=z, sigma=..., observed=y)</code> から <code>pm.Bernoulli("y_obs", p=p, observed=y)</code> に変える。連続値の正規分布から、二値のベルヌーイ分布へ。<br>
+            線形予測子（\( \alpha,\beta \) の事前分布と \( z \) の計算）は、どちらの回帰でも共通なので、そのまま使えます。</p>
+          </details>
+        </div>
+
+        <h2>まとめ</h2>
+        <ul>
+          <li><span class="term">二値分類</span>（合格／不合格などのどっち?問題）には、線形回帰の直線に「確率へのふた」をかぶせた<span class="term">ロジスティック回帰</span>を使います。</li>
+          <li><span class="term">シグモイド関数</span> \( \sigma(z)=\dfrac{1}{1+e^{-z}} \) は、直線の出力 \( z \) をなめらかなS字で \(0\)〜\(1\) の確率に変換します。\( z=0 \) で \(0.5\) を通ります。</li>
+          <li>結果のばらつきは<span class="term">ベルヌーイ分布</span>（二項分布の \( n=1 \) 版）で表します。尤度は \( p^y(1-p)^{1-y} \) です。</li>
+          <li>線形回帰もロジスティック回帰も、<span class="term">一般化線形モデル(GLM)</span>の仲間です。リンク関数と分布を差しかえるだけで、別の問題に対応できます。</li>
+          <li>係数 \( \beta \) は<span class="term">対数オッズ（ロジット）</span>の増分です。\( \log\dfrac{p}{1-p} = \alpha+\beta x \) という形で、確率の世界が直線にまっすぐ戻ります。</li>
+          <li>ベイズにするには係数 \( \alpha,\beta \) に事前分布を置くだけ。PyMCではリンクと尤度の2行を変えるだけで、線形回帰のコードから移行できます。</li>
+        </ul>
+        <p>これで、連続値（線形回帰）と二値（ロジスティック回帰）の2つを、同じGLMの枠組みで扱えるようになりました。つぎの <a href="5-4.html">5-4 階層ベイズモデル</a> では、データが「クラスごと」「店舗ごと」のようにグループに分かれているとき、その構造をモデルに取り込む方法へ進みます。一段ずつ、実践のベイズに近づいていきましょう。</p>
+
+      </div>
+
+      <div class="complete-area">
+        <button class="btn btn-level" id="complete-btn">このレッスンを完了にする</button>
+        <p class="complete-note">進捗はこのブラウザに保存されます</p>
+      </div>
+
+      <!-- 前後ナビ: main.js がカリキュラムから自動生成 -->
+      <nav class="lesson-nav" id="lesson-nav" aria-label="前後のレッスン"></nav>
+
+    </main>
+
+    <!-- ページ内目次: main.js が本文の h2 から自動生成 -->
+    <aside class="toc">
+      <div class="toc-title">このページの内容</div>
+      <nav id="toc"></nav>
+    </aside>
+
+  </div>
+
+  <footer class="site-footer">
+    <p>ベイズの階段 — 中学数学から最前線まで、一段ずつ。</p>
+  </footer>
+
+  <script src="../../assets/js/curriculum.js"></script>
+  <script src="../../assets/js/main.js"></script>
+</body>
+</html>

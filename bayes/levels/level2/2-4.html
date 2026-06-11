@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>2-4 期待値・分散・標準偏差 | ベイズの階段</title>
+  <meta name="description" content="分布を数個の数で要約する道具">
+  <script>
+    document.documentElement.dataset.theme =
+      localStorage.getItem("bayes-stairs-theme") ||
+      (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Noto+Serif+JP:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../assets/css/main.css">
+
+  <!-- KaTeX: 数式を使うページでは必ずこの3行を入れる -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+          onload="renderMathInElement(document.body, {delimiters: [
+            {left: '$$', right: '$$', display: true},
+            {left: '\\(', right: '\\)', display: false}
+          ]});"></script>
+</head>
+<body data-root="../../" data-level="2" data-lesson-id="2-4">
+
+  <header class="site-header">
+    <button class="sidebar-toggle" id="sidebar-toggle" aria-label="メニュー">☰</button>
+    <a class="brand" href="../../index.html">
+      <span class="brand-mark">階</span>
+      <span>ベイズの階段</span>
+    </a>
+    <div class="header-spacer"></div>
+    <div class="header-progress" id="header-progress"></div>
+    <button class="theme-toggle" id="theme-toggle" aria-label="テーマ切替">🌙</button>
+  </header>
+
+  <div class="layout">
+
+    <!-- サイドバー: main.js がカリキュラムから自動生成 -->
+    <aside class="sidebar"><nav id="sidebar-nav" aria-label="カリキュラム"></nav></aside>
+
+    <main class="lesson">
+
+      <nav class="breadcrumbs" aria-label="パンくず">
+        <a href="../../index.html">ホーム</a><span class="sep">›</span>
+        <a href="index.html">Level 2 確率分布と尤度</a><span class="sep">›</span>
+        <span>2-4 期待値・分散・標準偏差</span>
+      </nav>
+
+      <header class="lesson-header">
+        <div class="lesson-meta">
+          <span class="level-badge">Level 2</span>
+          <span class="small">レッスン 2-4</span>
+        </div>
+        <h1>期待値・分散・標準偏差</h1>
+
+        <div class="lesson-goals">
+          <h2>このレッスンでできるようになること</h2>
+          <ul>
+            <li>離散確率分布の期待値 \( E[X] \) を、重みつき平均として計算できる</li>
+            <li>分散 \( V[X] \) と標準偏差を求め、「ばらつきの大きさ」として説明できる</li>
+            <li>期待値が分布の中心、標準偏差がその広がりを表すことを図でつかめる</li>
+          </ul>
+          <p class="prereq">前提: <a href="2-1.html">2-1 確率変数と確率分布</a> を読んでいること（<a href="../../appendix/a-1.html">付録 a-1 シグマ記法</a> があると安心です）</p>
+        </div>
+      </header>
+
+      <div class="lesson-body">
+
+        <h2>分布まるごとは情報が多すぎる</h2>
+        <p>前の <a href="2-1.html">2-1</a> では、確率変数の値と確率を、表や棒グラフで一望できるようになりました。分布の全体像が見えるのは便利です。</p>
+        <p>でも、分布をまるごと相手にしていると、ちょっと不便なこともあります。たとえば友だちに「このくじ、引く価値ある?」と聞かれたとき、棒グラフを全部見せるより「だいたい平均で50円もらえるよ」と一言で答えたいですよね。</p>
+        <p>このレッスンでは、分布を<strong>数個の数</strong>にぎゅっと要約する道具を覚えます。中心がどこかを表す<span class="term">期待値（きたいち）</span>と、どれだけ散らばっているかを表す<span class="term">分散（ぶんさん）</span>・<span class="term">標準偏差（ひょうじゅんへんさ）</span>です。</p>
+
+        <div class="box box-intuition">
+          <div class="box-title">直感でつかむ</div>
+          <p>分布を一人の人物だと思ってください。その人を紹介するのに、生まれてから今までの全エピソードを話す必要はありません。「身長170cm、性格はおだやか」のように、数個の特徴を言えば十分伝わります。</p>
+          <p>期待値は分布の「身長」、つまり<strong>だいたいどのあたりに集まっているか</strong>(中心)を表す数です。標準偏差は「散らばり具合」、つまり<strong>中心からどれくらい離れた値が出やすいか</strong>(広がり)を表します。中心と広がり、この2つで分布の人物像はかなり伝わります。</p>
+        </div>
+
+        <h2>期待値 — 分布の中心はどこか</h2>
+        <p>まずは中心からです。サイコロを1回振ると \(1\) から \(6\) のどれかが出ます。では「何回も振り続けたら、目の平均はいくつに落ち着く?」と聞かれたら、いくつだと思いますか。直感では真ん中あたり、\(3.5\) くらいでしょうか。その直感を式にしたのが期待値です。</p>
+
+        <div class="box box-def">
+          <div class="box-title">定義 — 期待値（きたいち）</div>
+          <p>離散確率変数 \(X\) の取りうる値を \(x\)、その確率を \( p(x) = P(X = x) \) とします。<span class="term">期待値</span>は、各値にその確率という「重み」をかけて足し合わせた数で、\( E[X] \) と書きます。</p>
+          $$ E[X] = \sum_{x} x \, p(x) $$
+          <p>\( E[X] \) は『\(X\) の期待値』と読みます。\(E\) は英語の expectation(期待)の頭文字です。記号 \( \sum_x \)(シグマ)は『\(x\) が取りうる値すべてについて足す』という意味でした(<a href="../../appendix/a-1.html">付録 a-1</a>)。平均と同じ意味で \( \mu \)(ミュー)と書くこともあります。</p>
+        </div>
+
+        <p>ふつうの平均は「全部足して個数で割る」でした。期待値は少し違って、<strong>出やすい値を重く、出にくい値を軽く</strong>数えた平均です。これを<span class="term">重みつき平均</span>と呼びます。出やすさ(確率)が重みになっているわけですね。</p>
+
+        <div class="box box-ex">
+          <div class="box-title">例題 — サイコロの期待値</div>
+          <p>サイコロを1回振り、出た目を \(X\) とします。\( E[X] \) を求めましょう。</p>
+          <p><strong>解</strong>: どの目も確率は \( \frac{1}{6} \) です。定義どおり、各値に \( \frac{1}{6} \) をかけて足します。</p>
+          $$ E[X] = 1\cdot\tfrac{1}{6} + 2\cdot\tfrac{1}{6} + 3\cdot\tfrac{1}{6} + 4\cdot\tfrac{1}{6} + 5\cdot\tfrac{1}{6} + 6\cdot\tfrac{1}{6} $$
+          <p>共通の \( \frac{1}{6} \) でくくると、中身は \( 1+2+3+4+5+6 = 21 \) です。よって</p>
+          $$ E[X] = \frac{21}{6} = 3.5 $$
+          <p>期待値は \(3.5\)。直感どおり真ん中でした。おもしろいのは、\(3.5\) という目は実際には存在しないことです。期待値は「長く振り続けたときの平均」であって、1回ごとの結果そのものではありません。</p>
+        </div>
+
+        <div class="box box-warn">
+          <div class="box-title">つまずき注意</div>
+          <p>期待値は「いちばん出やすい値」ではありません。サイコロはどの目も同じくらい出ますが、期待値は \(3.5\) です。期待値はあくまで<strong>重みつき平均</strong>であって、最頻の値(よく出る値)とは別物です。「期待値=平均的にこのへん」、「最頻値=いちばん出やすい1つ」と区別しておきましょう。</p>
+        </div>
+
+        <h2>同じ中心でも、散らばりが違う</h2>
+        <p>中心(期待値)が分かれば分布の「だいたいの位置」はつかめます。でも、それだけでは足りない場面があります。次の例を見てください。</p>
+        <p>くじAは、必ず \(50\) 円もらえます。くじBは、半々で \(0\) 円か \(100\) 円。どちらも期待値は \(50\) 円です。でも、もらえる金額の<strong>安定感</strong>はまるで違いますよね。Aは確実、Bは博打。期待値が同じでも、ばらつきが違うのです。</p>
+
+        <figure class="figure">
+          <svg viewBox="0 0 380 200" width="380" aria-label="期待値は同じでも散らばりが違う2つの分布">
+            <!-- 中心線(期待値=50) -->
+            <line x1="190" y1="20" x2="190" y2="180" stroke="var(--level-color)" stroke-width="1.5" stroke-dasharray="5 4"/>
+            <text x="190" y="16" text-anchor="middle" font-size="11" fill="var(--level-color)">期待値 50</text>
+            <!-- くじA: 中心に1本だけ高い棒 -->
+            <line x1="40" y1="100" x2="340" y2="100" stroke="var(--border)" stroke-width="1"/>
+            <rect x="178" y="40" width="24" height="50" fill="var(--level-color)"/>
+            <text x="30" y="70" text-anchor="end" font-size="12" fill="var(--text-muted)">くじA</text>
+            <!-- くじB: 両端に2本 -->
+            <rect x="78"  y="120" width="24" height="50" fill="var(--level-color)" opacity="0.75"/>
+            <rect x="278" y="120" width="24" height="50" fill="var(--level-color)" opacity="0.75"/>
+            <text x="30" y="150" text-anchor="end" font-size="12" fill="var(--text-muted)">くじB</text>
+            <text x="90"  y="186" text-anchor="middle" font-size="11" fill="var(--text-muted)">0円</text>
+            <text x="290" y="186" text-anchor="middle" font-size="11" fill="var(--text-muted)">100円</text>
+          </svg>
+          <figcaption>図1: くじA(上)もくじB(下)も期待値は同じ \(50\) 円。でもAは中心にぴたりと集まり、Bは両端に大きく散らばっています。この「散らばり具合」を測りたい。</figcaption>
+        </figure>
+
+        <div class="box box-intuition">
+          <div class="box-title">直感でつかむ</div>
+          <p>散らばりを測るには、「各値が中心からどれだけ離れているか」を調べればよさそうです。中心の近くに集まっていれば散らばりは小さい、遠くまで広がっていれば大きい。</p>
+          <p>ただ単純に「中心からの差」を平均すると、プラスの差とマイナスの差が打ち消し合って \(0\) になってしまいます。そこで差を<strong>2乗</strong>してから平均します。2乗すればマイナスも消えて、しかも遠く離れた値ほど大きく効きます。これが分散の発想です。</p>
+        </div>
+
+        <h2>分散と標準偏差 — 散らばりを数にする</h2>
+        <p>では、散らばりを式にしましょう。中心は期待値 \( E[X] \)、これを \( \mu \)(ミュー)とおきます。各値 \(x\) と中心の差 \( x - \mu \) を「ずれ」と呼ぶことにします。</p>
+
+        <div class="box box-def">
+          <div class="box-title">定義 — 分散（ぶんさん）と標準偏差（ひょうじゅんへんさ）</div>
+          <p>\(X\) の期待値を \( \mu = E[X] \) とします。<span class="term">分散</span>は、ずれ \( x - \mu \) を2乗したものの期待値で、\( V[X] \) と書きます。</p>
+          $$ V[X] = \sum_{x} (x - \mu)^2 \, p(x) $$
+          <p>分散の平方根(ルート)を<span class="term">標準偏差</span>と呼び、よく \( \sigma \)(シグマ。和のシグマ \( \sum \) とは別の記号です)で表します。</p>
+          $$ \sigma = \sqrt{V[X]} $$
+          <p>\( V[X] \) は『\(X\) の分散』、\( \sigma \) は『標準偏差』と読みます。\(V\) は variance(分散)の頭文字です。</p>
+        </div>
+
+        <p>なぜ最後にルートを取るのでしょう。分散は「ずれを2乗」しているので、単位も2乗になっています。円の話なら「円の2乗」という、ピンとこない単位です。ルートを取って標準偏差に戻すと、単位がもとに戻ります。だから<strong>「結局どれくらい散らばっているか」を実感したいときは標準偏差</strong>を見ます。</p>
+
+        <div class="box box-thm">
+          <div class="box-title">読み方のコツ</div>
+          <p>標準偏差 \( \sigma \) は、ざっくり言えば「平均すると、中心からこれくらいずれる」という幅です。\( \sigma \) が小さいほど中心にぎゅっと集まり、大きいほど広く散らばっています。図1のくじAは \( \sigma = 0 \)(まったくばらつかない)、くじBは \( \sigma = 50 \) です。</p>
+        </div>
+
+        <div class="box box-ex">
+          <div class="box-title">例題 — くじBの分散と標準偏差</div>
+          <p>くじBは確率 \( \frac{1}{2} \) で \(0\) 円、確率 \( \frac{1}{2} \) で \(100\) 円もらえます。期待値・分散・標準偏差を求めましょう。</p>
+          <p><strong>解 (1) 期待値</strong>:</p>
+          $$ \mu = 0\cdot\tfrac{1}{2} + 100\cdot\tfrac{1}{2} = 50 $$
+          <p>期待値は \(50\) 円です。</p>
+          <p><strong>解 (2) 分散</strong>: 各値のずれ \( x - \mu \) を2乗し、確率をかけて足します。\(0\) 円のずれは \( 0 - 50 = -50 \)、\(100\) 円のずれは \( 100 - 50 = 50 \) です。</p>
+          $$ V[X] = (-50)^2\cdot\tfrac{1}{2} + (50)^2\cdot\tfrac{1}{2} = 2500\cdot\tfrac{1}{2} + 2500\cdot\tfrac{1}{2} = 2500 $$
+          <p><strong>解 (3) 標準偏差</strong>: 分散のルートを取ります。</p>
+          $$ \sigma = \sqrt{2500} = 50 $$
+          <p>標準偏差は \(50\) 円。「平均すると中心から50円ずれる」と読めます。図1のとおり、くじBは大きくばらつくくじだと数で確認できました。</p>
+        </div>
+
+        <div class="box box-ex">
+          <div class="box-title">例題 — くじAの分散</div>
+          <p>くじAは必ず \(50\) 円です。分散と標準偏差を求めましょう。</p>
+          <p><strong>解</strong>: 期待値は \( \mu = 50\cdot 1 = 50 \) 円。取りうる値は \(50\) 円ひとつだけで、ずれは \( 50 - 50 = 0 \) です。</p>
+          $$ V[X] = (50 - 50)^2 \cdot 1 = 0, \qquad \sigma = \sqrt{0} = 0 $$
+          <p>分散も標準偏差も \(0\)。「まったく散らばらない=確実」を、ちゃんと \(0\) という数が表しています。期待値はAもBも \(50\) 円で同じでしたが、標準偏差はAが \(0\)、Bが \(50\)。中心は同じでも広がりが違う、という最初の話が数になりました。</p>
+        </div>
+
+        <figure class="figure">
+          <svg viewBox="0 0 360 220" width="360" aria-label="標準偏差の大きさを矢印で示した図">
+            <line x1="30" y1="170" x2="340" y2="170" stroke="var(--border)" stroke-width="2"/>
+            <!-- 山(分布のイメージ) -->
+            <path d="M40,170 C120,170 140,40 185,40 C230,40 250,170 330,170"
+                  fill="none" stroke="var(--level-color)" stroke-width="3"/>
+            <!-- 中心線 -->
+            <line x1="185" y1="40" x2="185" y2="180" stroke="var(--level-color)" stroke-width="1.5" stroke-dasharray="4 4"/>
+            <text x="185" y="196" text-anchor="middle" font-size="11" fill="var(--level-color)">中心 μ (期待値)</text>
+            <!-- σ の幅を示す両矢印 -->
+            <line x1="185" y1="120" x2="248" y2="120" stroke="var(--text-muted)" stroke-width="1.5"/>
+            <path d="M243,116 L248,120 L243,124 Z" fill="var(--text-muted)"/>
+            <text x="216" y="113" text-anchor="middle" font-size="11" fill="var(--text-muted)">σ (標準偏差)</text>
+          </svg>
+          <figcaption>図2: 期待値 \( \mu \) は山の中心の位置、標準偏差 \( \sigma \) は中心からの広がりの幅。中心と広がり、この2つで分布のおおよその姿が伝わります。</figcaption>
+        </figure>
+
+        <div class="box box-warn">
+          <div class="box-title">つまずき注意</div>
+          <p>分散 \( V[X] \) と標準偏差 \( \sigma \) を混同しないようにしましょう。分散は「ずれの2乗の平均」で単位が2乗、標準偏差はそのルートでもとの単位に戻ったもの。くじBなら分散は \(2500\)(円の2乗)、標準偏差は \(50\)(円)です。散らばりの大きさを「円」で語りたいときは、必ずルートを取った標準偏差を使います。</p>
+        </div>
+
+        <h2>理解度チェック</h2>
+
+        <div class="quiz" data-answer="b">
+          <p class="quiz-q">問1: 確率変数 \(X\) が、確率 \(0.5\) で \(2\)、確率 \(0.5\) で \(4\) を取ります。\( E[X] \) はいくつですか?</p>
+          <button class="quiz-option" data-key="a">2</button>
+          <button class="quiz-option" data-key="b">3</button>
+          <button class="quiz-option" data-key="c">6</button>
+          <div class="quiz-explain"><p>期待値は重みつき平均です。\( E[X] = 2\cdot 0.5 + 4\cdot 0.5 = 1 + 2 = 3 \)。\(2\) と \(4\) のちょうど真ん中、\(3\) になります。</p></div>
+        </div>
+
+        <div class="quiz" data-answer="c">
+          <p class="quiz-q">問2: 標準偏差について、正しい説明はどれですか?</p>
+          <button class="quiz-option" data-key="a">いちばん出やすい値のこと</button>
+          <button class="quiz-option" data-key="b">分布の中心の位置のこと</button>
+          <button class="quiz-option" data-key="c">中心からの散らばりの大きさを、もとの単位で表したもの</button>
+          <div class="quiz-explain"><p>中心の位置を表すのは期待値です。標準偏差は「散らばりの大きさ」で、分散のルートを取ってもとの単位に戻したもの。\( \sigma \) が大きいほど広く散らばっています。</p></div>
+        </div>
+
+        <div class="quiz" data-answer="a">
+          <p class="quiz-q">問3: 期待値がどちらも \(10\) の分布PとQがあります。Pの標準偏差は \(1\)、Qの標準偏差は \(5\) です。正しいのはどれですか?</p>
+          <button class="quiz-option" data-key="a">Pのほうが値が中心に集まっていて、Qのほうが散らばっている</button>
+          <button class="quiz-option" data-key="b">PとQはまったく同じ分布である</button>
+          <button class="quiz-option" data-key="c">Qのほうが中心の位置が大きい</button>
+          <div class="quiz-explain"><p>期待値が同じなので中心の位置は両方 \(10\) です。標準偏差が小さいPは中心にぎゅっと集まり、標準偏差が大きいQは広く散らばっています。中心は同じでも広がりが違う、という典型例です。</p></div>
+        </div>
+
+        <h2>演習</h2>
+
+        <div class="box box-practice">
+          <div class="box-title">演習1</div>
+          <p>コインを1回投げ、表なら \(X = 1\)、裏なら \(X = 0\) とします(どちらも確率 \( \frac{1}{2} \))。\( E[X] \) を求めなさい。</p>
+          <details class="answer">
+            <summary>解答を見る</summary>
+            <p>\( E[X] = 1\cdot\frac{1}{2} + 0\cdot\frac{1}{2} = \frac{1}{2} = 0.5 \) です。\(0\) と \(1\) しか出ないのに期待値は \(0.5\)。「実際には出ない値が期待値になる」よい例です。これは「表が出る割合の平均」と読めます。</p>
+          </details>
+        </div>
+
+        <div class="box box-practice">
+          <div class="box-title">演習2</div>
+          <p>確率変数 \(X\) の分布が \( p(1) = 0.2 \)、\( p(2) = 0.5 \)、\( p(3) = 0.3 \) です。期待値 \( E[X] \) を求めなさい。</p>
+          <details class="answer">
+            <summary>解答を見る</summary>
+            <p>各値に確率をかけて足します。
+            $$ E[X] = 1\cdot 0.2 + 2\cdot 0.5 + 3\cdot 0.3 = 0.2 + 1.0 + 0.9 = 2.1 $$
+            期待値は \(2.1\) です。まず確率の合計が \( 0.2 + 0.5 + 0.3 = 1 \) になっていることを確認してから計算すると安心です。</p>
+          </details>
+        </div>
+
+        <div class="box box-practice">
+          <div class="box-title">演習3</div>
+          <p>演習1のコイン(表なら \(1\)、裏なら \(0\)、どちらも確率 \( \frac{1}{2} \))について、分散 \( V[X] \) と標準偏差 \( \sigma \) を求めなさい。期待値は \( \mu = 0.5 \) です。</p>
+          <details class="answer">
+            <summary>解答を見る</summary>
+            <p>ずれを2乗し、確率をかけて足します。\(0\) のずれは \( 0 - 0.5 = -0.5 \)、\(1\) のずれは \( 1 - 0.5 = 0.5 \) です。
+            $$ V[X] = (-0.5)^2\cdot\tfrac{1}{2} + (0.5)^2\cdot\tfrac{1}{2} = 0.25\cdot\tfrac{1}{2} + 0.25\cdot\tfrac{1}{2} = 0.25 $$
+            標準偏差は \( \sigma = \sqrt{0.25} = 0.5 \) です。\(0\) と \(1\) が半々で出るコインは、中心 \(0.5\) から両側に \(0.5\) ずれる、と読めます。</p>
+          </details>
+        </div>
+
+        <div class="box box-practice">
+          <div class="box-title">演習4</div>
+          <p>サイコロを1回振り、出た目を \(X\) とします。例題より期待値は \( \mu = 3.5 \) でした。分散 \( V[X] \) を求めなさい(標準偏差は分散のルートですが、ここは分散まででかまいません)。各目のずれの2乗 \( (x-3.5)^2 \) は順に \(6.25,\ 2.25,\ 0.25,\ 0.25,\ 2.25,\ 6.25\) です。</p>
+          <details class="answer">
+            <summary>解答を見る</summary>
+            <p>どの目も確率は \( \frac{1}{6} \) なので、ずれの2乗をすべて足してから \( \frac{1}{6} \) をかければ済みます。
+            $$ 6.25 + 2.25 + 0.25 + 0.25 + 2.25 + 6.25 = 17.5 $$
+            よって
+            $$ V[X] = 17.5 \times \tfrac{1}{6} = \frac{17.5}{6} \approx 2.92 $$
+            分散はおよそ \(2.92\)、標準偏差はそのルートで \( \sigma = \sqrt{2.92} \approx 1.71 \) です。「サイコロの目は中心 \(3.5\) から平均1.7くらいずれる」とイメージできます。</p>
+          </details>
+        </div>
+
+        <h2>まとめ</h2>
+        <ul>
+          <li><span class="term">期待値</span> \( E[X] = \sum_x x\,p(x) \) は、出やすい値を重く数えた<strong>重みつき平均</strong>。分布の中心の位置を表します。</li>
+          <li>期待値は「長く繰り返したときの平均」であって、1回の結果でも最頻の値でもありません(サイコロの \(3.5\) のように、実際には出ない値のこともある)。</li>
+          <li><span class="term">分散</span> \( V[X] = \sum_x (x-\mu)^2 p(x) \) は、中心からのずれを2乗して平均したもの。散らばりが大きいほど値も大きくなります。</li>
+          <li><span class="term">標準偏差</span> \( \sigma = \sqrt{V[X]} \) は、分散のルートを取ってもとの単位に戻したもの。「平均してこれくらい中心からずれる」という広がりの幅です。</li>
+          <li>期待値が同じでも標準偏差は違うことがあります。<strong>中心と広がりの2つ</strong>がそろって、はじめて分布の姿が伝わります。</li>
+        </ul>
+        <p>これで、分布を数個の数に要約できるようになりました。中心(期待値)と広がり(標準偏差)は、このあと何度も顔を出します。つぎの <a href="2-5.html">2-5 尤度 — データから見た「もっともらしさ」</a> では、いよいよベイズ推定の主役である尤度（ゆうど）を導入します。確率と尤度は何が違うのか、その入り口に立ちましょう。</p>
+
+      </div>
+
+      <div class="complete-area">
+        <button class="btn btn-level" id="complete-btn">このレッスンを完了にする</button>
+        <p class="complete-note">進捗はこのブラウザに保存されます</p>
+      </div>
+
+      <!-- 前後ナビ: main.js がカリキュラムから自動生成 -->
+      <nav class="lesson-nav" id="lesson-nav" aria-label="前後のレッスン"></nav>
+
+    </main>
+
+    <!-- ページ内目次: main.js が本文の h2 から自動生成 -->
+    <aside class="toc">
+      <div class="toc-title">このページの内容</div>
+      <nav id="toc"></nav>
+    </aside>
+
+  </div>
+
+  <footer class="site-footer">
+    <p>ベイズの階段 — 中学数学から最前線まで、一段ずつ。</p>
+  </footer>
+
+  <script src="../../assets/js/curriculum.js"></script>
+  <script src="../../assets/js/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>4-2 モンテカルロ法の考え方 | ベイズの階段</title>
+  <meta name="description" content="乱数で積分を近似する。サンプルで分布を代表する">
+  <script>
+    document.documentElement.dataset.theme =
+      localStorage.getItem("bayes-stairs-theme") ||
+      (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Noto+Serif+JP:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../assets/css/main.css">
+
+  <!-- KaTeX: 数式を使うページでは必ずこの3行を入れる -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+          onload="renderMathInElement(document.body, {delimiters: [
+            {left: '$$', right: '$$', display: true},
+            {left: '\\(', right: '\\)', display: false}
+          ]});"></script>
+</head>
+<body data-root="../../" data-level="4" data-lesson-id="4-2">
+
+  <header class="site-header">
+    <button class="sidebar-toggle" id="sidebar-toggle" aria-label="メニュー">☰</button>
+    <a class="brand" href="../../index.html">
+      <span class="brand-mark">階</span>
+      <span>ベイズの階段</span>
+    </a>
+    <div class="header-spacer"></div>
+    <div class="header-progress" id="header-progress"></div>
+    <button class="theme-toggle" id="theme-toggle" aria-label="テーマ切替">🌙</button>
+  </header>
+
+  <div class="layout">
+
+    <!-- サイドバー: main.js がカリキュラムから自動生成 -->
+    <aside class="sidebar"><nav id="sidebar-nav" aria-label="カリキュラム"></nav></aside>
+
+    <main class="lesson">
+
+      <nav class="breadcrumbs" aria-label="パンくず">
+        <a href="../../index.html">ホーム</a><span class="sep">›</span>
+        <a href="index.html">Level 4 計算ベイズ — MCMCと近似推論</a><span class="sep">›</span>
+        <span>4-2 モンテカルロ法の考え方</span>
+      </nav>
+
+      <header class="lesson-header">
+        <div class="lesson-meta">
+          <span class="level-badge">Level 4</span>
+          <span class="small">レッスン 4-2</span>
+        </div>
+        <h1>モンテカルロ法の考え方</h1>
+
+        <div class="lesson-goals">
+          <h2>このレッスンでできるようになること</h2>
+          <ul>
+            <li>「乱数を使って積分や期待値を近似する」というモンテカルロ法の発想を説明できる</li>
+            <li>円周率 \(\pi\)（パイ）を点の数え上げで推定する手順をたどれる</li>
+            <li>事後分布からサンプルが取れれば、平均や信用区間が計算できることを理解できる</li>
+          </ul>
+          <p class="prereq">前提: <a href="4-1.html">4-1 解析的に解けない事後分布</a> と <a href="../level2/2-4.html">2-4 期待値・分散・標準偏差</a> を読んでいること</p>
+        </div>
+      </header>
+
+      <div class="lesson-body">
+
+        <h2>計算できないなら、数えてしまえ</h2>
+        <p>前回の <a href="4-1.html">4-1</a> で、こんな壁にぶつかりました。事後分布の形は「事後 ∝ 尤度 × 事前」でわかるのに、平均や信用区間を出すための積分が、紙とペンでは解けないのです。</p>
+        <p>では、どうするか。発想を切りかえます。「式で解く」のをあきらめて、「たくさん試して数える」のです。サイコロの出目の平均を知りたいとき、確率を計算してもいいですが、実際に何百回も振って平均を取っても、だいたい同じ答えにたどり着きますよね。</p>
+        <p>この「乱数で攻める」という作戦が、このレッスンの主役、<span class="term">モンテカルロ法（ほう）</span>です。カジノで有名なモナコのモンテカルロ地区が名前の由来で、「乱数＝サイコロやルーレット」のイメージから来ています。</p>
+
+        <div class="box box-intuition">
+          <div class="box-title">直感でつかむ</div>
+          <p>池の広さを測りたいとします。形がぐにゃぐにゃで、面積の公式が使えません。そこで、上空から池をふくむ四角い土地にランダムに小石をばらまきます。</p>
+          <p>「池に落ちた小石の割合」に「土地全体の面積」をかければ、池の面積がわかります。たくさんばらまくほど、答えは正確になります。これがモンテカルロ法の心です。<strong>難しい計算を、ランダムな点の数え上げに置きかえる</strong>のです。</p>
+        </div>
+
+        <h2>モンテカルロ法とは何か</h2>
+        <p>もう少しきちんと言葉にします。私たちが本当に知りたいのは、多くの場合「期待値」です。<a href="../level2/2-4.html">2-4</a> で学んだとおり、期待値は「平均的にどれくらいの値になるか」を表す量でした。</p>
+
+        <div class="box box-def">
+          <div class="box-title">定義 — モンテカルロ法</div>
+          <p><span class="term">モンテカルロ法</span>とは、知りたい量（とくに期待値や積分）を、<strong>たくさんの乱数サンプルの平均</strong>で近似する方法のことです。</p>
+          <p>ある分布から取り出したサンプルを \(x_1, x_2, \dots, x_N\) とし、調べたい関数を \(f\) とします。このとき、関数 \(f\) の期待値を、次のように見積もります。</p>
+          $$ \mathbb{E}[f(x)] \;\approx\; \frac{1}{N}\sum_{i=1}^{N} f(x_i) $$
+          <p>\(\mathbb{E}[f(x)]\) は『\(f(x)\) の期待値』、\(\approx\) は『だいたい等しい』と読みます。右辺はただの平均です。サンプルの数 \(N\)（エヌ）を増やすほど、この近似はよくなります。</p>
+        </div>
+
+        <p>ここで大事なのは、右辺が<strong>ただの足し算と割り算だけ</strong>でできていることです。難しい積分はどこにもありません。サンプルさえ手に入れば、あとは電卓でも計算できます。「積分を平均にすりかえる」——これがモンテカルロ法の正体です。</p>
+
+        <div class="box box-warn">
+          <div class="box-title">つまずき注意</div>
+          <p>モンテカルロ法は「乱数で近似する」方法なので、答えはぴったりにはなりません。やるたびに少しずつ違う値が出ます。でも心配いりません。サンプル数 \(N\) を増やせば、ばらつきはどんどん小さくなります。具体的には、誤差はおおよそ \(1/\sqrt{N}\)（ルートエヌ分の1）の速さで縮みます。100倍のサンプルで、誤差はおよそ10分の1です。</p>
+        </div>
+
+        <h2>例題: 円周率 π を点で当てる</h2>
+        <p>モンテカルロ法の定番が、円周率 \(\pi\) の推定です。積分も三角関数も使わず、ただ点を打って数えるだけで \(\pi\) が出てきます。仕組みを見ていきましょう。</p>
+
+        <p>一辺が \(1\) の正方形を考え、その中に四分円（半径 \(1\) の円の \(\tfrac{1}{4}\)）を描きます。下の図のように、正方形の中にランダムに点を打ち、四分円の内側に入った点を数えます。</p>
+
+        <figure class="figure">
+          <svg viewBox="0 0 260 260" width="260" aria-label="正方形の中に四分円を描き、ランダムな点を打つ図">
+            <!-- 正方形 -->
+            <rect x="30" y="20" width="200" height="200" fill="none" stroke="var(--border)" stroke-width="2"/>
+            <!-- 四分円: 左下(30,220)を中心、半径200。左上(30,20)から右下(230,220)へ -->
+            <path d="M30,20 A200,200 0 0 1 230,220" fill="var(--level-color)" fill-opacity="0.12" stroke="var(--level-color)" stroke-width="2.5"/>
+            <!-- 中に入った点(円の内側) -->
+            <circle cx="70"  cy="190" r="3" fill="var(--level-color)"/>
+            <circle cx="110" cy="200" r="3" fill="var(--level-color)"/>
+            <circle cx="60"  cy="120" r="3" fill="var(--level-color)"/>
+            <circle cx="95"  cy="155" r="3" fill="var(--level-color)"/>
+            <circle cx="140" cy="180" r="3" fill="var(--level-color)"/>
+            <circle cx="80"  cy="90"  r="3" fill="var(--level-color)"/>
+            <circle cx="125" cy="135" r="3" fill="var(--level-color)"/>
+            <circle cx="160" cy="195" r="3" fill="var(--level-color)"/>
+            <!-- 外に出た点(円の外側) -->
+            <circle cx="200" cy="60"  r="3" fill="var(--text-muted)"/>
+            <circle cx="175" cy="90"  r="3" fill="var(--text-muted)"/>
+            <circle cx="210" cy="130" r="3" fill="var(--text-muted)"/>
+            <circle cx="190" cy="175" r="3" fill="var(--text-muted)"/>
+            <!-- ラベル -->
+            <text x="75" y="50" font-size="12" fill="var(--level-color)" font-weight="700">四分円</text>
+          </svg>
+          <figcaption>図1: 一辺 \(1\) の正方形に四分円を描き、ランダムに点を打った様子。色のついた点が円の内側、灰色の点が外側です。</figcaption>
+        </figure>
+
+        <p>ここで使うのは、面積の比です。正方形の面積は \(1 \times 1 = 1\)。四分円の面積は \(\dfrac{\pi \times 1^2}{4} = \dfrac{\pi}{4}\) です。点をまんべんなくばらまくと、「円の内側に入る点の割合」は、この面積の比に近づきます。</p>
+
+        <div class="box box-thm">
+          <div class="box-title">公式 — 点の割合から π を出す</div>
+          <p>正方形の中にランダムに \(N\) 個の点を打ち、そのうち四分円の内側に入った点が \(M\) 個だったとします。割合は面積の比に近づくので、</p>
+          $$ \frac{M}{N} \;\approx\; \frac{\pi}{4} \qquad\Longrightarrow\qquad \pi \;\approx\; 4 \times \frac{M}{N} $$
+          <p>「内側に入った割合を4倍する」だけで、\(\pi\) の近似値が手に入ります。</p>
+        </div>
+
+        <div class="box box-ex">
+          <div class="box-title">例題</div>
+          <p>正方形の中に \(N = 1000\) 個の点をランダムに打ったところ、四分円の内側に入った点が \(M = 786\) 個ありました。これを使って円周率 \(\pi\) を推定しなさい。</p>
+          <p><strong>解</strong>: 公式 \(\pi \approx 4 \times \dfrac{M}{N}\) にあてはめます。</p>
+          $$ \pi \;\approx\; 4 \times \frac{786}{1000} \;=\; 4 \times 0.786 \;=\; 3.144 $$
+          <p>真の値 \(\pi = 3.14159\dots\) にかなり近い値が出ました。点を \(1000\) 個打つだけで、小数第2位までほぼ当たっています。点の数をさらに増やせば、もっと正確になります。</p>
+          <p>注目してほしいのは、計算に使ったのが<strong>かけ算と割り算だけ</strong>という点です。円の面積の公式そのものを使わずに、点を数えるだけで \(\pi\) が出てきました。これがモンテカルロ法のすごさです。</p>
+        </div>
+
+        <div class="box box-warn">
+          <div class="box-title">つまずき注意</div>
+          <p>各点が「円の内側か外側か」は、中心からの距離で決めます。点の座標を \((x, y)\) とすると、原点からの距離が \(1\) 以下、つまり \(x^2 + y^2 \le 1\) なら内側です。ルートの計算すらいらないので、コンピュータはこの判定を一瞬でこなします。だから何百万点でも数えられるのです。</p>
+        </div>
+
+        <h2>事後分布も、サンプルがあれば要約できる</h2>
+        <p>さて、本題のベイズに戻りましょう。\(\pi\) の話とベイズが、どうつながるのでしょうか。</p>
+        <p>カギは、<a href="../level3/3-5.html">3-5</a> で学んだ「事後分布の要約」です。私たちが事後分布から知りたいのは、たいてい次のようなものでした。</p>
+        <ul>
+          <li>事後平均（\(\theta\) はだいたいいくつか）</li>
+          <li>信用区間（\(\theta\) はどの範囲に95%入るか）</li>
+          <li>「\(\theta\) が \(0.5\) より大きい確率」のような問い</li>
+        </ul>
+        <p>これらは本来、事後分布の積分で計算します。でも積分が解けないのが、4-1で見た悩みでした。ここでモンテカルロ法の出番です。</p>
+
+        <div class="box box-def">
+          <div class="box-title">定義 — 事後サンプル</div>
+          <p><span class="term">事後サンプル</span>とは、事後分布から取り出した、たくさんの値の集まりのことです。事後分布に従って \(\theta_1, \theta_2, \dots, \theta_N\) を取り出せたとします。すると、知りたい量は<strong>サンプルを集計するだけ</strong>で得られます。</p>
+          <ul>
+            <li><strong>事後平均</strong>: サンプルの平均 \(\dfrac{1}{N}\sum_{i=1}^{N}\theta_i\)</li>
+            <li><strong>信用区間</strong>: サンプルを小さい順に並べ、下から2.5%と上から2.5%を切る</li>
+            <li><strong>\(\theta > 0.5\) の確率</strong>: \(0.5\) を超えたサンプルの割合</li>
+          </ul>
+        </div>
+
+        <div class="box box-intuition">
+          <div class="box-title">直感でつかむ</div>
+          <p>事後分布という「地形」を、まるごと式で調べるのは大変です。でも、その地形にたくさんの旗を立てて（＝サンプルを取って）、旗の位置を集計すれば、地形の特徴はだいたいつかめます。</p>
+          <p>旗が密集している場所が、分布の山（ありそうな \(\theta\)）。旗の95%が収まる横幅が、信用区間。とても直感的ですよね。<strong>分布をサンプルで代表させる</strong>——これがベイズ計算の新しい武器です。</p>
+        </div>
+
+        <p>下の図は、事後分布のなめらかな曲線と、そこから取った事後サンプルのヒストグラム（柱の集まり）を重ねたものです。サンプルが分布の形をうまく「代表」しているのがわかります。</p>
+
+        <figure class="figure">
+          <svg viewBox="0 0 460 250" width="460" aria-label="事後分布の曲線と、事後サンプルのヒストグラムを重ねた図">
+            <!-- 軸 -->
+            <line x1="40" y1="210" x2="430" y2="210" stroke="var(--border)" stroke-width="2"/>
+            <!-- ヒストグラムの柱(分布を近似) -->
+            <g fill="var(--level-color)" fill-opacity="0.30">
+              <rect x="70"  y="190" width="26" height="20"/>
+              <rect x="98"  y="168" width="26" height="42"/>
+              <rect x="126" y="132" width="26" height="78"/>
+              <rect x="154" y="92"  width="26" height="118"/>
+              <rect x="182" y="70"  width="26" height="140"/>
+              <rect x="210" y="78"  width="26" height="132"/>
+              <rect x="238" y="110" width="26" height="100"/>
+              <rect x="266" y="150" width="26" height="60"/>
+              <rect x="294" y="180" width="26" height="30"/>
+              <rect x="322" y="198" width="26" height="12"/>
+            </g>
+            <!-- 事後分布の曲線 -->
+            <path d="M55,208 C120,208 150,70 205,68 C260,66 290,208 355,208"
+                  fill="none" stroke="var(--level-color)" stroke-width="3"/>
+            <!-- ラベル -->
+            <text x="230" y="40" text-anchor="middle" font-size="12" fill="var(--level-color)" font-weight="700">事後分布の曲線</text>
+            <text x="120" y="160" font-size="11" fill="var(--text-muted)">サンプルの柱</text>
+            <text x="235" y="232" text-anchor="middle" font-size="12" fill="var(--text-muted)">θ の値</text>
+          </svg>
+          <figcaption>図2: なめらかな曲線が真の事後分布、柱の集まりが事後サンプルのヒストグラム。サンプルが多いほど、柱は曲線の形にぴたりと近づきます。</figcaption>
+        </figure>
+
+        <div class="box box-ex">
+          <div class="box-title">例題</div>
+          <p>ある事後分布から、\(\theta\) のサンプルを8個取り出したところ、次のようになりました（小さい順）。</p>
+          $$ 0.31,\; 0.38,\; 0.42,\; 0.45,\; 0.49,\; 0.53,\; 0.57,\; 0.65 $$
+          <p>(1) 事後平均を、(2) 「\(\theta > 0.5\) である確率」を、サンプルから見積もりなさい。</p>
+          <p><strong>解 (1)</strong>: 事後平均はサンプルの平均です。8個を足して8で割ります。</p>
+          $$ \frac{0.31+0.38+0.42+0.45+0.49+0.53+0.57+0.65}{8} = \frac{3.80}{8} = 0.475 $$
+          <p>事後平均はおよそ \(0.475\) と見積もれます。</p>
+          <p><strong>解 (2)</strong>: \(0.5\) を超えているサンプルを数えます。\(0.53,\, 0.57,\, 0.65\) の3個です。全部で8個なので、</p>
+          $$ P(\theta > 0.5) \;\approx\; \frac{3}{8} = 0.375 $$
+          <p>「\(\theta > 0.5\) である確率」はおよそ \(0.375\) と見積もれます。積分をいっさいせず、数えるだけで答えが出ました。実際はサンプルを数千〜数万個取るので、もっと正確になります。</p>
+        </div>
+
+        <h2>ただし、ひとつ大きな問題が残る</h2>
+        <p>ここまで読んで、「事後サンプルさえあれば全部解決じゃないか」と思ったかもしれません。そのとおりです。問題は、その<strong>事後サンプルをどうやって取るか</strong>です。</p>
+
+        <div class="box box-warn">
+          <div class="box-title">つまずき注意 — ここが次回への入り口</div>
+          <p>\(\pi\) の例では、正方形の中に点を打つだけでした。一様にばらまくのは簡単です。でも、複雑な事後分布から「正しく」サンプルを取り出すのは、まったく簡単ではありません。</p>
+          <p>そもそも、4-1で見たように事後分布は \(P(D)\)（正規化のための分母）が計算できないのでした。形はわかっても、きちんと正規化された分布から直接サンプルを取る方法がない——これがベイズ計算の最後の難関です。</p>
+        </div>
+
+        <p>この難関を突破する、とびきり賢い仕掛けが <span class="term">MCMC（マルコフ連鎖モンテカルロ）</span>です。直接サンプルできないなら、サンプルが「歩いて」分布をめぐるように作ってしまおう、という発想です。それは次回のお楽しみにしましょう。</p>
+
+        <h2>理解度チェック</h2>
+
+        <div class="quiz" data-answer="b">
+          <p class="quiz-q">問1: モンテカルロ法の基本的な発想として、もっとも近いものはどれですか?</p>
+          <button class="quiz-option" data-key="a">難しい積分を、もっと難しい積分に置きかえて解く</button>
+          <button class="quiz-option" data-key="b">難しい計算を、たくさんの乱数サンプルの平均で近似する</button>
+          <button class="quiz-option" data-key="c">乱数を使わず、必ずぴったりの答えを出す</button>
+          <div class="quiz-explain"><p>モンテカルロ法は、期待値や積分を「乱数サンプルの平均」で近似する方法です。答えはぴったりにはなりませんが、サンプル数 \(N\) を増やせばどんどん正確になります。</p></div>
+        </div>
+
+        <div class="quiz" data-answer="c">
+          <p class="quiz-q">問2: 円周率の推定で、正方形に \(N\) 個の点を打ち、四分円の内側に \(M\) 個入りました。\(\pi\) の近似値はどれですか?</p>
+          <button class="quiz-option" data-key="a">\( \dfrac{M}{N} \)</button>
+          <button class="quiz-option" data-key="b">\( \dfrac{M}{4N} \)</button>
+          <button class="quiz-option" data-key="c">\( 4 \times \dfrac{M}{N} \)</button>
+          <div class="quiz-explain"><p>内側の点の割合 \(\dfrac{M}{N}\) は、面積の比 \(\dfrac{\pi}{4}\) に近づきます。よって \(\dfrac{M}{N} \approx \dfrac{\pi}{4}\) を変形して、\(\pi \approx 4 \times \dfrac{M}{N}\) です。割合を4倍するのがポイントです。</p></div>
+        </div>
+
+        <div class="quiz" data-answer="a">
+          <p class="quiz-q">問3: 事後分布から事後サンプルが取れたとき、「\(\theta > 0.7\) である確率」はどう見積もりますか?</p>
+          <button class="quiz-option" data-key="a">サンプルのうち \(0.7\) を超えたものの割合を数える</button>
+          <button class="quiz-option" data-key="b">サンプルの最大値を 0.7 で割る</button>
+          <button class="quiz-option" data-key="c">事後分布の積分を手で解くしかない</button>
+          <div class="quiz-explain"><p>「ある条件を満たす確率」は、その条件を満たすサンプルの割合で近似できます。\(0.7\) を超えたサンプルを数え、全体の個数で割るだけ。積分は不要です。これがサンプルで分布を代表する強みです。</p></div>
+        </div>
+
+        <h2>演習</h2>
+
+        <div class="box box-practice">
+          <div class="box-title">演習1</div>
+          <p>正方形に \(N = 2000\) 個の点を打ったところ、四分円の内側に \(M = 1580\) 個入りました。円周率 \(\pi\) を推定しなさい。</p>
+          <details class="answer">
+            <summary>解答を見る</summary>
+            <p>公式 \(\pi \approx 4 \times \dfrac{M}{N}\) を使います。</p>
+            $$ \pi \;\approx\; 4 \times \frac{1580}{2000} \;=\; 4 \times 0.79 \;=\; 3.16 $$
+            <p>推定値はおよそ \(3.16\) です。真の値 \(3.14159\dots\) に近い値が得られました。点の数を増やせば、さらに精度が上がります。</p>
+          </details>
+        </div>
+
+        <div class="box box-practice">
+          <div class="box-title">演習2</div>
+          <p>ある事後分布から取った \(\theta\) のサンプルが、次の5個でした。事後平均を見積もりなさい。</p>
+          $$ 0.20,\; 0.40,\; 0.50,\; 0.60,\; 0.80 $$
+          <details class="answer">
+            <summary>解答を見る</summary>
+            <p>事後平均はサンプルの平均なので、5個を足して5で割ります。</p>
+            $$ \frac{0.20+0.40+0.50+0.60+0.80}{5} = \frac{2.50}{5} = 0.50 $$
+            <p>事後平均はおよそ \(0.50\) と見積もれます。</p>
+          </details>
+        </div>
+
+        <div class="box box-practice">
+          <div class="box-title">演習3</div>
+          <p>友達が「モンテカルロ法はやるたびに違う答えが出るから、信用できない」と言っています。この心配にどう答えますか。簡単に説明しなさい。</p>
+          <details class="answer">
+            <summary>解答を見る</summary>
+            <p>たしかに毎回少しずつ値はちがいます。でもサンプル数 \(N\) を増やすほど、ばらつきは小さくなります。誤差はおおよそ \(1/\sqrt{N}\) の速さで縮むので、\(N\) を100倍にすれば誤差はおよそ10分の1になります。十分な数のサンプルを取れば、実用上は安心して使える精度になります。</p>
+          </details>
+        </div>
+
+        <div class="box box-practice">
+          <div class="box-title">演習4</div>
+          <p>「事後サンプルさえあれば事後平均も信用区間も計算できる」のなら、なぜまだ問題が残るのでしょうか。一言で説明しなさい。</p>
+          <details class="answer">
+            <summary>解答を見る</summary>
+            <p>肝心の「事後分布から正しくサンプルを取る」こと自体が難しいからです。複雑な事後分布は、4-1で見たとおり正規化の分母 \(P(D)\) が計算できず、直接サンプルを取り出す手段がありません。この難関を解決するのが、次回学ぶMCMCです。</p>
+          </details>
+        </div>
+
+        <h2>まとめ</h2>
+        <ul>
+          <li><span class="term">モンテカルロ法</span>は、知りたい量（期待値や積分）を<strong>たくさんの乱数サンプルの平均</strong>で近似する方法です。難しい積分を、点の数え上げにすりかえます。</li>
+          <li>円周率 \(\pi\) は、正方形に点を打ち、四分円に入った割合を4倍するだけで推定できます（\(\pi \approx 4 \times \tfrac{M}{N}\)）。</li>
+          <li>事後分布から<span class="term">事後サンプル</span>が取れれば、事後平均・信用区間・「\(\theta\) がある値を超える確率」などが、サンプルの集計だけで求まります。</li>
+          <li>サンプル数 \(N\) を増やすほど近似は正確になり、誤差はおおよそ \(1/\sqrt{N}\) で縮みます。</li>
+          <li>残る難関は「複雑な事後分布から、どうやって正しくサンプルを取るか」。これを解くのが次回の<span class="term">MCMC</span>です。</li>
+        </ul>
+        <p>「分布をサンプルで代表させる」という発想がつかめれば、計算ベイズの半分は理解できたようなものです。つぎの 4-3 では、いよいよ直接サンプルできない分布から賢くサンプルを取る、MCMCの仕掛けへ進みます。</p>
+
+      </div>
+
+      <div class="complete-area">
+        <button class="btn btn-level" id="complete-btn">このレッスンを完了にする</button>
+        <p class="complete-note">進捗はこのブラウザに保存されます</p>
+      </div>
+
+      <!-- 前後ナビ: main.js がカリキュラムから自動生成 -->
+      <nav class="lesson-nav" id="lesson-nav" aria-label="前後のレッスン"></nav>
+
+    </main>
+
+    <!-- ページ内目次: main.js が本文の h2 から自動生成 -->
+    <aside class="toc">
+      <div class="toc-title">このページの内容</div>
+      <nav id="toc"></nav>
+    </aside>
+
+  </div>
+
+  <footer class="site-footer">
+    <p>ベイズの階段 — 中学数学から最前線まで、一段ずつ。</p>
+  </footer>
+
+  <script src="../../assets/js/curriculum.js"></script>
+  <script src="../../assets/js/main.js"></script>
+</body>
+</html>

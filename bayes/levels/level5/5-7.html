@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>5-7 ベイズワークフロー — モデル構築から検証まで | ベイズの階段</title>
+  <meta name="description" content="事前予測チェック・事後予測チェック・モデル批判の実務">
+  <script>
+    document.documentElement.dataset.theme =
+      localStorage.getItem("bayes-stairs-theme") ||
+      (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Noto+Serif+JP:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../assets/css/main.css">
+
+  <!-- KaTeX: 数式を使うページでは必ずこの3行を入れる -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+          onload="renderMathInElement(document.body, {delimiters: [
+            {left: '$$', right: '$$', display: true},
+            {left: '\\(', right: '\\)', display: false}
+          ]});"></script>
+</head>
+<body data-root="../../" data-level="5" data-lesson-id="5-7">
+
+  <header class="site-header">
+    <button class="sidebar-toggle" id="sidebar-toggle" aria-label="メニュー">☰</button>
+    <a class="brand" href="../../index.html">
+      <span class="brand-mark">階</span>
+      <span>ベイズの階段</span>
+    </a>
+    <div class="header-spacer"></div>
+    <div class="header-progress" id="header-progress"></div>
+    <button class="theme-toggle" id="theme-toggle" aria-label="テーマ切替">🌙</button>
+  </header>
+
+  <div class="layout">
+
+    <!-- サイドバー: main.js がカリキュラムから自動生成 -->
+    <aside class="sidebar"><nav id="sidebar-nav" aria-label="カリキュラム"></nav></aside>
+
+    <main class="lesson">
+
+      <nav class="breadcrumbs" aria-label="パンくず">
+        <a href="../../index.html">ホーム</a><span class="sep">›</span>
+        <a href="index.html">Level 5 実践ベイズモデリング</a><span class="sep">›</span>
+        <span>5-7 ベイズワークフロー — モデル構築から検証まで</span>
+      </nav>
+
+      <header class="lesson-header">
+        <div class="lesson-meta">
+          <span class="level-badge">Level 5</span>
+          <span class="small">レッスン 5-7</span>
+        </div>
+        <h1>ベイズワークフロー — モデル構築から検証まで</h1>
+
+        <div class="lesson-goals">
+          <h2>このレッスンでできるようになること</h2>
+          <ul>
+            <li>ベイズ分析を「事前予測チェック → 推定 → 収束確認 → 事後予測チェック → モデル批判 → 反復」という一連の流れとして説明できる</li>
+            <li>事前予測チェックと事後予測チェックの違いを、何を見て何を判断するかという観点で区別できる</li>
+            <li>1つのモデルで終わらせず、批判して作り直すという反復の姿勢を自分の言葉で語れる</li>
+          </ul>
+          <p class="prereq">前提: <a href="5-1.html">5-1 PyMCではじめるベイズ推定</a>・<a href="../level4/4-6.html">4-6 収束診断とサンプリングの実務</a>・<a href="../level3/3-7.html">3-7 モデル比較とベイズファクター</a> を読んでいること</p>
+        </div>
+      </header>
+
+      <!-- ▼▼▼ ここからレッスン本文 ▼▼▼ -->
+      <div class="lesson-body">
+
+        <h2>「モデルを書いて、はい完成」ではない</h2>
+        <p>ここまでの旅で、たくさんの道具を手に入れました。ベイズの定理、事前分布と事後分布、尤度（ゆうど）、MCMC、PyMCでの回帰や階層モデル。最後のレッスンでは、それらを<strong>どういう順番で、どう組み合わせて使うか</strong>を学びます。</p>
+        <p>現実のデータ分析では、いきなり完璧なモデルは書けません。最初のモデルはたいてい、どこか間違っています。事前分布が変だったり、データの形に合っていなかったり。大切なのは、その間違いに<strong>自分で気づいて直す</strong>ことです。</p>
+        <p>この「書いて、確かめて、直す」を一連の手順にまとめたものを<span class="term">ベイズワークフロー（Bayesian workflow）</span>と呼びます。料理のレシピのように、迷ったときに立ち返れる地図です。今日はこの地図を、サイト全体のまとめとして広げてみましょう。</p>
+
+        <div class="box box-intuition">
+          <div class="box-title">直感でつかむ</div>
+          <p>家を建てることを思い浮かべてください。設計図をいきなり完成させて、そのまま建てる大工さんはいません。まず模型を作って「玄関の向き、これでいい?」と確かめます（事前予測チェック）。建てている途中も「柱はまっすぐ立っているか」と点検します（収束確認）。建て終わったら「雨漏りしないか、住み心地はどうか」を実際に試します（事後予測チェック）。問題が見つかれば設計を直して、また建て直す。ベイズワークフローも、これとそっくりの「点検しながら作る」やり方なのです。</p>
+        </div>
+
+        <h2>ワークフロー全体の地図</h2>
+        <p>まず全体像を一枚の図で見ましょう。ベイズ分析は、次の流れをぐるぐる回るサイクルです。一直線ではなく、後ろに戻る矢印があるのがポイントです。</p>
+
+        <figure class="figure">
+          <svg viewBox="0 0 640 300" width="640" aria-label="ベイズワークフローの循環を示す流れ図">
+            <defs>
+              <marker id="arrow" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+                <path d="M0,0 L9,4.5 L0,9 Z" fill="var(--level-color)"/>
+              </marker>
+              <marker id="arrowback" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+                <path d="M0,0 L9,4.5 L0,9 Z" fill="var(--text-muted)"/>
+              </marker>
+            </defs>
+            <!-- boxes (top row, left to right) -->
+            <g font-size="13" text-anchor="middle">
+              <rect x="20"  y="40" width="120" height="48" rx="8" fill="none" stroke="var(--level-color)" stroke-width="2"/>
+              <text x="80"  y="60" fill="var(--text)">① モデルを</text>
+              <text x="80"  y="78" fill="var(--text)">書く</text>
+
+              <rect x="180" y="40" width="120" height="48" rx="8" fill="none" stroke="var(--level-color)" stroke-width="2"/>
+              <text x="240" y="60" fill="var(--text)">② 事前予測</text>
+              <text x="240" y="78" fill="var(--text)">チェック</text>
+
+              <rect x="340" y="40" width="120" height="48" rx="8" fill="none" stroke="var(--level-color)" stroke-width="2"/>
+              <text x="400" y="60" fill="var(--text)">③ 推定する</text>
+              <text x="400" y="78" fill="var(--text)">(MCMC)</text>
+
+              <rect x="500" y="40" width="120" height="48" rx="8" fill="none" stroke="var(--level-color)" stroke-width="2"/>
+              <text x="560" y="60" fill="var(--text)">④ 収束を</text>
+              <text x="560" y="78" fill="var(--text)">確認</text>
+            </g>
+            <!-- boxes (bottom row, right to left) -->
+            <g font-size="13" text-anchor="middle">
+              <rect x="500" y="200" width="120" height="48" rx="8" fill="none" stroke="var(--level-color)" stroke-width="2"/>
+              <text x="560" y="220" fill="var(--text)">⑤ 事後予測</text>
+              <text x="560" y="238" fill="var(--text)">チェック</text>
+
+              <rect x="260" y="200" width="160" height="48" rx="8" fill="none" stroke="var(--level-color)" stroke-width="2"/>
+              <text x="340" y="220" fill="var(--text)">⑥ モデル批判</text>
+              <text x="340" y="238" fill="var(--text)">・比較</text>
+            </g>
+            <!-- forward arrows top -->
+            <line x1="140" y1="64" x2="178" y2="64" stroke="var(--level-color)" stroke-width="2" marker-end="url(#arrow)"/>
+            <line x1="300" y1="64" x2="338" y2="64" stroke="var(--level-color)" stroke-width="2" marker-end="url(#arrow)"/>
+            <line x1="460" y1="64" x2="498" y2="64" stroke="var(--level-color)" stroke-width="2" marker-end="url(#arrow)"/>
+            <!-- down from ④ to ⑤ -->
+            <line x1="560" y1="88" x2="560" y2="198" stroke="var(--level-color)" stroke-width="2" marker-end="url(#arrow)"/>
+            <!-- ⑤ to ⑥ -->
+            <line x1="500" y1="224" x2="422" y2="224" stroke="var(--level-color)" stroke-width="2" marker-end="url(#arrow)"/>
+            <!-- ⑥ back up to ① : the "反復" loop -->
+            <path d="M260,224 C120,224 80,200 80,90" fill="none" stroke="var(--text-muted)" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#arrowback)"/>
+            <text x="120" y="160" fill="var(--text-muted)" font-size="13" text-anchor="middle">⑦ 反復</text>
+            <text x="120" y="178" fill="var(--text-muted)" font-size="11" text-anchor="middle">(直して戻る)</text>
+          </svg>
+          <figcaption>図1: ベイズワークフローの全体像。①→⑥まで進み、問題が見つかれば点線の矢印でモデル作りに戻る。一度で終わらず、ぐるぐる回して育てていく。</figcaption>
+        </figure>
+
+        <p>それぞれのステップを、順番に見ていきましょう。①「モデルを書く」と③「推定する」はすでに <a href="5-1.html">5-1</a> 以降で何度もやってきました。今日の主役は、②の事前予測チェックと⑤の事後予測チェック、そして⑥のモデル批判です。</p>
+
+        <h2>② 事前予測チェック — 推定の前に事前分布を点検する</h2>
+        <p>モデルを書いたら、すぐにデータを当てはめたくなります。でも、その前に一歩立ち止まります。<span class="term">事前予測チェック（じぜんよそくチェック / prior predictive check）</span>です。これは「データを<strong>まだ見ないで</strong>、事前分布だけからどんなデータが生まれるかを眺める」点検です。</p>
+
+        <div class="box box-def">
+          <div class="box-title">定義 — 事前予測分布</div>
+          <p>パラメータ \(\theta\)（シータ）の事前分布 \(p(\theta)\) と、そのもとでのデータの分布 \(p(y \mid \theta)\) を組み合わせると、データ \(\tilde{y}\)（ワイ・チルダ、「まだ見ぬ仮のデータ」の意味）が生まれる分布が決まります。これを<strong>事前予測分布</strong>と呼びます:
+          $$ p(\tilde{y}) = \int p(\tilde{y} \mid \theta)\, p(\theta)\, d\theta $$
+          記号 \(\int \cdots\, d\theta\) は「\(\theta\) のあらゆる値について、その確率で重みづけて足し合わせる」という意味です（<a href="../../appendix/a-2.html">付録a-2</a>）。</p>
+        </div>
+
+        <p>式は難しそうですが、やることは単純です。事前分布から \(\theta\) を1つサンプルし、その \(\theta\) を使ってデータを1セット生成する。これを何度も繰り返して、出てきた仮データを眺めるだけです。手順にすると次の通りです。</p>
+
+        <div class="box box-thm">
+          <div class="box-title">手順 — 事前予測チェック</div>
+          <p>\(s = 1, 2, \dots, S\) について繰り返す:</p>
+          <p>$$ \theta^{(s)} \sim p(\theta), \qquad \tilde{y}^{(s)} \sim p\!\left(\tilde{y} \mid \theta^{(s)}\right) $$</p>
+          <p>こうして得た仮データ \(\tilde{y}^{(1)}, \dots, \tilde{y}^{(S)}\) が、<strong>常識的にありえる範囲</strong>に収まっているかを目で確かめます。</p>
+        </div>
+
+        <p>なぜこれが大事なのでしょう。たとえば人の身長を予測するモデルで、事前分布がいいかげんだと、事前予測分布が「身長マイナス3メートル」や「身長500メートル」を平気で生み出すことがあります。データを見る前に、その時点で事前分布が間違っているとわかるのです。</p>
+
+        <div class="box box-warn">
+          <div class="box-title">つまずき注意 — 「無情報なつもり」が暴れる</div>
+          <p>「何も決めつけたくないから、うんと広い事前分布にしよう」と \(\theta \sim \mathcal{N}(0, 1000^2)\) のような極端に幅広い設定をすると、事前予測分布がとんでもない値ばかり出すことがあります。広ければ中立、というわけではありません。事前予測チェックは、こうした<strong>「無情報なつもりで実は暴れている事前分布」</strong>をあぶり出してくれます。多くの場合、ほどよく弱い情報を持たせた事前分布（弱情報事前分布）のほうが安全です。</p>
+        </div>
+
+        <div class="box box-ex">
+          <div class="box-title">例題 — 事前予測チェックでおかしさに気づく</div>
+          <p>あるコインの表が出る確率 \(\theta\) を推定したいとします。あなたは「\(\theta\) は0から1の間」と知っていますが、うっかり事前分布を \(\theta \sim \mathcal{N}(0.5,\ 0.4^2)\)（平均0.5、標準偏差0.4の正規分布）にしてしまいました。事前予測チェックで何が問題だとわかりますか。</p>
+          <p><strong>解</strong>:</p>
+          <p>事前分布から \(\theta\) をサンプルしてみます。標準偏差が \(0.4\) と大きいので、\(\theta = -0.3\) や \(\theta = 1.2\) のような値が普通に出てしまいます。確率なのに0未満や1超えになるのは明らかにおかしい。データを見るまでもなく、この事前分布は不適切だと判明します。</p>
+          <p>正しくは、確率を表すなら値が必ず0〜1に収まる<a href="../level2/2-6.html">ベータ分布</a>、たとえば \(\theta \sim \text{Beta}(2, 2)\) を使うべきでした。事前予測チェックは「使ってはいけない事前分布」を、推定を回す前に止めてくれます。</p>
+        </div>
+
+        <h2>④ 収束を確認する — サンプリングを信じてよいか</h2>
+        <p>事前分布が妥当だと確認できたら、いよいよ③でMCMCを回して事後分布のサンプルを得ます。でも、得られたサンプルをすぐ信用してはいけません。MCMCが<strong>ちゃんと事後分布に行き着いたか</strong>を確かめる必要があります。これが④の収束確認です。</p>
+        <p>くわしくは <a href="../level4/4-6.html">4-6 収束診断とサンプリングの実務</a> で学びました。ここでは要点だけ思い出しておきましょう。チェックすべきは主に次の3つです。</p>
+
+        <table>
+          <thead>
+            <tr><th>見るもの</th><th>意味</th><th>合格の目安</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>\(\hat{R}\)(アール・ハット)</td><td>複数の鎖が同じ分布に集まったか</td><td>すべて 1.01 以下</td></tr>
+            <tr><td>有効サンプルサイズ</td><td>実質いくつ分の独立サンプルか</td><td>数百以上あれば安心</td></tr>
+            <tr><td>トレースプロット</td><td>鎖の軌跡を時系列で見た図</td><td>毛虫のように一様に混ざる</td></tr>
+          </tbody>
+        </table>
+
+        <p>もし \(\hat{R}\) が大きかったり、警告が出たりしたら、その推定結果は使えません。サンプル数を増やす、モデルを書き直す、といった対処に戻ります。ここでも「先に進む前に点検」という姿勢は同じです。</p>
+
+        <h2>⑤ 事後予測チェック — モデルは現実のデータを再現できるか</h2>
+        <p>収束も確認できました。事後分布が手に入りました。では、そのモデルは<strong>良いモデル</strong>でしょうか。それを確かめるのが、ワークフローでいちばん大切といってもいい<span class="term">事後予測チェック（じごよそくチェック / posterior predictive check）</span>です。</p>
+
+        <div class="box box-def">
+          <div class="box-title">定義 — 事後予測分布</div>
+          <p>データ \(y\) を見たあとの事後分布 \(p(\theta \mid y)\) を使って、新しいデータ \(\tilde{y}\) が生まれる分布を<strong>事後予測分布</strong>と呼びます:
+          $$ p(\tilde{y} \mid y) = \int p(\tilde{y} \mid \theta)\, p(\theta \mid y)\, d\theta $$
+          事前予測分布の式と、ほとんど同じ形です。ちがいは事前分布 \(p(\theta)\) が<strong>事後分布</strong> \(p(\theta \mid y)\) に置き換わっている一点だけです。</p>
+        </div>
+
+        <div class="box box-intuition">
+          <div class="box-title">直感でつかむ — 二つの予測チェックの違い</div>
+          <p>事前予測チェックは「データを見る<strong>前</strong>に、思い込み（事前分布）が暴れていないか」を見ます。事後予測チェックは「データを見た<strong>後</strong>に、学んだモデルが<strong>本物のデータそっくりの偽データ</strong>を作れるか」を見ます。</p>
+          <p>たとえるなら、事前予測チェックは試験前に「この勉強の方針、的外れじゃないか」を確認すること。事後予測チェックは試験後に「学んだ知識で、本番と同じ問題を解いて再現できるか」を試すこと。同じ「予測を眺める」でも、見る目的とタイミングが違うのです。</p>
+        </div>
+
+        <p>やり方はこうです。事後分布からモデルが作った偽データ \(\tilde{y}\) を、何セットも生成します。そして<strong>本物のデータ \(y\) と並べて見比べる</strong>のです。偽データの分布の中に本物がうまく収まっていれば、モデルは現実をよく再現できています。本物だけが偽データの群れから外れていたら、モデルはどこかを取りこぼしています。</p>
+
+        <figure class="figure">
+          <svg viewBox="0 0 560 240" width="560" aria-label="事後予測チェックで偽データの分布と本物のデータを見比べる図">
+            <!-- baseline -->
+            <line x1="40" y1="200" x2="520" y2="200" stroke="var(--border)" stroke-width="2"/>
+            <text x="280" y="228" fill="var(--text-muted)" font-size="12" text-anchor="middle">観測値（たとえば「1日の来客数」）</text>
+            <!-- several light gray predictive curves (the fake data sets) -->
+            <path d="M60,200 C150,200 170,90 230,90 C290,90 310,200 400,200" fill="none" stroke="var(--text-muted)" stroke-width="1.5" opacity="0.45"/>
+            <path d="M60,200 C160,200 180,110 245,110 C310,110 330,200 410,200" fill="none" stroke="var(--text-muted)" stroke-width="1.5" opacity="0.45"/>
+            <path d="M60,200 C140,200 160,80 218,80 C276,80 296,200 390,200" fill="none" stroke="var(--text-muted)" stroke-width="1.5" opacity="0.45"/>
+            <path d="M60,200 C155,200 175,100 238,100 C300,100 322,200 405,200" fill="none" stroke="var(--text-muted)" stroke-width="1.5" opacity="0.45"/>
+            <!-- the real data curve, in level color, sitting nicely inside -->
+            <path d="M60,200 C150,200 172,95 232,95 C292,95 314,200 402,200" fill="none" stroke="var(--level-color)" stroke-width="3.5"/>
+            <!-- legend -->
+            <line x1="350" y1="40" x2="380" y2="40" stroke="var(--level-color)" stroke-width="3.5"/>
+            <text x="386" y="44" fill="var(--text)" font-size="12">本物のデータ</text>
+            <line x1="350" y1="60" x2="380" y2="60" stroke="var(--text-muted)" stroke-width="1.5" opacity="0.6"/>
+            <text x="386" y="64" fill="var(--text-muted)" font-size="12">モデルが作った偽データ</text>
+          </svg>
+          <figcaption>図2: 事後予測チェック。薄いグレーの曲線がモデルの作った偽データ、太い色の曲線が本物のデータ。本物が偽データの群れの中央あたりに収まっていれば、モデルは現実をよく説明できている。</figcaption>
+        </figure>
+
+        <div class="box box-warn">
+          <div class="box-title">つまずき注意 — 「本物のデータで答え合わせ」と勘違いしない</div>
+          <p>事後予測チェックは「予測が当たったかを採点する」テストではありません。見ているのは<strong>「モデルが、観測データと同じような特徴のデータを生み出せるか」</strong>です。たとえば本物のデータには外れ値が時々あるのに、モデルの偽データには一切出ないなら、そのモデルは「ばらつきの大きさ」を取りこぼしています。値を当てる精度ではなく、<strong>データの形・性質を再現できているか</strong>に注目するのがコツです。</p>
+        </div>
+
+        <h2>⑥ モデル批判と比較 — そして反復へ</h2>
+        <p>事後予測チェックで「ここがズレている」と見つかったら、何が原因かを考えます。これが<span class="term">モデル批判（model criticism）</span>です。批判というと厳しく聞こえますが、要は「このモデルの弱点はどこか」を冷静に探す作業です。</p>
+        <p>原因の候補はいろいろあります。分布の選び方が合っていない（左右対称な正規分布を使ったが、本当は右に裾を引いていた、など）。説明に使う変数が足りない。グループ差を無視している（それなら<a href="5-4.html">階層モデル</a>の出番です）。見つけた弱点をもとにモデルを書き直し、図1の点線をたどって①へ戻ります。これが⑦の<strong>反復</strong>です。</p>
+        <p>候補が複数あるときは、どれが良いかを比べます。<a href="../level3/3-7.html">3-7 モデル比較とベイズファクター</a> で学んだ考え方の出番です。「データへの当てはまり」と「モデルの複雑さ」のバランスで選ぶ、というのが基本の発想でした。むやみに複雑なモデルが偉いわけではなく、シンプルで現実をよく説明できるモデルを目指します。</p>
+
+        <div class="box box-sim">
+          <div class="box-title">やってみよう</div>
+          <p>下のコードは、PyMCでの事前予測チェックと事後予測チェックの呼び出し方です。前のレッスンで書いたモデルに、たった数行を足すだけで点検ができます。<code>sample_prior_predictive</code> が②、<code>sample_posterior_predictive</code> が⑤に対応します。手元に環境がある人は、自分のモデルでぜひ試してみてください。</p>
+        </div>
+
+        <pre><code>import pymc as pm
+import arviz as az
+
+with pm.Model() as model:
+    theta = pm.Beta("theta", alpha=2, beta=2)        # 事前分布(0〜1に収まる)
+    y = pm.Binomial("y", n=100, p=theta, observed=62)
+
+    # ② 事前予測チェック: データを見る前に事前分布を点検
+    prior_pred = pm.sample_prior_predictive()
+    az.plot_ppc(prior_pred, group="prior")           # 事前予測分布を図示
+
+    # ③ 推定 + ④ 収束確認
+    idata = pm.sample()                              # MCMC実行
+    az.summary(idata)                                # R-hat などを表示
+
+    # ⑤ 事後予測チェック: 学んだモデルが本物のデータを再現できるか
+    idata.extend(pm.sample_posterior_predictive(idata))
+    az.plot_ppc(idata)                               # 偽データと本物を重ねて図示</code></pre>
+
+        <h2>理解度チェック</h2>
+
+        <div class="quiz" data-answer="b">
+          <p class="quiz-q">問1: 事前予測チェックは、ワークフローのどの時点で行いますか?</p>
+          <button class="quiz-option" data-key="a">MCMCで推定し終わった後</button>
+          <button class="quiz-option" data-key="b">モデルを書いた後、データを当てはめて推定する前</button>
+          <button class="quiz-option" data-key="c">事後予測チェックの後</button>
+          <div class="quiz-explain"><p>事前予測チェックは「データをまだ見ないで、事前分布だけからどんなデータが生まれるか」を点検します。だから推定（MCMC）を回す<strong>前</strong>に行います。図1の②の位置です。これにより、暴れた事前分布を早い段階で止められます。</p></div>
+        </div>
+
+        <div class="quiz" data-answer="c">
+          <p class="quiz-q">問2: 事後予測チェックで見ているのは、次のうちどれですか?</p>
+          <button class="quiz-option" data-key="a">事前分布の標準偏差が大きすぎないか</button>
+          <button class="quiz-option" data-key="b">\(\hat{R}\) が 1.01 以下に収まっているか</button>
+          <button class="quiz-option" data-key="c">モデルが作った偽データが、本物のデータと同じような特徴を持つか</button>
+          <div class="quiz-explain"><p>事後予測チェックは、事後分布から偽データを何セットも生成し、本物のデータと見比べる作業です。本物が偽データの群れの中にうまく収まっていれば合格。aは事前予測チェック、bは収束確認（④）の話です。</p></div>
+        </div>
+
+        <div class="quiz" data-answer="a">
+          <p class="quiz-q">問3: ベイズワークフローが「一直線ではなく、ぐるぐる回るサイクル」であるのはなぜですか?</p>
+          <button class="quiz-option" data-key="a">最初のモデルはたいてい不完全で、点検で見つけた弱点をもとに作り直して戻るから</button>
+          <button class="quiz-option" data-key="b">MCMCは必ず複数回実行しないと動かないから</button>
+          <button class="quiz-option" data-key="c">事前分布は毎回ランダムに選び直す決まりだから</button>
+          <div class="quiz-explain"><p>現実のデータ分析では、最初のモデルはどこか間違っています。事後予測チェックなどで弱点を見つけたら、モデルを直して①へ戻る（⑦反復）。この「書いて、確かめて、直す」の繰り返しが、ワークフローを循環にしている理由です。bやcのような決まりはありません。</p></div>
+        </div>
+
+        <h2>演習</h2>
+
+        <div class="box box-practice">
+          <div class="box-title">演習1</div>
+          <p>事前予測チェックと事後予測チェックは、式の上ではよく似ています。両者の式を並べ、どこが違うのか、そしてその違いが何を意味するのかを説明しなさい。</p>
+          <details class="answer">
+            <summary>解答を見る</summary>
+            <p>2つの式は次の通りです。</p>
+            <p>$$ p(\tilde{y}) = \int p(\tilde{y} \mid \theta)\, p(\theta)\, d\theta \qquad p(\tilde{y} \mid y) = \int p(\tilde{y} \mid \theta)\, p(\theta \mid y)\, d\theta $$</p>
+            <p>違うのは、重みに使う分布です。事前予測では<strong>事前分布 \(p(\theta)\)</strong>、事後予測では<strong>事後分布 \(p(\theta \mid y)\)</strong> を使います。つまり「データ \(y\) を見て学んだかどうか」だけが違いです。事前予測は学ぶ前の思い込みからデータを作るので、事前分布の妥当性を点検できます。事後予測は学んだ後のモデルからデータを作るので、モデルが現実を再現できるかを点検できます。</p>
+          </details>
+        </div>
+
+        <div class="box box-practice">
+          <div class="box-title">演習2</div>
+          <p>あるお店の「1日の来客数」をポアソン分布でモデル化しました。事後予測チェックをすると、本物のデータには「来客0人の日」がかなり多いのに、モデルの作る偽データではほとんど0人の日が出ませんでした。このとき、モデル批判としてどんなことが言えますか。考えられる次の一手を1つ挙げなさい。</p>
+          <details class="answer">
+            <summary>解答を見る</summary>
+            <p>モデル（ポアソン分布）は「0人の日の多さ」という、データの大事な特徴を取りこぼしている、と批判できます。ポアソン分布だけでは、現実に多い「ゼロ」を十分に作り出せないのです。</p>
+            <p>次の一手の例: 「ゼロが起きやすい仕組み」を足したモデルに作り直すことが考えられます（たとえば「そもそも休業で0人」と「営業したが偶然0人」を分けて考えるなど）。あるいは曜日や天気といった、来客数を説明する変数を追加することも候補です。いずれにせよ、図1の点線をたどって①へ戻り、モデルを更新して反復します。</p>
+            <p>※ ここで大事なのは具体的な手法名ではなく、<strong>「事後予測チェックでズレを見つけ、原因を考え、モデルを直して戻る」という流れ</strong>を踏めることです。</p>
+          </details>
+        </div>
+
+        <div class="box box-practice">
+          <div class="box-title">演習3</div>
+          <p>「事前分布を思いきり広くしておけば中立で安全だ」という考え方には、どんな落とし穴がありますか。事前予測チェックの観点から説明しなさい。</p>
+          <details class="answer">
+            <summary>解答を見る</summary>
+            <p>事前分布を極端に広く（たとえば \(\mathcal{N}(0, 1000^2)\) のように）すると、事前予測分布が現実にはありえない値を大量に生み出すことがあります。身長の例なら「マイナス3メートル」や「500メートル」のようなデータです。広いこと＝中立、ではありません。むしろ「ありえないデータも等しくありえる」と主張してしまっているのです。</p>
+            <p>事前予測チェックをすれば、この暴走に推定の前から気づけます。多くの場合、常識的な範囲にゆるく収める<strong>弱情報事前分布</strong>のほうが安全で、推定も安定します。「無情報なつもりが実は暴れている」という典型的な落とし穴を、事前予測チェックが防いでくれます。</p>
+          </details>
+        </div>
+
+        <h2>まとめ</h2>
+        <ul>
+          <li><strong>ベイズワークフロー</strong>は「モデルを書く → 事前予測チェック → 推定 → 収束確認 → 事後予測チェック → モデル批判・比較 → 反復」という、点検しながら作る一連の流れです。</li>
+          <li><strong>事前予測チェック</strong>は、データを見る前に事前分布だけから仮データを作り、常識的な範囲に収まるかを確かめます。暴れた事前分布を早期に止めます。</li>
+          <li><strong>事後予測チェック</strong>は、事後分布から偽データを作り、本物のデータと見比べます。モデルが現実の「データの形・性質」を再現できているかを見ます。</li>
+          <li>2つのチェックの式はそっくりで、違いは重みが<strong>事前分布</strong>か<strong>事後分布</strong>かの一点だけです。</li>
+          <li>1つのモデルで終わらせず、<strong>批判して作り直す反復</strong>こそがワークフローの心臓部。一直線ではなく、ぐるぐる回して育てます。</li>
+        </ul>
+
+        <p>これで『ベイズの階段』の本編はおしまいです。あなたは確率の数え上げから始めて、ベイズの定理、分布、MCMC、PyMCでの実践、そしてモデルを育てるワークフローまで、一段ずつ上ってきました。ここから先は、自分のデータで実際にモデルを書き、点検し、直していく番です。つまずいたら、いつでも前のレッスンへ戻ってきてください。次に読む本やもっと深い学びは <a href="../../appendix/a-5.html">付録a-5 参考文献と次に読む本</a> にまとめてあります。よい旅を。</p>
+
+      </div>
+      <!-- ▲▲▲ レッスン本文ここまで ▲▲▲ -->
+
+      <div class="complete-area">
+        <button class="btn btn-level" id="complete-btn">このレッスンを完了にする</button>
+        <p class="complete-note">進捗はこのブラウザに保存されます</p>
+      </div>
+
+      <!-- 前後ナビ: main.js がカリキュラムから自動生成 -->
+      <nav class="lesson-nav" id="lesson-nav" aria-label="前後のレッスン"></nav>
+
+    </main>
+
+    <!-- ページ内目次: main.js が本文の h2 から自動生成 -->
+    <aside class="toc">
+      <div class="toc-title">このページの内容</div>
+      <nav id="toc"></nav>
+    </aside>
+
+  </div>
+
+  <footer class="site-footer">
+    <p>ベイズの階段 — 中学数学から最前線まで、一段ずつ。</p>
+  </footer>
+
+  <script src="../../assets/js/curriculum.js"></script>
+  <script src="../../assets/js/main.js"></script>
+</body>
+</html>

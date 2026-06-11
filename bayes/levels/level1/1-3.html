@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>1-3 ベイズの定理の導出 | ベイズの階段</title>
+  <meta name="description" content="条件付き確率の定義から定理を自力で導く">
+  <script>
+    document.documentElement.dataset.theme =
+      localStorage.getItem("bayes-stairs-theme") ||
+      (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Noto+Serif+JP:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../assets/css/main.css">
+
+  <!-- KaTeX: 数式を使うページでは必ずこの3行を入れる -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+          onload="renderMathInElement(document.body, {delimiters: [
+            {left: '$$', right: '$$', display: true},
+            {left: '\\(', right: '\\)', display: false}
+          ]});"></script>
+</head>
+<body data-root="../../" data-level="1" data-lesson-id="1-3">
+
+  <header class="site-header">
+    <button class="sidebar-toggle" id="sidebar-toggle" aria-label="メニュー">☰</button>
+    <a class="brand" href="../../index.html">
+      <span class="brand-mark">階</span>
+      <span>ベイズの階段</span>
+    </a>
+    <div class="header-spacer"></div>
+    <div class="header-progress" id="header-progress"></div>
+    <button class="theme-toggle" id="theme-toggle" aria-label="テーマ切替">🌙</button>
+  </header>
+
+  <div class="layout">
+
+    <!-- サイドバー: main.js がカリキュラムから自動生成 -->
+    <aside class="sidebar"><nav id="sidebar-nav" aria-label="カリキュラム"></nav></aside>
+
+    <main class="lesson">
+
+      <nav class="breadcrumbs" aria-label="パンくず">
+        <a href="../../index.html">ホーム</a><span class="sep">›</span>
+        <a href="index.html">Level 1 条件付き確率とベイズの定理</a><span class="sep">›</span>
+        <span>1-3 ベイズの定理の導出</span>
+      </nav>
+
+      <header class="lesson-header">
+        <div class="lesson-meta">
+          <span class="level-badge">Level 1</span>
+          <span class="small">レッスン 1-3</span>
+        </div>
+        <h1>ベイズの定理の導出</h1>
+
+        <div class="lesson-goals">
+          <h2>このレッスンでできるようになること</h2>
+          <ul>
+            <li>同時確率を2通りに書くことから、ベイズの定理を自分の手で導ける</li>
+            <li>ベイズの定理の各部分が何を表すかを説明できる</li>
+            <li>全確率の定理を使って、分母 \(P(B)\) を場合分けで展開できる</li>
+          </ul>
+          <p class="prereq">前提: <a href="1-1.html">1-1 条件付き確率</a> と <a href="1-2.html">1-2 同時確率と周辺確率</a> を読んでいること</p>
+        </div>
+      </header>
+
+      <!-- ▼▼▼ ここからレッスン本文 ▼▼▼ -->
+      <div class="lesson-body">
+
+        <h2>「逆向き」を計算したい</h2>
+        <p>
+          検査を受けて陽性が出たとします。知りたいのは「陽性だったとき、本当に病気である確率」ですよね。
+          でも、手元にある資料に書いてあるのはたいてい逆の数字です。
+          「病気の人が検査を受けたら、何％が陽性になるか」です。
+        </p>
+        <p>
+          この2つは向きが反対です。<a href="../level0/0-5.html">0-5「逆向き」の確率</a> でも見たように、向きを取りちがえると大きな誤解が生まれます。
+          欲しい向きと、手元にある向き。この橋渡しをしてくれるのが、これから導く<span class="term">ベイズの定理（ていり）</span>です。
+        </p>
+        <p>
+          うれしいことに、この定理は天から降ってくる魔法ではありません。
+          1-1 で習った条件付き確率の定義だけを使って、自分で組み立てられます。
+          このレッスンでは、その組み立てを最初から最後まで一緒にたどります。
+        </p>
+
+        <div class="box box-intuition">
+          <div class="box-title">直感でつかむ</div>
+          <p>
+            ある同じ部屋（2つの出来事が両方起きた状況）に入るのに、ドアが2つあると思ってください。
+          </p>
+          <p>
+            1つ目のドアは「まず \(B\) を確かめて、そのあと \(A\) を確かめる」道。
+            2つ目は「まず \(A\) を確かめて、そのあと \(B\) を確かめる」道。
+            入口は違っても、たどり着く部屋は同じ「\(A\) も \(B\) も起きた」です。
+          </p>
+          <p>
+            つまり2つの道の「通りやすさ」は等しいはず。この当たり前の等号から、ベイズの定理が一気に出てきます。
+          </p>
+        </div>
+
+        <h2>出発点: 同時確率を2通りに書く</h2>
+        <p>
+          まず 1-1 の<span class="term">条件付き確率（じょうけんつきかくりつ）</span>の定義を思い出します。
+          \(P(A \mid B)\) は「\(B\) が起きたとわかったときの \(A\) の確率」と読みます。定義はこうでした。
+        </p>
+
+        <div class="box box-def">
+          <div class="box-title">定義 — 条件付き確率（復習）</div>
+          <p>\(P(B) > 0\) のとき、
+          $$ P(A \mid B) = \frac{P(A \cap B)}{P(B)} $$
+          ここで \(P(A \cap B)\) は「\(A\) と \(B\) が両方起きる確率」＝<span class="term">同時確率（どうじかくりつ）</span>です（1-2 で学習）。</p>
+        </div>
+
+        <p>
+          この式の両辺に \(P(B)\) をかけると、分母が消えて、同時確率を表す式になります。
+        </p>
+        <div class="formula">
+          <span class="formula-label">同時確率の書き方 その1（B から見る）</span>
+          $$ P(A \cap B) = P(A \mid B)\, P(B) $$
+        </div>
+        <p>
+          これは「先に \(B\) が起きて（確率 \(P(B)\)）、その \(B\) のもとで \(A\) も起きる（確率 \(P(A \mid B)\)）」という読み方です。さきほどの1つ目のドアですね。
+        </p>
+        <p>
+          ところで、\(A\) と \(B\) の役割を入れかえても、まったく同じ理屈が成り立ちます。
+          条件付き確率の定義で \(A\) と \(B\) を交換すると \(P(B \mid A) = \dfrac{P(A \cap B)}{P(A)}\) となり、両辺に \(P(A)\) をかけて、
+        </p>
+        <div class="formula">
+          <span class="formula-label">同時確率の書き方 その2（A から見る）</span>
+          $$ P(A \cap B) = P(B \mid A)\, P(A) $$
+        </div>
+        <p>
+          こちらは2つ目のドア。「先に \(A\) が起きて、その \(A\) のもとで \(B\) も起きる」という読み方です。
+          なお \(A \cap B\) と \(B \cap A\) は同じ事象なので、左辺はどちらも同じ \(P(A \cap B)\) です。
+        </p>
+
+        <figure class="figure">
+          <svg viewBox="0 0 360 150" width="360" aria-label="同じ同時確率に至る2つの道">
+            <!-- start -->
+            <circle cx="30" cy="75" r="6" fill="var(--level-color)"/>
+            <text x="30" y="100" text-anchor="middle" font-size="11" fill="var(--text-muted)">スタート</text>
+            <!-- top path: B then A -->
+            <path d="M40,70 C110,30 150,30 175,40" fill="none" stroke="var(--level-color)" stroke-width="2.5"/>
+            <text x="105" y="28" text-anchor="middle" font-size="11" fill="var(--level-color)">P(B)</text>
+            <path d="M185,42 C250,35 290,50 320,68" fill="none" stroke="var(--level-color)" stroke-width="2.5"/>
+            <text x="255" y="38" text-anchor="middle" font-size="11" fill="var(--level-color)">P(A|B)</text>
+            <!-- bottom path: A then B -->
+            <path d="M40,80 C110,120 150,120 175,110" fill="none" stroke="var(--level-color)" stroke-width="2.5" stroke-dasharray="5 4"/>
+            <text x="105" y="135" text-anchor="middle" font-size="11" fill="var(--level-color)">P(A)</text>
+            <path d="M185,108 C250,115 290,100 320,82" fill="none" stroke="var(--level-color)" stroke-width="2.5" stroke-dasharray="5 4"/>
+            <text x="255" y="128" text-anchor="middle" font-size="11" fill="var(--level-color)">P(B|A)</text>
+            <!-- goal -->
+            <circle cx="332" cy="75" r="6" fill="var(--level-color)"/>
+            <text x="332" y="100" text-anchor="middle" font-size="11" fill="var(--text-muted)">A∩B</text>
+          </svg>
+          <figcaption>図1: 「A も B も起きた」へは2つの道がある。上の道（実線）と下の道（点線）は同じゴールに着くので、通りやすさは等しい。</figcaption>
+        </figure>
+
+        <h2>2つを等号でつなぐ</h2>
+        <p>
+          ここがヤマ場です。「その1」も「その2」も、左辺は同じ \(P(A \cap B)\) でした。
+          同じものを表す式が2つあるなら、右辺どうしも等しいはずです。
+        </p>
+
+        <div class="formula">
+          <span class="formula-label">2通りの書き方は等しい</span>
+          $$ P(A \mid B)\, P(B) = P(B \mid A)\, P(A) $$
+        </div>
+
+        <p>
+          あとは知りたい向き \(P(A \mid B)\) について解くだけ。両辺を \(P(B)\) で割ります（\(P(B) > 0\) が必要です）。
+          すると分母に \(P(B)\) が移り、ベイズの定理が完成します。
+        </p>
+
+        <div class="box box-thm">
+          <div class="box-title">定理 — ベイズの定理</div>
+          <p>\(P(B) > 0\) のとき、
+          $$ P(A \mid B) = \frac{P(B \mid A)\, P(A)}{P(B)} $$
+          手元にある向き \(P(B \mid A)\) から、知りたい向き \(P(A \mid B)\) を計算できる、というのが核心です。</p>
+        </div>
+
+        <p>
+          導出をもう一度ひとことで言うと、こうです。
+          <strong>同時確率を2通りに書いて、等号で結んで、欲しい向きについて解いた。</strong>
+          たったこれだけです。新しく覚えることは何もなく、1-1 の定義から自然に出てきました。
+        </p>
+
+        <div class="box box-warn">
+          <div class="box-title">つまずき注意</div>
+          <p>
+            ベイズの定理は \(P(A \mid B)\) と \(P(B \mid A)\) を「等しい」とする式ではありません。
+            むしろ、この2つは一般に<strong>等しくない</strong>からこそ、向きを変換する道具が必要なのです。
+            右辺をよく見ると \(P(A)\) と \(P(B)\) という重みがかかっていますね。この重みのぶんだけ、2つの向きはズレます。
+          </p>
+        </div>
+
+        <h2>分母 P(B) を場合分けで展開する</h2>
+        <p>
+          実際に計算しようとすると、分母の \(P(B)\) が手元の資料に書いていない、ということがよくあります。
+          たとえば「陽性になる確率」そのものは、ふつう資料に載っていません。
+          そこで \(P(B)\) を、自分が持っている数字だけで組み立て直します。これに使うのが<span class="term">全確率の定理（ぜんかくりつのていり）</span>です。
+        </p>
+
+        <div class="box box-intuition">
+          <div class="box-title">直感でつかむ</div>
+          <p>
+            「陽性になる」には2つの入口があります。「病気で、かつ陽性」と「病気でなく、かつ陽性」です。
+            この2つで陽性のすべてを覆い、しかも重なりません。
+            だから「陽性になる確率」は、2つの入口の確率を足し合わせたものになります。
+          </p>
+        </div>
+
+        <p>
+          いま、世界を \(A\)（起きた）と \(\bar{A}\)（起きなかった。「A バー」と読みます）の2つに分けます。
+          どんな場合でも、必ずどちらか一方に入り、両方に入ることはありません。
+          すると事象 \(B\) は、「\(A\) と一緒に起きた \(B\)」と「\(\bar{A}\) と一緒に起きた \(B\)」の2つに切り分けられます。
+        </p>
+
+        <figure class="figure">
+          <svg viewBox="0 0 320 150" width="320" aria-label="B を A 部分と A バー部分に分ける">
+            <!-- left A region -->
+            <rect x="20" y="20" width="130" height="110" fill="var(--level-color)" opacity="0.10" stroke="var(--border)"/>
+            <text x="85" y="38" text-anchor="middle" font-size="12" fill="var(--text-muted)">A</text>
+            <!-- right Abar region -->
+            <rect x="150" y="20" width="150" height="110" fill="var(--text-muted)" opacity="0.08" stroke="var(--border)"/>
+            <text x="225" y="38" text-anchor="middle" font-size="12" fill="var(--text-muted)">Ā</text>
+            <!-- B ellipse straddling -->
+            <ellipse cx="150" cy="85" rx="95" ry="34" fill="var(--level-color)" opacity="0.30" stroke="var(--level-color)" stroke-width="2"/>
+            <text x="105" y="90" text-anchor="middle" font-size="11" fill="var(--text)">A∩B</text>
+            <text x="200" y="90" text-anchor="middle" font-size="11" fill="var(--text)">Ā∩B</text>
+            <line x1="150" y1="20" x2="150" y2="130" stroke="var(--border)" stroke-width="2" stroke-dasharray="4 3"/>
+          </svg>
+          <figcaption>図2: 楕円が事象 B。点線で左右（A と Ā）に分かれ、B も「A∩B」と「Ā∩B」の2片に切れる。2片を足せば B 全体。</figcaption>
+        </figure>
+
+        <p>
+          この2つの片は重なりません。だから「\(B\) が起きる確率」は、2つの片の確率の単純な足し算です。
+        </p>
+        <div class="formula">
+          <span class="formula-label">B を2つの片に分ける</span>
+          $$ P(B) = P(A \cap B) + P(\bar{A} \cap B) $$
+        </div>
+        <p>
+          さらに、それぞれの片を「その1」の書き方（同時確率＝条件付き確率 × 確率）で書き直します。
+          \(P(A \cap B) = P(B \mid A)\,P(A)\)、\(P(\bar{A} \cap B) = P(B \mid \bar{A})\,P(\bar{A})\) ですから、
+        </p>
+
+        <div class="box box-thm">
+          <div class="box-title">定理 — 全確率の定理（2分割の場合）</div>
+          <p>$$ P(B) = P(B \mid A)\, P(A) + P(B \mid \bar{A})\, P(\bar{A}) $$
+          右辺はすべて「手元にありそうな数字」だけでできています。これを分母に入れれば計算できます。</p>
+        </div>
+
+        <p>
+          このひらいた \(P(B)\) をベイズの定理の分母に代入すると、分母を場合分けで展開した完成形になります。
+        </p>
+        <div class="formula">
+          <span class="formula-label">ベイズの定理（分母を展開した完成形）</span>
+          $$ P(A \mid B) = \frac{P(B \mid A)\, P(A)}{P(B \mid A)\, P(A) + P(B \mid \bar{A})\, P(\bar{A})} $$
+          <div class="formula-parts">
+            <span class="part"><b>分子</b>: A の側から B が起きる「道の太さ」</span>
+            <span class="part"><b>分母</b>: B が起きる全部の道（A 側 ＋ Ā 側）</span>
+            <span class="part"><b>全体</b>: B のうち A の道が占める割合</span>
+          </div>
+        </div>
+        <p>
+          見た目はいかつくなりましたが、やっていることは「\(B\) という全体のうち、\(A\) 経由の分がどれだけか」という割合の計算です。
+          分子は分母の一部になっていますね。
+        </p>
+
+        <h2>例題で通してみる</h2>
+
+        <div class="box box-ex">
+          <div class="box-title">例題</div>
+          <p>
+            ある病気にかかっている人は、住民全体の \(1\%\) です。検査には次のクセがあります。
+          </p>
+          <ul>
+            <li>病気の人が検査を受けると、\(90\%\) で陽性になる（＝ \(P(\text{陽性} \mid \text{病気}) = 0.9\)）</li>
+            <li>病気でない人でも、\(5\%\) で陽性になってしまう（＝ \(P(\text{陽性} \mid \text{健康}) = 0.05\)）</li>
+          </ul>
+          <p>
+            いま、ある人が陽性でした。この人が本当に病気である確率 \(P(\text{病気} \mid \text{陽性})\) を求めましょう。
+          </p>
+          <p><strong>解</strong>：\(A=\)「病気」、\(B=\)「陽性」とおきます。手元の数字は次の通り。</p>
+          <p>
+            \(P(A)=0.01\)、\(P(\bar{A})=0.99\)、\(P(B \mid A)=0.9\)、\(P(B \mid \bar{A})=0.05\)。
+          </p>
+          <p>まず分母（陽性になる確率）を全確率の定理でひらきます。</p>
+          <p>
+            $$ P(B) = 0.9 \times 0.01 + 0.05 \times 0.99 = 0.009 + 0.0495 = 0.0585 $$
+          </p>
+          <p>つぎにベイズの定理に入れます。</p>
+          <p>
+            $$ P(A \mid B) = \frac{0.9 \times 0.01}{0.0585} = \frac{0.009}{0.0585} \approx 0.154 $$
+          </p>
+          <p>
+            つまり、陽性でも病気である確率は約 \(15\%\) です。
+            「\(90\%\) で陽性になる検査」と聞くと高そうですが、もともと病気の人がごく少ない（\(1\%\)）ため、
+            陽性の多くは健康な人の「まちがい陽性」で占められます。だから \(15\%\) にとどまるのです。
+          </p>
+        </div>
+
+        <h2>理解度チェック</h2>
+
+        <div class="quiz" data-answer="b">
+          <p class="quiz-q">問1: ベイズの定理を導く出発点になった等式はどれですか?</p>
+          <button class="quiz-option" data-key="a">\(P(A \mid B) = P(B \mid A)\)</button>
+          <button class="quiz-option" data-key="b">\(P(A \mid B)\,P(B) = P(B \mid A)\,P(A)\)</button>
+          <button class="quiz-option" data-key="c">\(P(A \cap B) = P(A)\,P(B)\)</button>
+          <div class="quiz-explain"><p>同時確率 \(P(A \cap B)\) を2通りに書き、左辺が同じことから右辺どうしを等号で結んだのが \(P(A \mid B)\,P(B) = P(B \mid A)\,P(A)\) です。これを \(P(B)\) で割ると定理になります。aは一般に成り立たず、cは独立のときだけ成り立つ別の式です。</p></div>
+        </div>
+
+        <div class="quiz" data-answer="c">
+          <p class="quiz-q">問2: ベイズの定理 \(P(A \mid B) = \dfrac{P(B \mid A)\,P(A)}{P(B)}\) の分母 \(P(B)\) を、全確率の定理でひらくとどうなりますか?</p>
+          <button class="quiz-option" data-key="a">\(P(B) = P(B \mid A) + P(B \mid \bar{A})\)</button>
+          <button class="quiz-option" data-key="b">\(P(B) = P(B \mid A)\,P(B) + P(B \mid \bar{A})\,P(\bar{B})\)</button>
+          <button class="quiz-option" data-key="c">\(P(B) = P(B \mid A)\,P(A) + P(B \mid \bar{A})\,P(\bar{A})\)</button>
+          <div class="quiz-explain"><p>\(B\) を「\(A\) と一緒の片」と「\(\bar{A}\) と一緒の片」に分け、それぞれを同時確率の書き方で表すと \(P(B \mid A)\,P(A) + P(B \mid \bar{A})\,P(\bar{A})\) です。各条件付き確率には、その条件の確率（\(P(A)\) や \(P(\bar{A})\)）という重みをかけ忘れないのがポイントです。</p></div>
+        </div>
+
+        <div class="quiz" data-answer="a">
+          <p class="quiz-q">問3: 例題と同じ設定で、もし病気の割合 \(P(A)\) が \(1\%\) ではなく \(50\%\) だったら、陽性のときに病気である確率はどう変わりますか?</p>
+          <button class="quiz-option" data-key="a">\(15\%\) より大きくなる</button>
+          <button class="quiz-option" data-key="b">\(15\%\) のまま変わらない</button>
+          <button class="quiz-option" data-key="c">\(15\%\) より小さくなる</button>
+          <div class="quiz-explain"><p>事前確率 \(P(A)\) が上がると、分子 \(P(B \mid A)\,P(A)\) が増え、まちがい陽性の割合は相対的に減ります。実際 \(P(A)=0.5\) なら \(P(B)=0.9 \times 0.5 + 0.05 \times 0.5 = 0.475\)、\(P(A \mid B)=\dfrac{0.45}{0.475} \approx 0.95\)。もとが少ないか多いかで、同じ検査でも結論が大きく変わります。</p></div>
+        </div>
+
+        <h2>演習</h2>
+
+        <div class="box box-practice">
+          <div class="box-title">演習1</div>
+          <p>
+            条件付き確率の定義 \(P(A \mid B) = \dfrac{P(A \cap B)}{P(B)}\) から出発して、
+            ベイズの定理 \(P(A \mid B) = \dfrac{P(B \mid A)\,P(A)}{P(B)}\) を、途中式つきで導きなさい。
+          </p>
+          <details class="answer">
+            <summary>解答を見る</summary>
+            <p>(1) 定義の両辺に \(P(B)\) をかけて \(P(A \cap B) = P(A \mid B)\,P(B)\)。</p>
+            <p>(2) \(A\) と \(B\) を入れかえた定義から \(P(A \cap B) = P(B \mid A)\,P(A)\)。（\(A \cap B\) と \(B \cap A\) は同じ事象）</p>
+            <p>(3) 左辺が同じなので \(P(A \mid B)\,P(B) = P(B \mid A)\,P(A)\)。</p>
+            <p>(4) 両辺を \(P(B)\) で割って \(P(A \mid B) = \dfrac{P(B \mid A)\,P(A)}{P(B)}\)。これがベイズの定理です。</p>
+          </details>
+        </div>
+
+        <div class="box box-practice">
+          <div class="box-title">演習2</div>
+          <p>
+            ある工場では製品の \(2\%\) に傷があります。検査機は、傷のある製品を \(95\%\) の確率で「不良」と判定し、
+            傷のない製品も \(10\%\) の確率で「不良」と判定してしまいます。
+            「不良」と判定された製品が、本当に傷ありである確率を求めなさい。
+          </p>
+          <details class="answer">
+            <summary>解答を見る</summary>
+            <p>\(A=\)「傷あり」、\(B=\)「不良判定」とおきます。\(P(A)=0.02\)、\(P(\bar{A})=0.98\)、\(P(B \mid A)=0.95\)、\(P(B \mid \bar{A})=0.10\)。</p>
+            <p>分母を全確率の定理でひらくと
+            $$ P(B) = 0.95 \times 0.02 + 0.10 \times 0.98 = 0.019 + 0.098 = 0.117 $$</p>
+            <p>ベイズの定理に入れて
+            $$ P(A \mid B) = \frac{0.95 \times 0.02}{0.117} = \frac{0.019}{0.117} \approx 0.162 $$</p>
+            <p>約 \(16\%\) です。「不良」と出ても、その多くは傷のない製品の取りちがえだとわかります。</p>
+          </details>
+        </div>
+
+        <div class="box box-practice">
+          <div class="box-title">演習3</div>
+          <p>
+            次の文のまちがいを指摘し、正しい考え方を一言で書きなさい。
+            「この検査は病気の人を \(99\%\) 当てる。だから陽性なら病気である確率は \(99\%\) だ。」
+          </p>
+          <details class="answer">
+            <summary>解答を見る</summary>
+            <p>
+              \(99\%\) なのは \(P(\text{陽性} \mid \text{病気})\)、つまり「病気のもとで陽性になる」向きの確率です。
+              知りたいのは逆向きの \(P(\text{病気} \mid \text{陽性})\) で、この2つは一般に等しくありません。
+            </p>
+            <p>
+              正しくは、ベイズの定理で向きを変換する必要があります。
+              その際、病気の人がもともと少なければ（事前確率 \(P(\text{病気})\) が小さければ）、陽性でも病気である確率はずっと低くなります。
+              「当てる率」と「陽性なら病気の率」は別物、というのがポイントです。
+            </p>
+          </details>
+        </div>
+
+        <h2>まとめ</h2>
+        <ul>
+          <li>同時確率 \(P(A \cap B)\) は2通りに書ける: \(P(A \mid B)\,P(B)\) と \(P(B \mid A)\,P(A)\)。</li>
+          <li>左辺が同じなので右辺を等号で結び、\(P(B)\) で割るとベイズの定理 \(P(A \mid B) = \dfrac{P(B \mid A)\,P(A)}{P(B)}\) が出る。</li>
+          <li>定理は \(P(A \mid B)\) と \(P(B \mid A)\) を等しいとする式ではない。向きを変換する道具である。</li>
+          <li>分母 \(P(B)\) は全確率の定理で \(P(B \mid A)\,P(A) + P(B \mid \bar{A})\,P(\bar{A})\) と場合分けして展開できる。</li>
+          <li>事前確率（もとの割合）が小さいと、検査が陽性でも本当に病気である確率は低くとどまる。</li>
+        </ul>
+        <p>
+          これでベイズの定理を自分の手で導けるようになりました。
+          ここに出てきた \(P(A)\)、\(P(B \mid A)\)、\(P(A \mid B)\) には、それぞれ事前確率・尤度（ゆうど）・事後確率という名前がついています。
+          次のレベルでは、この名前と意味をじっくり育てていきます。一段、のぼれましたね。
+        </p>
+
+      </div>
+      <!-- ▲▲▲ レッスン本文ここまで ▲▲▲ -->
+
+      <div class="complete-area">
+        <button class="btn btn-level" id="complete-btn">このレッスンを完了にする</button>
+        <p class="complete-note">進捗はこのブラウザに保存されます</p>
+      </div>
+
+      <!-- 前後ナビ: main.js がカリキュラムから自動生成 -->
+      <nav class="lesson-nav" id="lesson-nav" aria-label="前後のレッスン"></nav>
+
+    </main>
+
+    <!-- ページ内目次: main.js が本文の h2 から自動生成 -->
+    <aside class="toc">
+      <div class="toc-title">このページの内容</div>
+      <nav id="toc"></nav>
+    </aside>
+
+  </div>
+
+  <footer class="site-footer">
+    <p>ベイズの階段 — 中学数学から最前線まで、一段ずつ。</p>
+  </footer>
+
+  <script src="../../assets/js/curriculum.js"></script>
+  <script src="../../assets/js/main.js"></script>
+</body>
+</html>

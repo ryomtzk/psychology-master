@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>2-5 尤度 — データから見た「もっともらしさ」 | ベイズの階段</title>
+  <meta name="description" content="確率と尤度の違い。ベイズ推定の主役を導入する">
+  <script>
+    document.documentElement.dataset.theme =
+      localStorage.getItem("bayes-stairs-theme") ||
+      (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Noto+Serif+JP:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../assets/css/main.css">
+
+  <!-- KaTeX: 数式を使うページでは必ずこの3行を入れる -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+          onload="renderMathInElement(document.body, {delimiters: [
+            {left: '$$', right: '$$', display: true},
+            {left: '\\(', right: '\\)', display: false}
+          ]});"></script>
+</head>
+<body data-root="../../" data-level="2" data-lesson-id="2-5">
+
+  <header class="site-header">
+    <button class="sidebar-toggle" id="sidebar-toggle" aria-label="メニュー">☰</button>
+    <a class="brand" href="../../index.html">
+      <span class="brand-mark">階</span>
+      <span>ベイズの階段</span>
+    </a>
+    <div class="header-spacer"></div>
+    <div class="header-progress" id="header-progress"></div>
+    <button class="theme-toggle" id="theme-toggle" aria-label="テーマ切替">🌙</button>
+  </header>
+
+  <div class="layout">
+
+    <!-- サイドバー: main.js がカリキュラムから自動生成 -->
+    <aside class="sidebar"><nav id="sidebar-nav" aria-label="カリキュラム"></nav></aside>
+
+    <main class="lesson">
+
+      <nav class="breadcrumbs" aria-label="パンくず">
+        <a href="../../index.html">ホーム</a><span class="sep">›</span>
+        <a href="index.html">Level 2 確率分布と尤度</a><span class="sep">›</span>
+        <span>2-5 尤度 — データから見た「もっともらしさ」</span>
+      </nav>
+
+      <header class="lesson-header">
+        <div class="lesson-meta">
+          <span class="level-badge">Level 2</span>
+          <span class="small">レッスン 2-5</span>
+        </div>
+        <h1>尤度 — データから見た「もっともらしさ」</h1>
+
+        <div class="lesson-goals">
+          <h2>このレッスンでできるようになること</h2>
+          <ul>
+            <li>確率と尤度（ゆうど）の違いを、何を固定するかで説明できる</li>
+            <li>コインの例で、尤度をパラメータの関数として計算できる</li>
+            <li>尤度関数のグラフを読み、尤度が最大になる値の意味を言える</li>
+          </ul>
+          <p class="prereq">前提: <a href="../level1/1-4.html">1-4 事前確率・尤度・事後確率</a> と <a href="2-2.html">2-2 二項分布とポアソン分布</a> を読んでいること</p>
+        </div>
+      </header>
+
+      <div class="lesson-body">
+
+        <h2>同じ計算なのに、見る向きが逆になる</h2>
+        <p>コインを10回投げたら、表が7回出ました。さて、このコインはどれくらい「表が出やすい」のでしょうか。</p>
+        <p>これまでの確率の問題は、向きが逆でした。「表が出る確率を \(0.5\) としたとき、10回中7回表が出る確率は?」という問いです。コインの性質が先に決まっていて、結果の出やすさをあとから計算しました。</p>
+        <p>でも実際の場面では、コインの性質のほうこそ知りたいものです。手元にあるのはデータ（10回中7回）だけ。ここから逆向きにコインの性質を探る——その主役になるのが<span class="term">尤度（ゆうど）</span>です。このレッスンでは、確率と尤度がどう違うのかをはっきりさせます。</p>
+
+        <div class="box box-intuition">
+          <div class="box-title">直感でつかむ</div>
+          <p>同じ1枚の地図でも、「家から駅まで」と「駅から家まで」では、たどる向きが逆です。確率と尤度の関係も、これに似ています。</p>
+          <p><strong>確率</strong>は「コインの性質を決めて、データの出やすさを見る」向き。<strong>尤度</strong>は「データを手にしてから、コインの性質ごとのもっともらしさを見る」向きです。使う数式はまったく同じ。<strong>何を固定して、何を動かすか</strong>だけが逆になります。</p>
+        </div>
+
+        <h2>まず確率の向きを思い出す</h2>
+        <p>コインを10回投げて表が出る回数を考えます。<a href="2-2.html">2-2</a> の二項分布の出番です。表が出る確率を \(\theta\)（シータ）と書きましょう。\(\theta\) はコインの「表の出やすさ」を表すパラメータで、\(0\) から \(1\) のあいだの数です。</p>
+        <p>記号 \( P(D \mid \theta) \) は『\(\theta\) が決まっているもとで、データ \(D\) が出る確率』と読みます。10回中ちょうど7回表が出る確率は、二項分布から次のように書けます。</p>
+
+        <div class="formula">
+          <span class="formula-label">10回中7回表が出る確率（二項分布）</span>
+          $$ P(D \mid \theta) = \binom{10}{7}\, \theta^{7} (1-\theta)^{3} $$
+          <div class="formula-parts">
+            <span class="part"><b>\(\theta^{7}\)</b>: 表が7回出る</span>
+            <span class="part"><b>\((1-\theta)^{3}\)</b>: 裏が3回出る</span>
+            <span class="part"><b>\(\binom{10}{7}\)</b>: 7回がどの回かの場合の数</span>
+          </div>
+        </div>
+
+        <p>記号 \( \binom{10}{7} \) は『10個から7個を選ぶ場合の数』で、値は \(120\) です。ここで大事なのは、いまは \(\theta\) を<strong>先に決めてから</strong>計算している点です。たとえば \(\theta = 0.5\) のコインなら、\( P(D \mid 0.5) = 120 \times 0.5^{7} \times 0.5^{3} \approx 0.117 \) となります。</p>
+        <p>このとき \(D\)（10回中7回）はまだ動く余地があります。表が6回かもしれないし8回かもしれない。\(\theta\) を固定して、いろいろな \(D\) の出やすさを見る——これが確率の向きです。</p>
+
+        <h2>向きを反転させると尤度になる</h2>
+        <p>ところが現実では、コインはもう10回投げ終わっています。データは「7回表」で確定しました。動かせません。逆に、わからないのは \(\theta\) のほうです。</p>
+        <p>そこで発想を切り替えます。データ \(D\) を固定し、\(\theta\) のほうを動かして式を眺めるのです。すると同じ式が、\(\theta\) を入力とする<strong>関数</strong>に見えてきます。これが尤度です。</p>
+
+        <div class="box box-def">
+          <div class="box-title">定義 — 尤度（ゆうど）と尤度関数</div>
+          <p><span class="term">尤度</span>とは、データを固定したうえで、それぞれのパラメータの値が「どれくらいもっともらしいか」を表す量です。値そのものは確率 \( P(D \mid \theta) \) と同じですが、<strong>\(\theta\) の関数として見る</strong>点が違います。</p>
+          <p>これを \(\theta\) の関数とみなしたものを<span class="term">尤度関数（ゆうどかんすう）</span>と呼び、\( L(\theta) \) と書きます。</p>
+          $$ L(\theta) = P(D \mid \theta) = \binom{10}{7}\, \theta^{7} (1-\theta)^{3} $$
+          <p>\( L(\theta) \) は『データ \(D\) が得られたときの、\(\theta\) の尤もらしさ』を表します。</p>
+        </div>
+
+        <div class="box box-warn">
+          <div class="box-title">つまずき注意</div>
+          <p>「式が同じなら、確率と尤度は同じものでは?」と思うかもしれません。値の計算は確かに同じです。でも<strong>意味がまったく違います</strong>。</p>
+          <p>確率では \(\theta\) が固定で \(D\) が変数。尤度では \(D\) が固定で \(\theta\) が変数です。だから「尤度を全部足すと1になる」とは限りません。確率は \(D\) について足すと1になりますが、尤度は \(\theta\) について足しても（積分しても）1になる保証はないのです。尤度は確率の<strong>分布</strong>ではない、と覚えておきましょう。</p>
+        </div>
+
+        <h2>尤度関数をグラフで見る</h2>
+        <p>言葉だけでは実感がわきません。データを「10回中7回表」に固定したまま、\(\theta\) をいろいろ変えて \(L(\theta)\) を計算してみましょう。</p>
+
+        <table>
+          <thead>
+            <tr><th>\(\theta\)（表の出やすさ）</th><th>0.3</th><th>0.5</th><th>0.7</th><th>0.9</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>尤度 \( L(\theta) \)</td><td>0.009</td><td>0.117</td><td>0.267</td><td>0.057</td></tr>
+          </tbody>
+        </table>
+
+        <p>表を見ると、\(\theta = 0.7\) のときに尤度がいちばん大きくなっています。これをグラフにすると、山の形がはっきり見えます。</p>
+
+        <figure class="figure">
+          <svg viewBox="0 0 380 240" width="380" aria-label="10回中7回表が出たときの尤度関数のグラフ">
+            <!-- 軸 -->
+            <line x1="45" y1="200" x2="350" y2="200" stroke="var(--border)" stroke-width="2"/>
+            <line x1="45" y1="20" x2="45" y2="200" stroke="var(--border)" stroke-width="2"/>
+            <!-- 尤度曲線: theta=0..1 を x=45..345 に、L をスケールして描画 -->
+            <path d="M45,200
+                     C 75,199 95,188 125,168
+                     C 155,148 175,118 205,95
+                     C 220,84 235,78 250,80
+                     C 275,84 290,108 315,150
+                     C 330,176 340,194 345,200"
+                  fill="none" stroke="var(--level-color)" stroke-width="3"/>
+            <!-- 最大点 theta=0.7 の縦線 -->
+            <line x1="255" y1="78" x2="255" y2="200" stroke="var(--level-color)" stroke-width="1.5" stroke-dasharray="4 4"/>
+            <circle cx="255" cy="78" r="4" fill="var(--level-color)"/>
+            <!-- x軸ラベル -->
+            <text x="45"  y="218" text-anchor="middle" font-size="11" fill="var(--text-muted)">0</text>
+            <text x="195" y="218" text-anchor="middle" font-size="11" fill="var(--text-muted)">0.5</text>
+            <text x="255" y="218" text-anchor="middle" font-size="11" fill="var(--level-color)">0.7</text>
+            <text x="345" y="218" text-anchor="middle" font-size="11" fill="var(--text-muted)">1</text>
+            <text x="195" y="234" text-anchor="middle" font-size="11" fill="var(--text-muted)">θ（表の出やすさ）</text>
+            <!-- y軸ラベル -->
+            <text x="38" y="200" text-anchor="end" font-size="11" fill="var(--text-muted)">0</text>
+            <text x="22" y="115" text-anchor="middle" font-size="11" fill="var(--text-muted)" transform="rotate(-90 22 115)">尤度 L(θ)</text>
+          </svg>
+          <figcaption>図1: 「10回中7回表」というデータを固定したときの尤度関数 \( L(\theta) \)。横軸はパラメータ \(\theta\) で、縦軸が尤度です。\(\theta = 0.7\) で山の頂上になります。</figcaption>
+        </figure>
+
+        <p>このグラフは「どの \(\theta\) が、観測したデータをいちばんよく説明するか」を表しています。\(\theta = 0.7\) の山の頂上は、ちょうど観測した表の割合 \( 7/10 = 0.7 \) と一致しています。偶然ではありません。次でその意味を見ましょう。</p>
+
+        <h2>頂上を選ぶ — 最尤の予告</h2>
+        <p>尤度関数の山の頂上は、特別な意味を持ちます。そこは「観測されたデータを、もっともよく説明するパラメータ」だからです。</p>
+
+        <div class="box box-intuition">
+          <div class="box-title">直感でつかむ</div>
+          <p>10回中7回も表が出たのに、「表の出やすさは \(0.1\) です」と言われたら、しっくりきませんよね。逆に「\(0.7\) くらいでは?」と言われると納得できます。尤度関数のグラフは、この「しっくりくる度合い」を山の高さで表したものです。いちばん高い場所が、いちばん納得のいく \(\theta\) というわけです。</p>
+        </div>
+
+        <p>この「尤度を最大にする \(\theta\) を選ぶ」という考え方を<span class="term">最尤法（さいゆうほう）</span>と呼び、選ばれた値を<span class="term">最尤推定値（さいゆうすいていち）</span>といいます。コインの例では \( \hat{\theta} = 0.7 \) です（記号 \( \hat{\theta} \) は「推定したシータ」と読みます）。</p>
+        <p>実は二項分布では、最尤推定値はいつも「観測した割合」になります。10回中7回なら \( 7/10 \)、100回中62回なら \( 62/100 \) です。頂上を厳密に求めるには微分を使いますが、ここでは「山の頂上＝観測した割合」という事実だけ押さえれば十分です。くわしい山の探し方は <a href="../../appendix/a-2.html">付録 a-2 微分積分</a> の道具を使います。</p>
+
+        <div class="box box-warn">
+          <div class="box-title">つまずき注意</div>
+          <p>最尤法はデータだけから \(\theta\) を選びます。ここには<strong>事前の知識が入りません</strong>。「ふつうのコインなら \(\theta\) は \(0.5\) に近いはず」という常識を反映できないのです。</p>
+          <p>ここがベイズとの分かれ道です。ベイズでは、尤度に<a href="../level1/1-4.html">事前分布</a>を組み合わせます。尤度は「データの声」、事前分布は「これまでの知識の声」。両方を聞いて結論を出すのがベイズ推定です。</p>
+        </div>
+
+        <h2>尤度はベイズ推定の主役</h2>
+        <p><a href="../level1/1-4.html">1-4</a> で出てきたベイズの定理を、もう一度見てみましょう。データ \(D\) からパラメータ \(\theta\) を推定する形に書くと、こうなります。</p>
+
+        <div class="formula">
+          <span class="formula-label">ベイズの定理（尤度の位置）</span>
+          $$ \underbrace{P(\theta \mid D)}_{\text{事後分布}} \propto \underbrace{P(D \mid \theta)}_{\text{尤度}} \times \underbrace{P(\theta)}_{\text{事前分布}} $$
+          <div class="formula-parts">
+            <span class="part"><b>事前分布</b>: データを見る前の \(\theta\) の信念</span>
+            <span class="part"><b>尤度</b>: データから見た \(\theta\) のもっともらしさ</span>
+            <span class="part"><b>事後分布</b>: データを見た後の \(\theta\) の信念</span>
+          </div>
+        </div>
+
+        <p>記号 \( \propto \) は『左辺は右辺に比例する』という意味です。式の右側にいる尤度 \( P(D \mid \theta) \) こそ、まさにこのレッスンで学んだ \( L(\theta) \) です。データが事後分布に効いてくる入り口が、尤度なのです。</p>
+        <p>事前分布が「平ら」（どの \(\theta\) も同じくらいありそう）なら、事後分布の形は尤度の形とほとんど同じになります。つまり、データの量が増えるほど、ベイズ推定の結論は尤度に引っぱられていきます。尤度がベイズ推定の主役と呼ばれるのは、このためです。</p>
+
+        <div class="box box-ex">
+          <div class="box-title">例題</div>
+          <p>ある画びょうを5回投げたら、上向き（針が上）が4回、横向きが1回でした。上向きになる確率を \(\theta\) とします。このデータに対する尤度関数 \( L(\theta) \) を式で表し、\(\theta = 0.8\) のときの値を求めましょう。場合の数の係数 \( \binom{5}{4} = 5 \) を使ってよいものとします。</p>
+          <p><strong>解</strong>: データは「5回中4回が上向き」で固定します。これは二項分布の形そのものです。上向きが4回、横向きが1回なので</p>
+          $$ L(\theta) = \binom{5}{4}\, \theta^{4} (1-\theta)^{1} = 5\,\theta^{4}(1-\theta) $$
+          <p>となります。\(\theta = 0.8\) を代入しましょう。\( 0.8^{4} = 0.4096 \)、\( 1 - 0.8 = 0.2 \) なので</p>
+          $$ L(0.8) = 5 \times 0.4096 \times 0.2 = 0.4096 $$
+          <p>よって \( L(0.8) \approx 0.41 \) です。ちなみに、このデータの最尤推定値は観測した割合 \( 4/5 = 0.8 \) で、尤度はこの \(\theta = 0.8\) のあたりで最大になります。</p>
+        </div>
+
+        <h2>理解度チェック</h2>
+
+        <div class="quiz" data-answer="b">
+          <p class="quiz-q">問1: 確率 \( P(D \mid \theta) \) と尤度 \( L(\theta) \) の違いは何ですか?</p>
+          <button class="quiz-option" data-key="a">使う数式そのものが別々の式である</button>
+          <button class="quiz-option" data-key="b">何を固定して何を変数とみなすかが逆になっている</button>
+          <button class="quiz-option" data-key="c">尤度のほうがつねに値が大きくなる</button>
+          <div class="quiz-explain"><p>2つは同じ式を使います。違うのは見る向きです。確率は \(\theta\) を固定して \(D\) を動かし、尤度は \(D\) を固定して \(\theta\) を動かします。値の大小は決まっていません。</p></div>
+        </div>
+
+        <div class="quiz" data-answer="c">
+          <p class="quiz-q">問2: コインを10回投げて表が3回でした。尤度関数 \( L(\theta) \) が最大になる \(\theta\) はどれにいちばん近いですか?</p>
+          <button class="quiz-option" data-key="a">0.5</button>
+          <button class="quiz-option" data-key="b">0.7</button>
+          <button class="quiz-option" data-key="c">0.3</button>
+          <div class="quiz-explain"><p>二項分布の最尤推定値は「観測した割合」です。10回中3回表なので \( 3/10 = 0.3 \)。尤度の山の頂上は、観測した表の割合と一致します。</p></div>
+        </div>
+
+        <div class="quiz" data-answer="a">
+          <p class="quiz-q">問3: ベイズの定理 \( P(\theta \mid D) \propto P(D \mid \theta)\, P(\theta) \) の中で、尤度はどれですか?</p>
+          <button class="quiz-option" data-key="a">\( P(D \mid \theta) \)</button>
+          <button class="quiz-option" data-key="b">\( P(\theta) \)</button>
+          <button class="quiz-option" data-key="c">\( P(\theta \mid D) \)</button>
+          <div class="quiz-explain"><p>尤度は \( P(D \mid \theta) \)、つまり「\(\theta\) のもとでのデータの出やすさ」を \(\theta\) の関数として見たものです。\( P(\theta) \) は事前分布、\( P(\theta \mid D) \) は事後分布です。</p></div>
+        </div>
+
+        <h2>演習</h2>
+
+        <div class="box box-practice">
+          <div class="box-title">演習1</div>
+          <p>「確率」と「尤度」は、それぞれ何を固定し、何を変数として見るものですか。1文ずつで説明しなさい。</p>
+          <details class="answer">
+            <summary>解答を見る</summary>
+            <p>確率は、パラメータ \(\theta\) を固定して、データ \(D\) の出やすさを見るものです。尤度は、データ \(D\) を固定して、パラメータ \(\theta\) のもっともらしさを見るものです。式は同じ \( P(D \mid \theta) \) ですが、固定するものと動かすものが逆になります。</p>
+          </details>
+        </div>
+
+        <div class="box box-practice">
+          <div class="box-title">演習2</div>
+          <p>コインを4回投げて表が3回、裏が1回でした。このデータに対する尤度関数 \( L(\theta) \) を、二項分布の形で式に表しなさい。係数は \( \binom{4}{3} = 4 \) を使ってよい。</p>
+          <details class="answer">
+            <summary>解答を見る</summary>
+            <p>表が3回、裏が1回なので、表の確率 \(\theta\) を使って次のように書けます。</p>
+            <p>\( L(\theta) = \binom{4}{3}\, \theta^{3}(1-\theta)^{1} = 4\,\theta^{3}(1-\theta) \)</p>
+            <p>データ（3回表・1回裏）を固定し、\(\theta\) を変数とみなした関数です。</p>
+          </details>
+        </div>
+
+        <div class="box box-practice">
+          <div class="box-title">演習3</div>
+          <p>演習2の尤度 \( L(\theta) = 4\,\theta^{3}(1-\theta) \) について、\(\theta = 0.5\) と \(\theta = 0.75\) の値をそれぞれ計算し、どちらのほうがもっともらしいか答えなさい。</p>
+          <details class="answer">
+            <summary>解答を見る</summary>
+            <p>\( L(0.5) = 4 \times 0.5^{3} \times (1 - 0.5) = 4 \times 0.125 \times 0.5 = 0.25 \)</p>
+            <p>\( L(0.75) = 4 \times 0.75^{3} \times (1 - 0.75) = 4 \times 0.421875 \times 0.25 \approx 0.42 \)</p>
+            <p>\( L(0.75) \) のほうが大きいので、\(\theta = 0.75\) のほうがもっともらしいです。これは観測した表の割合 \( 3/4 = 0.75 \) と一致しており、ここが尤度の山の頂上（最尤推定値）になります。</p>
+          </details>
+        </div>
+
+        <div class="box box-practice">
+          <div class="box-title">演習4</div>
+          <p>「尤度は確率と同じく、すべての \(\theta\) について足すと（積分すると）必ず1になる」——この説明は正しいですか。理由とともに答えなさい。</p>
+          <details class="answer">
+            <summary>解答を見る</summary>
+            <p>正しくありません。確率は \(D\)（データ）について足すと1になりますが、尤度はデータを固定して \(\theta\) を動かしたものです。\(\theta\) について足したり積分したりしても、1になる保証はありません。尤度は \(\theta\) についての確率分布ではないからです。あくまで「各 \(\theta\) のもっともらしさを比べるための量」だと考えましょう。</p>
+          </details>
+        </div>
+
+        <h2>まとめ</h2>
+        <ul>
+          <li><span class="term">尤度</span>とは、データを固定し、パラメータ \(\theta\) の関数として見た \( P(D \mid \theta) \) のこと。\(\theta\) の関数とみた式を尤度関数 \( L(\theta) \) と呼びます。</li>
+          <li>確率は「\(\theta\) を固定して \(D\) を動かす」向き、尤度は「\(D\) を固定して \(\theta\) を動かす」向き。式は同じでも、見る向きが逆です。</li>
+          <li>尤度関数のグラフは山の形になり、頂上が「データをもっともよく説明する \(\theta\)」。二項分布ではこの頂上が観測した割合と一致します（最尤推定）。</li>
+          <li>尤度はベイズの定理 \( P(\theta \mid D) \propto P(D \mid \theta)\, P(\theta) \) の中でデータの情報を運ぶ部分。だからベイズ推定の主役です。</li>
+          <li>尤度は確率の分布ではないので、\(\theta\) について足しても1にはなりません。あくまで \(\theta\) どうしを比べる量です。</li>
+        </ul>
+        <p>これで Level 2 の道具がそろいました。確率変数・分布・期待値、そして尤度。次のレベルでは、この尤度に事前分布を組み合わせて、いよいよ事後分布を計算していきます。ベイズ推定の本番はもうすぐです。</p>
+
+      </div>
+
+      <div class="complete-area">
+        <button class="btn btn-level" id="complete-btn">このレッスンを完了にする</button>
+        <p class="complete-note">進捗はこのブラウザに保存されます</p>
+      </div>
+
+      <!-- 前後ナビ: main.js がカリキュラムから自動生成 -->
+      <nav class="lesson-nav" id="lesson-nav" aria-label="前後のレッスン"></nav>
+
+    </main>
+
+    <!-- ページ内目次: main.js が本文の h2 から自動生成 -->
+    <aside class="toc">
+      <div class="toc-title">このページの内容</div>
+      <nav id="toc"></nav>
+    </aside>
+
+  </div>
+
+  <footer class="site-footer">
+    <p>ベイズの階段 — 中学数学から最前線まで、一段ずつ。</p>
+  </footer>
+
+  <script src="../../assets/js/curriculum.js"></script>
+  <script src="../../assets/js/main.js"></script>
+</body>
+</html>

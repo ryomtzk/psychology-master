@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>2-2 二項分布とポアソン分布 | ベイズの階段</title>
+  <meta name="description" content="回数を数える場面で現れる2大離散分布">
+  <script>
+    document.documentElement.dataset.theme =
+      localStorage.getItem("bayes-stairs-theme") ||
+      (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Noto+Serif+JP:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../assets/css/main.css">
+
+  <!-- KaTeX: 数式を使うページでは必ずこの3行を入れる -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+          onload="renderMathInElement(document.body, {delimiters: [
+            {left: '$$', right: '$$', display: true},
+            {left: '\\(', right: '\\)', display: false}
+          ]});"></script>
+</head>
+<body data-root="../../" data-level="2" data-lesson-id="2-2">
+
+  <header class="site-header">
+    <button class="sidebar-toggle" id="sidebar-toggle" aria-label="メニュー">☰</button>
+    <a class="brand" href="../../index.html">
+      <span class="brand-mark">階</span>
+      <span>ベイズの階段</span>
+    </a>
+    <div class="header-spacer"></div>
+    <div class="header-progress" id="header-progress"></div>
+    <button class="theme-toggle" id="theme-toggle" aria-label="テーマ切替">🌙</button>
+  </header>
+
+  <div class="layout">
+
+    <!-- サイドバー: main.js がカリキュラムから自動生成 -->
+    <aside class="sidebar"><nav id="sidebar-nav" aria-label="カリキュラム"></nav></aside>
+
+    <main class="lesson">
+
+      <nav class="breadcrumbs" aria-label="パンくず">
+        <a href="../../index.html">ホーム</a><span class="sep">›</span>
+        <a href="index.html">Level 2 確率分布と尤度</a><span class="sep">›</span>
+        <span>2-2 二項分布とポアソン分布</span>
+      </nav>
+
+      <header class="lesson-header">
+        <div class="lesson-meta">
+          <span class="level-badge">Level 2</span>
+          <span class="small">レッスン 2-2</span>
+        </div>
+        <h1>二項分布とポアソン分布</h1>
+
+        <div class="lesson-goals">
+          <h2>このレッスンでできるようになること</h2>
+          <ul>
+            <li>二項分布 \(B(n, p)\) を使って「\(n\) 回中 \(k\) 回成功する確率」を計算できる</li>
+            <li>ポアソン分布で「めったに起きない事象が一定時間に何回起きるか」の確率を計算できる</li>
+            <li>二項分布とポアソン分布のつながりを、自分の言葉で説明できる</li>
+          </ul>
+          <p class="prereq">前提: <a href="2-1.html">2-1 確率変数と確率分布</a> と <a href="../level0/0-2.html">0-2 場合の数の数え方</a> を読んでいること（数式は <a href="../../appendix/a-1.html">付録 a-1 シグマ記法</a> も参考に）</p>
+        </div>
+      </header>
+
+      <div class="lesson-body">
+
+        <h2>「何回起きたか」を数える分布</h2>
+        <p>コインを10回投げて、表は何回出るでしょうか。3回かもしれないし、6回かもしれません。投げるたびに変わります。でも「だいたいこのあたり」という確率の山はあるはずです。</p>
+        <p>あるいは、お店に1時間で何人のお客さんが来るでしょうか。0人の日もあれば、5人の日もあります。これも「ありそうな人数」には傾向があります。</p>
+        <p>このレッスンでは、こうした<strong>「回数」を数える場面</strong>に必ず登場する2つの分布を学びます。<span class="term">二項分布</span>（にこうぶんぷ）と<span class="term">ポアソン分布</span>です。どちらも前回の <a href="2-1.html">2-1</a> で学んだ確率変数と確率分布の、とても大事な具体例です。</p>
+
+        <div class="box box-intuition">
+          <div class="box-title">直感でつかむ</div>
+          <p>二項分布は「<strong>○回試して、何回当たったか</strong>」の分布です。コイン10回で表が何回、テスト20問で正解が何回。<strong>試す回数が決まっている</strong>のが特徴です。</p>
+          <p>ポアソン分布は「<strong>一定時間に、まれな事が何回起きたか</strong>」の分布です。1時間の来客数、1ページの誤字の数。<strong>「何回試したか」がはっきりしない</strong>のが特徴です。回数の代わりに「平均で何回くらい」だけが分かっています。</p>
+        </div>
+
+        <h2>二項分布 — n回中k回成功する確率</h2>
+        <p>まずは話のかんたんな二項分布からです。「成功」か「失敗」かの2通りしかない試行を考えます。コインなら表か裏、テストなら正解か不正解です。</p>
+        <p>この2択の試行を、毎回同じ確率 \(p\) で、独立に \(n\) 回くりかえします。\(p\)（ピー）は1回あたりの成功確率です。このとき「\(n\) 回中ちょうど \(k\) 回成功する確率」を考えるのが二項分布です。</p>
+
+        <div class="box box-def">
+          <div class="box-title">定義 — 二項分布</div>
+          <p>成功確率 \(p\) の試行を独立に \(n\) 回くりかえすとき、成功回数を表す確率変数 \(X\) が従う分布を<span class="term">二項分布</span>と呼び、\(B(n, p)\) と書きます。\(X\) がちょうど \(k\) 回成功する確率は次で与えられます。</p>
+          $$ P(X = k) = \binom{n}{k}\, p^{k} (1-p)^{\,n-k} $$
+          <p>ここで \(k = 0, 1, 2, \ldots, n\) です。\(\binom{n}{k}\) は「\(n\) 個から \(k\) 個を選ぶ組み合わせの数」で、『エヌ・チューズ・ケー』と読みます。</p>
+        </div>
+
+        <p>式が3つの部品でできているのが見えると、ぐっと分かりやすくなります。下に分解しておきます。</p>
+
+        <div class="formula">
+          <span class="formula-label">二項分布の確率（部品の意味）</span>
+          $$ P(X = k) = \underbrace{\binom{n}{k}}_{\text{並び方の数}} \times \underbrace{p^{k}}_{\text{成功 }k\text{ 回}} \times \underbrace{(1-p)^{\,n-k}}_{\text{失敗 }n-k\text{ 回}} $$
+          <div class="formula-parts">
+            <span class="part"><b>\(\binom{n}{k}\)</b>: どの回が成功かの並び方の数</span>
+            <span class="part"><b>\(p^{k}\)</b>: 成功が \(k\) 回起きる確率</span>
+            <span class="part"><b>\((1-p)^{n-k}\)</b>: 失敗が \(n-k\) 回起きる確率</span>
+          </div>
+        </div>
+
+        <p>なぜこの形になるのでしょう。1つの並び方、たとえば「成功・成功・失敗・…」に注目すると、成功が \(k\) 回・失敗が \(n-k\) 回なので、その確率は \(p^{k}(1-p)^{n-k}\) です。どの回が成功かを入れ替えても確率は同じ。だから、その並び方の総数 \(\binom{n}{k}\) を掛ければよいのです。組み合わせの数は <a href="../level0/0-2.html">0-2</a> で学びました。</p>
+
+        <div class="box box-ex">
+          <div class="box-title">例題1 — コインを5回</div>
+          <p>正しいコイン（表の出る確率 \(p = 0.5\)）を5回投げます。表がちょうど2回出る確率を求めましょう。</p>
+          <p><strong>解</strong>: \(n = 5\)、\(p = 0.5\)、\(k = 2\) を式に入れます。まず並び方の数は
+          $$ \binom{5}{2} = \frac{5 \times 4}{2 \times 1} = 10 $$
+          残りの部品は \(p^{2}(1-p)^{3} = 0.5^{2} \times 0.5^{3} = 0.5^{5} = \dfrac{1}{32}\)。よって
+          $$ P(X = 2) = 10 \times \frac{1}{32} = \frac{10}{32} \approx 0.31 $$
+          5回中2回表が出る確率は約31%です。</p>
+        </div>
+
+        <p>\(n = 10\)、\(p = 0.5\) のとき、成功回数ごとの確率を棒グラフにすると下のような山になります。確率変数を横軸、確率を縦軸にとった、まさに前回の確率分布の絵です。</p>
+
+        <figure class="figure">
+          <svg viewBox="0 0 380 220" width="380" aria-label="B(10, 0.5) の確率分布の棒グラフ">
+            <!-- 軸 -->
+            <line x1="36" y1="180" x2="360" y2="180" stroke="var(--border)" stroke-width="2"/>
+            <line x1="36" y1="20" x2="36" y2="180" stroke="var(--border)" stroke-width="2"/>
+            <!-- 棒: B(10,0.5) の確率に比例した高さ (最大 P(X=5)=0.246 を高さ150に対応) -->
+            <!-- k=0 0.001 -->
+            <rect x="44"  y="179.4" width="24" height="0.6"   fill="var(--level-color)" opacity="0.85"/>
+            <!-- k=1 0.010 -->
+            <rect x="72"  y="174"   width="24" height="6"     fill="var(--level-color)" opacity="0.85"/>
+            <!-- k=2 0.044 -->
+            <rect x="100" y="153"   width="24" height="27"    fill="var(--level-color)" opacity="0.85"/>
+            <!-- k=3 0.117 -->
+            <rect x="128" y="109"   width="24" height="71"    fill="var(--level-color)" opacity="0.85"/>
+            <!-- k=4 0.205 -->
+            <rect x="156" y="55"    width="24" height="125"   fill="var(--level-color)" opacity="0.85"/>
+            <!-- k=5 0.246 (最大) -->
+            <rect x="184" y="30"    width="24" height="150"   fill="var(--level-color)"/>
+            <!-- k=6 0.205 -->
+            <rect x="212" y="55"    width="24" height="125"   fill="var(--level-color)" opacity="0.85"/>
+            <!-- k=7 0.117 -->
+            <rect x="240" y="109"   width="24" height="71"    fill="var(--level-color)" opacity="0.85"/>
+            <!-- k=8 0.044 -->
+            <rect x="268" y="153"   width="24" height="27"    fill="var(--level-color)" opacity="0.85"/>
+            <!-- k=9 0.010 -->
+            <rect x="296" y="174"   width="24" height="6"     fill="var(--level-color)" opacity="0.85"/>
+            <!-- k=10 0.001 -->
+            <rect x="324" y="179.4" width="24" height="0.6"   fill="var(--level-color)" opacity="0.85"/>
+            <!-- 横軸ラベル -->
+            <text x="56"  y="195" text-anchor="middle" font-size="10" fill="var(--text-muted)">0</text>
+            <text x="196" y="195" text-anchor="middle" font-size="10" fill="var(--text-muted)">5</text>
+            <text x="336" y="195" text-anchor="middle" font-size="10" fill="var(--text-muted)">10</text>
+            <text x="198" y="212" text-anchor="middle" font-size="11" fill="var(--text-muted)">成功回数 k</text>
+            <text x="20"  y="100" text-anchor="middle" font-size="11" fill="var(--text-muted)" transform="rotate(-90 20 100)">確率</text>
+          </svg>
+          <figcaption>図1: 二項分布 \(B(10,\,0.5)\) の確率分布。山の中心は \(k = 5\)（＝平均の \(np = 5\)）あたり。</figcaption>
+        </figure>
+
+        <div class="box box-thm">
+          <div class="box-title">公式 — 二項分布の平均</div>
+          <p>\(B(n, p)\) に従う成功回数の<strong>平均（期待値）</strong>は、覚えやすい形になります。</p>
+          $$ \text{平均} = n \times p $$
+          <p>「\(n\) 回試して、1回あたり \(p\) の割合で当たる」のだから、平均は \(np\) 回。直感どおりです。コイン10回（\(p=0.5\)）なら平均5回、これが図1の山の中心でした。</p>
+        </div>
+
+        <div class="box box-warn">
+          <div class="box-title">つまずき注意</div>
+          <p>\(p^{k}(1-p)^{n-k}\) の指数を取りちがえないようにしましょう。成功には \(p\) を成功回数 \(k\) だけ、失敗には \((1-p)\) を<strong>残りの</strong> \(n-k\) 回だけ掛けます。\(k + (n-k) = n\) となり、指数の合計が必ず試行回数 \(n\) になることを確認すると安心です。</p>
+        </div>
+
+        <h2>ポアソン分布 — まれな事象の回数</h2>
+        <p>つぎはポアソン分布です。こちらは「試した回数 \(n\)」がはっきりしない場面で活躍します。</p>
+        <p>たとえば「1時間にお店へ来るお客の数」。これは何回試行しているのでしょう。1秒ごとに「来る／来ない」を試していると考えれば \(n\) は3600回。0.1秒ごとなら3万6千回。区切り方しだいで \(n\) が変わってしまい、二項分布の形では困ります。</p>
+        <p>そこで発想を変えます。回数 \(n\) と確率 \(p\) を別々に追うのをやめて、<strong>「平均で何回くらい起きるか」だけ</strong>に注目します。この平均回数を \(\lambda\)（ラムダ）と書きます。</p>
+
+        <div class="box box-intuition">
+          <div class="box-title">直感でつかむ</div>
+          <p>ポアソン分布は「<strong>めったに起きないが、機会はたくさんある</strong>」事象の回数を表します。1回1回の確率は小さいけれど、チャンスがとても多い。その積み重ねで、たまにポツポツと起きる――そんな場面です。</p>
+          <p>知りたいのは細かい \(n\) や \(p\) ではなく、<strong>平均回数 \(\lambda\)</strong> ただ1つ。「平均すると1時間に3人来る」なら \(\lambda = 3\)。この \(\lambda\) さえ分かれば、来客が0人・1人・2人…となる確率がすべて決まります。</p>
+        </div>
+
+        <div class="box box-def">
+          <div class="box-title">定義 — ポアソン分布</div>
+          <p>一定の時間（や範囲）にまれな事象が起きる回数 \(X\) が、平均 \(\lambda\) で従う分布を<span class="term">ポアソン分布</span>と呼びます。\(X\) がちょうど \(k\) 回起きる確率は次で与えられます。</p>
+          $$ P(X = k) = \frac{\lambda^{k}\, e^{-\lambda}}{k!} $$
+          <p>ここで \(k = 0, 1, 2, \ldots\) と、上限なくいくらでも大きくなれます。\(k!\)（ケー・かいじょう）は \(k\) の階乗、\(e\) は約 \(2.718\) の定数（ネイピア数）です。\(\lambda\)（ラムダ）は平均回数で、これがこの分布のただ1つのパラメータです。</p>
+        </div>
+
+        <p>式の \(e^{-\lambda}\) は、すべての確率を足すと1になるようにそろえる調整役です。だいじなのは「\(\lambda\) を1つ決めれば分布の形がぜんぶ決まる」という点。平均回数だけで回数の分布が言いきれるのが、ポアソン分布の便利なところです。</p>
+
+        <div class="box box-ex">
+          <div class="box-title">例題2 — 1時間の来客</div>
+          <p>あるお店には、平均すると1時間に3人のお客が来ます。来客がポアソン分布に従うとして、ある1時間に「ちょうど2人来る」確率を求めましょう。\(e^{-3} \approx 0.0498\) を使ってよいものとします。</p>
+          <p><strong>解</strong>: \(\lambda = 3\)、\(k = 2\) を式に入れます。
+          $$ P(X = 2) = \frac{3^{2}\, e^{-3}}{2!} = \frac{9 \times 0.0498}{2} $$
+          計算すると \(9 \times 0.0498 = 0.448\)、これを2で割って
+          $$ P(X = 2) \approx \frac{0.448}{2} \approx 0.224 $$
+          ちょうど2人来る確率は約22%です。ちなみに「0人」の確率は \(P(X=0) = e^{-3} \approx 0.050\) で、まったく来ない1時間も5%ほどあると分かります。</p>
+        </div>
+
+        <figure class="figure">
+          <svg viewBox="0 0 380 220" width="380" aria-label="ポアソン分布 λ=3 の確率分布の棒グラフ">
+            <!-- 軸 -->
+            <line x1="36" y1="180" x2="360" y2="180" stroke="var(--border)" stroke-width="2"/>
+            <line x1="36" y1="20" x2="36" y2="180" stroke="var(--border)" stroke-width="2"/>
+            <!-- 棒: Poisson(3) の確率 (最大 P=0.224 を高さ150に対応, 倍率 ≈ 670) -->
+            <!-- k=0 0.050 -->
+            <rect x="44"  y="146"   width="26" height="34"  fill="var(--level-color)" opacity="0.85"/>
+            <!-- k=1 0.149 -->
+            <rect x="74"  y="80"    width="26" height="100" fill="var(--level-color)" opacity="0.85"/>
+            <!-- k=2 0.224 (最大) -->
+            <rect x="104" y="30"    width="26" height="150" fill="var(--level-color)"/>
+            <!-- k=3 0.224 (最大) -->
+            <rect x="134" y="30"    width="26" height="150" fill="var(--level-color)"/>
+            <!-- k=4 0.168 -->
+            <rect x="164" y="67"    width="26" height="113" fill="var(--level-color)" opacity="0.85"/>
+            <!-- k=5 0.101 -->
+            <rect x="194" y="112"   width="26" height="68"  fill="var(--level-color)" opacity="0.85"/>
+            <!-- k=6 0.050 -->
+            <rect x="224" y="146"   width="26" height="34"  fill="var(--level-color)" opacity="0.85"/>
+            <!-- k=7 0.022 -->
+            <rect x="254" y="165"   width="26" height="15"  fill="var(--level-color)" opacity="0.85"/>
+            <!-- k=8 0.008 -->
+            <rect x="284" y="174.5" width="26" height="5.5" fill="var(--level-color)" opacity="0.85"/>
+            <!-- k=9 0.003 -->
+            <rect x="314" y="178"   width="26" height="2"   fill="var(--level-color)" opacity="0.85"/>
+            <!-- 横軸ラベル -->
+            <text x="57"  y="195" text-anchor="middle" font-size="10" fill="var(--text-muted)">0</text>
+            <text x="147" y="195" text-anchor="middle" font-size="10" fill="var(--text-muted)">3</text>
+            <text x="237" y="195" text-anchor="middle" font-size="10" fill="var(--text-muted)">6</text>
+            <text x="200" y="212" text-anchor="middle" font-size="11" fill="var(--text-muted)">起きた回数 k</text>
+            <text x="20"  y="100" text-anchor="middle" font-size="11" fill="var(--text-muted)" transform="rotate(-90 20 100)">確率</text>
+          </svg>
+          <figcaption>図2: ポアソン分布（\(\lambda = 3\)）の確率分布。山の中心は平均の \(\lambda = 3\) 付近。右へ長くすそを引く。</figcaption>
+        </figure>
+
+        <div class="box box-thm">
+          <div class="box-title">公式 — ポアソン分布の平均</div>
+          <p>ポアソン分布の平均（期待値）は、パラメータそのものです。</p>
+          $$ \text{平均} = \lambda $$
+          <p>「平均回数」として定義したのだから当然ですね。\(\lambda\) は分布の山の位置でもあり、図2では \(k = 3\) あたりが一番高くなっています。</p>
+        </div>
+
+        <h2>二項の極限としてのポアソン</h2>
+        <p>この2つの分布、じつは深くつながっています。<strong>ポアソン分布は、二項分布の特別な場合の「行き着く先」</strong>なのです。</p>
+
+        <div class="box box-intuition">
+          <div class="box-title">直感でつかむ</div>
+          <p>来客数の話を思い出します。1時間を細かく区切って「この一瞬に客が来る／来ない」を試行と考えると、これは二項分布です。区切りを細かくするほど、試行回数 \(n\) はどんどん大きくなります。</p>
+          <p>いっぽう一瞬に客が来る確率 \(p\) は、区切りを細かくするほど小さくなります。でも<strong>平均回数 \(np\) は変わりません</strong>（1時間で平均3人は3人のまま）。この「\(n\) を大きく、\(p\) を小さく、\(np\) は一定」の行き着く先が、平均 \(\lambda = np\) のポアソン分布です。</p>
+        </div>
+
+        <div class="box box-thm">
+          <div class="box-title">公式 — 二項からポアソンへ</div>
+          <p>二項分布 \(B(n, p)\) で、平均 \(np = \lambda\) を一定に保ったまま \(n\) を大きく（\(p\) を小さく）していくと、確率は次のポアソン分布に近づきます。</p>
+          $$ \binom{n}{k}\, p^{k}(1-p)^{\,n-k} \;\longrightarrow\; \frac{\lambda^{k}\, e^{-\lambda}}{k!} $$
+          <p>そのため \(\lambda = np\) は「二項のときの平均 \(np\)」と完全に一致します。ポアソン分布は『\(n\) が大きく \(p\) が小さい二項分布』の便利な近道だと言えます。</p>
+        </div>
+
+        <p>具体例で確かめてみましょう。\(n = 100\)、\(p = 0.03\)（つまり \(np = 3\)）の二項分布で「ちょうど2回成功」を計算すると、約 \(0.225\)。例題2のポアソン（\(\lambda = 3\)）で求めた \(0.224\) とほとんど同じです。\(n\) が大きく \(p\) が小さければ、二項の答えはポアソンでよく近似できるのです。</p>
+
+        <div class="box box-warn">
+          <div class="box-title">つまずき注意</div>
+          <p>どんな二項分布でもポアソンになるわけではありません。近づくのは「\(n\) が大きく、\(p\) が小さい（事象がまれ）」場合だけです。コインのように \(p = 0.5\) と大きいときは、ポアソンでは近似できません。「試行回数が決まっている／いない」「\(p\) が大きい／とても小さい」で、どちらを使うか見分けましょう。</p>
+        </div>
+
+        <h2>理解度チェック</h2>
+
+        <div class="quiz" data-answer="b">
+          <p class="quiz-q">問: サイコロを4回振って、ちょうど1回だけ6が出る確率を表す式はどれですか? (1回で6が出る確率は \(\frac{1}{6}\))</p>
+          <button class="quiz-option" data-key="a">\( \left(\frac{1}{6}\right)^{1} \left(\frac{5}{6}\right)^{3} \)</button>
+          <button class="quiz-option" data-key="b">\( \binom{4}{1} \left(\frac{1}{6}\right)^{1} \left(\frac{5}{6}\right)^{3} \)</button>
+          <button class="quiz-option" data-key="c">\( \binom{4}{1} \left(\frac{1}{6}\right)^{3} \left(\frac{5}{6}\right)^{1} \)</button>
+          <div class="quiz-explain"><p>二項分布 \(B(4, \frac{1}{6})\) で \(k = 1\) の場合です。成功（6が出る）は \(\frac{1}{6}\) を1回、失敗は \(\frac{5}{6}\) を残りの3回。並び方の数 \(\binom{4}{1} = 4\) を忘れずに掛けます。aは並び方の数が抜けています。cは成功と失敗の指数が逆です。</p></div>
+        </div>
+
+        <div class="quiz" data-answer="c">
+          <p class="quiz-q">問: ポアソン分布を使うのにふさわしいのは、次のどの場面ですか?</p>
+          <button class="quiz-option" data-key="a">コインを10回投げたときの、表が出る回数</button>
+          <button class="quiz-option" data-key="b">サイコロを5回振ったときの、3以上が出る回数</button>
+          <button class="quiz-option" data-key="c">ある交差点で1日に起きる、めったにない事故の件数</button>
+          <div class="quiz-explain"><p>ポアソン分布は「試行回数がはっきりせず、まれな事象が一定時間に何回起きるか」を表します。cは機会が無数にあり、1回あたりはまれな事象なので最適です。aとbは試行回数（10回・5回）がはっきり決まっているので、二項分布の場面です。</p></div>
+        </div>
+
+        <div class="quiz" data-answer="a">
+          <p class="quiz-q">問: 二項分布 \(B(n, p)\) からポアソン分布に近づくのは、どんなときですか?</p>
+          <button class="quiz-option" data-key="a">\(np\) を一定に保ったまま、\(n\) を大きく \(p\) を小さくするとき</button>
+          <button class="quiz-option" data-key="b">\(n\) を小さく、\(p\) を大きくするとき</button>
+          <button class="quiz-option" data-key="c">\(p\) を \(0.5\) に固定して \(n\) を大きくするとき</button>
+          <div class="quiz-explain"><p>ポアソン分布は「\(n\) が大きく \(p\) が小さい（事象がまれな）二項分布」の行き着く先です。平均 \(np = \lambda\) を一定に保つのがポイント。\(p\) が \(0.5\) のように大きいままでは、ポアソンには近づきません。</p></div>
+        </div>
+
+        <h2>演習</h2>
+
+        <div class="box box-practice">
+          <div class="box-title">演習1</div>
+          <p>正しいコインを6回投げます。表がちょうど4回出る確率を、二項分布の式を使って求めなさい。（\(0.5^{6} = \frac{1}{64}\) を使ってよい）</p>
+          <details class="answer">
+            <summary>解答を見る</summary>
+            <p>\(n = 6\)、\(p = 0.5\)、\(k = 4\) です。まず並び方の数は
+            $$ \binom{6}{4} = \frac{6 \times 5}{2 \times 1} = 15 $$
+            （\(\binom{6}{4} = \binom{6}{2}\) なので2個選ぶ計算と同じです。）次に \(p^{4}(1-p)^{2} = 0.5^{4} \times 0.5^{2} = 0.5^{6} = \dfrac{1}{64}\)。よって
+            $$ P(X = 4) = 15 \times \frac{1}{64} = \frac{15}{64} \approx 0.23 $$
+            表が4回出る確率は約23%です。</p>
+          </details>
+        </div>
+
+        <div class="box box-practice">
+          <div class="box-title">演習2</div>
+          <p>あるテストは1問あたり正解率 \(p = 0.8\)、全部で20問あります。正解数 \(X\) は二項分布に従うとして、平均で何問正解すると期待できますか。</p>
+          <details class="answer">
+            <summary>解答を見る</summary>
+            <p>二項分布 \(B(20, 0.8)\) の平均は \(n \times p\) で求められます。
+            $$ \text{平均} = np = 20 \times 0.8 = 16 $$
+            平均すると16問正解すると期待できます。20問の8割が16問、という直感どおりの答えです。</p>
+          </details>
+        </div>
+
+        <div class="box box-practice">
+          <div class="box-title">演習3</div>
+          <p>ある本では、平均すると1ページに2か所の誤字があります。誤字の数がポアソン分布に従うとして、あるページに「誤字が1つもない」確率を求めなさい。（\(e^{-2} \approx 0.135\) を使ってよい）</p>
+          <details class="answer">
+            <summary>解答を見る</summary>
+            <p>\(\lambda = 2\)、\(k = 0\) です。式に入れます。
+            $$ P(X = 0) = \frac{2^{0}\, e^{-2}}{0!} = \frac{1 \times e^{-2}}{1} = e^{-2} \approx 0.135 $$
+            （\(2^{0} = 1\)、\(0! = 1\) です。）誤字が1つもないページは、約13.5%。逆に言えば、8割以上のページには何かしら誤字があるということです。</p>
+          </details>
+        </div>
+
+        <div class="box box-practice">
+          <div class="box-title">演習4</div>
+          <p>平均1時間に4件の問い合わせが来るコールセンターがあります。問い合わせ数がポアソン分布に従うとき、ある1時間に「ちょうど5件来る」確率を求めなさい。（\(e^{-4} \approx 0.0183\) を使ってよい）</p>
+          <details class="answer">
+            <summary>解答を見る</summary>
+            <p>\(\lambda = 4\)、\(k = 5\) です。
+            $$ P(X = 5) = \frac{4^{5}\, e^{-4}}{5!} = \frac{1024 \times 0.0183}{120} $$
+            分子は \(1024 \times 0.0183 \approx 18.7\)、これを \(5! = 120\) で割って
+            $$ P(X = 5) \approx \frac{18.7}{120} \approx 0.156 $$
+            ちょうど5件来る確率は約16%です。平均は4件ですが、それより少し多い5件もよく起こると分かります。</p>
+          </details>
+        </div>
+
+        <h2>まとめ</h2>
+        <ul>
+          <li><span class="term">二項分布</span> \(B(n, p)\) は「\(n\) 回中 \(k\) 回成功する確率」を表し、\( P(X = k) = \binom{n}{k} p^{k}(1-p)^{n-k} \)。試行回数 \(n\) が決まっている場面で使います。</li>
+          <li>二項分布の平均は \(np\)。式は「並び方の数 × 成功の確率 × 失敗の確率」の3部品でできています。</li>
+          <li><span class="term">ポアソン分布</span> は「まれな事象が一定時間に \(k\) 回起きる確率」を表し、\( P(X = k) = \dfrac{\lambda^{k} e^{-\lambda}}{k!} \)。平均回数 \(\lambda\) ただ1つで形が決まります。</li>
+          <li>ポアソン分布の平均は \(\lambda\)。試行回数がはっきりしない場面で活躍します。</li>
+          <li>ポアソンは「\(n\) を大きく \(p\) を小さく（\(np = \lambda\) は一定）」した二項分布の行き着く先。まれな事象の近道です。</li>
+        </ul>
+        <p>これで「回数を数える」2大離散分布がそろいました。どちらも、ある成功確率 \(p\) や平均 \(\lambda\) を決めるとデータの出やすさが決まります。この「パラメータからデータの出やすさを測る」見方こそ、つぎに学ぶ<strong>尤度</strong>へとまっすぐつながっていきます。一段ずつ、のぼっていきましょう。</p>
+
+      </div>
+
+      <div class="complete-area">
+        <button class="btn btn-level" id="complete-btn">このレッスンを完了にする</button>
+        <p class="complete-note">進捗はこのブラウザに保存されます</p>
+      </div>
+
+      <!-- 前後ナビ: main.js がカリキュラムから自動生成 -->
+      <nav class="lesson-nav" id="lesson-nav" aria-label="前後のレッスン"></nav>
+
+    </main>
+
+    <!-- ページ内目次: main.js が本文の h2 から自動生成 -->
+    <aside class="toc">
+      <div class="toc-title">このページの内容</div>
+      <nav id="toc"></nav>
+    </aside>
+
+  </div>
+
+  <footer class="site-footer">
+    <p>ベイズの階段 — 中学数学から最前線まで、一段ずつ。</p>
+  </footer>
+
+  <script src="../../assets/js/curriculum.js"></script>
+  <script src="../../assets/js/main.js"></script>
+</body>
+</html>

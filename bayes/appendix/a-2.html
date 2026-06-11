@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>a-2 数学の準備② — 微分積分の最小限 | ベイズの階段</title>
+  <meta name="description" content="微分＝傾き、積分＝面積という最小限の直感。確率密度の積分が確率になること、最大化と「微分＝0」の関係を、中学数学だけを前提に学びます。">
+  <script>
+    document.documentElement.dataset.theme =
+      localStorage.getItem("bayes-stairs-theme") ||
+      (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Noto+Serif+JP:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/css/main.css">
+
+  <!-- KaTeX -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+          onload="renderMathInElement(document.body, {delimiters: [
+            {left: '$$', right: '$$', display: true},
+            {left: '\\(', right: '\\)', display: false}
+          ]});"></script>
+</head>
+<body data-root="../" data-level="appendix" data-lesson-id="a-2">
+
+  <header class="site-header">
+    <button class="sidebar-toggle" id="sidebar-toggle" aria-label="メニュー">☰</button>
+    <a class="brand" href="../index.html">
+      <span class="brand-mark">階</span>
+      <span>ベイズの階段</span>
+    </a>
+    <div class="header-spacer"></div>
+    <div class="header-progress" id="header-progress"></div>
+    <button class="theme-toggle" id="theme-toggle" aria-label="テーマ切替">🌙</button>
+  </header>
+
+  <div class="layout">
+
+    <aside class="sidebar"><nav id="sidebar-nav" aria-label="カリキュラム"></nav></aside>
+
+    <main class="lesson">
+
+      <nav class="breadcrumbs" aria-label="パンくず">
+        <a href="../index.html">ホーム</a><span class="sep">›</span>
+        <a href="index.html">付録</a><span class="sep">›</span>
+        <span>a-2 数学の準備② — 微分積分の最小限</span>
+      </nav>
+
+      <header class="lesson-header">
+        <div class="lesson-meta">
+          <span class="level-badge">付録</span>
+          <span class="small">レッスン a-2</span>
+        </div>
+        <h1>数学の準備② — 微分積分の最小限</h1>
+
+        <div class="lesson-goals">
+          <h2>このページでつかめるようになること</h2>
+          <ul>
+            <li>微分を「傾き＝変化率」として説明できる</li>
+            <li>積分を「グラフと横軸ではさまれた面積」として説明できる</li>
+            <li>確率密度を積分すると確率になることを直感で言える</li>
+            <li>「いちばん高いところでは傾きが0」を使って最大の場所を探せる</li>
+          </ul>
+          <p class="prereq">前提: 中学数学(比例・グラフ・面積)だけです。式の厳密さより、まず絵で納得することを目指します。</p>
+        </div>
+      </header>
+
+      <div class="lesson-body">
+
+        <h2>なぜ微積分が出てくるの?</h2>
+        <p>Level 2 から先では、なめらかな曲線で確率を表す<span class="term">確率密度（かくりつみつど）</span>が登場します。山の形をしたグラフですね。「この範囲に入る確率は?」と聞かれたとき、答えはそのグラフの<strong>面積</strong>になります。面積を求める道具が積分です。</p>
+        <p>さらに「いちばんありそうな値はどこ?」を探すとき、山の<strong>てっぺん</strong>を見つけたくなります。てっぺんを探す道具が微分です。微積分というと身構えますが、ベイズで使うのはこの2つの絵だけです。公式を山ほど覚える必要はありません。</p>
+        <p>このページでは、計算のテクニックではなく「傾き」と「面積」という2枚の絵だけを持ち帰ってください。それだけで Level 2〜4 の説明はぐっと読みやすくなります。</p>
+
+        <div class="box box-intuition">
+          <div class="box-title">直感でつかむ</div>
+          <p>微分と積分は、つかんでしまえば次の2行です。</p>
+          <ul>
+            <li><strong>微分＝傾き</strong>。坂道の急さ。グラフが上り坂なら正、下り坂なら負、平らなら0。</li>
+            <li><strong>積分＝面積</strong>。グラフと横軸ではさまれた部分の広さ。</li>
+          </ul>
+          <p>この2つは「変化の速さ」と「ためた量」の関係です。車のメーターでいうと、速度計が微分、走った距離が積分。同じことを別の窓から見ているだけです。</p>
+        </div>
+
+        <h2>微分 ＝ 傾き ＝ 変化率</h2>
+        <p>まず坂道を思い浮かべてください。<span class="term">傾き（かたむき）</span>とは「横に1進むと、たてにどれだけ上がるか」です。中学校で習った直線の傾きと同じです。横の変化を \( \Delta x \)（デルタエックス、「\(x\) の変化」と読みます）、たての変化を \( \Delta y \) と書くと、傾きは次のようになります。</p>
+
+        <div class="formula">
+          <span class="formula-label">傾き(平均変化率)</span>
+          $$ \text{傾き} = \frac{\Delta y}{\Delta x} = \frac{\text{たての変化}}{\text{横の変化}} $$
+        </div>
+
+        <p>直線なら傾きはどこでも同じです。でも曲線だと、場所によって坂の急さが変わりますね。そこで「その<strong>一点</strong>での傾き」を考えます。横の幅 \( \Delta x \) をどんどん小さくして、点をギュッと1つに絞ったときの傾き。これが微分です。</p>
+
+        <figure class="figure">
+          <svg viewBox="0 0 320 180" width="320" aria-label="曲線と、ある一点での接線(傾き)">
+            <line x1="20" y1="160" x2="300" y2="160" stroke="var(--border)" stroke-width="2"/>
+            <line x1="20" y1="160" x2="20" y2="15" stroke="var(--border)" stroke-width="2"/>
+            <path d="M25,150 C90,150 110,40 175,40 C230,40 250,90 300,120"
+                  fill="none" stroke="var(--level-color)" stroke-width="3"/>
+            <!-- 接線(平らに近い点) -->
+            <line x1="120" y1="55" x2="230" y2="25" stroke="var(--text-muted)" stroke-width="2" stroke-dasharray="5 4"/>
+            <circle cx="175" cy="40" r="4" fill="var(--level-color)"/>
+            <text x="178" y="33" font-size="11" fill="var(--text-muted)">この点での傾き＝微分</text>
+            <!-- 急な点 -->
+            <line x1="60" y1="170" x2="120" y2="100" stroke="var(--text-muted)" stroke-width="2" stroke-dasharray="5 4"/>
+            <circle cx="90" cy="135" r="4" fill="var(--level-color)"/>
+            <text x="35" y="100" font-size="11" fill="var(--text-muted)">急な坂</text>
+          </svg>
+          <figcaption>図1: 曲線の傾きは場所ごとに変わる。点での傾き(点線＝接線の急さ)がその点の微分。</figcaption>
+        </figure>
+
+        <div class="box box-def">
+          <div class="box-title">定義 — 微分(直感版)</div>
+          <p>関数 \( f(x) \) の<span class="term">微分（びぶん）</span>とは、グラフ上のある点での傾きのことです。横の幅を限りなく0に近づけたときの \( \dfrac{\Delta y}{\Delta x} \) として、記号 \( f'(x) \)(エフプライムエックス、「\(f\) の微分」と読みます)で表します。</p>
+          <p>意味はいつも同じです。<strong>その点で、\(x\) をほんの少し増やすと \(f\) がどれだけ変わるか</strong>。これを<span class="term">変化率（へんかりつ）</span>とも呼びます。</p>
+        </div>
+
+        <p>符号だけ覚えれば十分なことも多いです。坂の向きと傾きの符号は、次のように対応します。</p>
+
+        <table>
+          <thead>
+            <tr><th>グラフの様子</th><th>傾き \( f'(x) \)</th><th>意味</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>上り坂</td><td>正(プラス)</td><td>\(x\) を増やすと \(f\) も増える</td></tr>
+            <tr><td>平ら(山や谷)</td><td>0(ゼロ)</td><td>増えも減りもしない瞬間</td></tr>
+            <tr><td>下り坂</td><td>負(マイナス)</td><td>\(x\) を増やすと \(f\) は減る</td></tr>
+          </tbody>
+        </table>
+
+        <h2>積分 ＝ 面積</h2>
+        <p>次は積分です。こちらはもっと素朴で、<strong>グラフと横軸ではさまれた部分の面積</strong>のことです。\( a \) から \( b \) までの面積を、次の記号で書きます。</p>
+
+        <div class="formula">
+          <span class="formula-label">積分(a から b までの面積)</span>
+          $$ \int_a^b f(x)\, dx $$
+          <div class="formula-parts">
+            <span class="part"><b>∫</b>: 「たし合わせる」を表す記号(インテグラル)</span>
+            <span class="part"><b>a, b</b>: 面積を測る左端と右端</span>
+            <span class="part"><b>dx</b>: 横をうんと細く切った1本分の幅</span>
+          </div>
+        </div>
+
+        <p>読み方は「\(a\) から \(b\) まで \(f(x)\) を積分する」です。イメージは短冊(たんざく)です。グラフの下を、たての細い長方形にたくさん刻みます。長方形1本の面積は「高さ \( f(x) \) × 幅 \( dx \)」。それを左から右まで全部たすと、グラフの下の面積になります。\( \int \) はその「全部たす」の合図です。</p>
+
+        <figure class="figure">
+          <svg viewBox="0 0 320 180" width="320" aria-label="曲線の下を細い長方形で刻んで面積を近づける">
+            <line x1="20" y1="150" x2="300" y2="150" stroke="var(--border)" stroke-width="2"/>
+            <line x1="20" y1="150" x2="20" y2="15" stroke="var(--border)" stroke-width="2"/>
+            <!-- 短冊 -->
+            <g fill="var(--level-color)" opacity="0.30" stroke="var(--level-color)" stroke-width="1">
+              <rect x="80"  y="120" width="22" height="30"/>
+              <rect x="102" y="95"  width="22" height="55"/>
+              <rect x="124" y="70"  width="22" height="80"/>
+              <rect x="146" y="55"  width="22" height="95"/>
+              <rect x="168" y="62"  width="22" height="88"/>
+              <rect x="190" y="85"  width="22" height="65"/>
+              <rect x="212" y="115" width="22" height="35"/>
+            </g>
+            <path d="M30,140 C90,140 110,55 157,52 C210,49 240,135 295,142"
+                  fill="none" stroke="var(--level-color)" stroke-width="3"/>
+            <text x="120" y="172" font-size="11" fill="var(--text-muted)">a</text>
+            <text x="228" y="172" font-size="11" fill="var(--text-muted)">b</text>
+          </svg>
+          <figcaption>図2: 曲線の下を細い長方形(短冊)で刻む。幅をうんと細くしてたし合わせた面積が積分。</figcaption>
+        </figure>
+
+        <div class="box box-def">
+          <div class="box-title">定義 — 積分(直感版)</div>
+          <p>\( \displaystyle\int_a^b f(x)\, dx \) は、\(x = a\) から \(x = b\) までの間で、グラフ \( y = f(x) \) と横軸ではさまれた<span class="term">面積（めんせき）</span>を表します。</p>
+          <p>細い長方形(高さ \(f(x)\)、幅 \(dx\))の面積を、すき間なくたし合わせたものです。</p>
+        </div>
+
+        <h2>確率密度の積分 ＝ 確率</h2>
+        <p>ここがベイズで積分を使う本命です。連続した値(身長、待ち時間など)の確率は、棒グラフではなくなめらかな曲線 — 確率密度のグラフ — で表します。このとき<strong>確率は、点ではなく区間で考えます</strong>。「ぴったり身長170.0cmの確率」は0に近く、意味があるのは「169cm〜171cmの間に入る確率」のような幅のある問いです。</p>
+        <p>その確率が、まさに<strong>その区間でのグラフの下の面積</strong>になります。つまり積分です。</p>
+
+        <div class="box box-intuition">
+          <div class="box-title">直感でつかむ</div>
+          <p>確率密度のグラフは「確率の混みぐあい」の地図です。山が高いところは値が出やすく、低いところは出にくい。ある区間にどれだけ確率が詰まっているかは、その区間の下の面積で測ります。だから「区間の確率＝面積＝積分」なのです。</p>
+        </div>
+
+        <div class="box box-thm">
+          <div class="box-title">公式 — 確率密度と確率</div>
+          <p>確率密度を \( p(x) \)(ピーエックス)とすると、値が \( a \) と \( b \) の間に入る確率は次の面積です。</p>
+          $$ P(a \le X \le b) = \int_a^b p(x)\, dx $$
+          <p>とくに「すべての値」を合わせた面積は必ず1になります(どこかには必ず入るから)。</p>
+          $$ \int_{-\infty}^{\infty} p(x)\, dx = 1 $$
+        </div>
+
+        <div class="box box-warn">
+          <div class="box-title">つまずき注意</div>
+          <p>確率密度 \( p(x) \) は<strong>そのままでは確率ではありません</strong>。高さは1を超えることもあります。確率になるのは、高さに幅をかけて足した「面積」の方です。「密度＝高さ」「確率＝面積」と切り分けて覚えておきましょう。</p>
+        </div>
+
+        <h2>最大化と「微分 ＝ 0」</h2>
+        <p>最後は微分の出番です。ベイズでは「いちばんありそうな値」、つまりグラフの<strong>てっぺん</strong>を探したい場面がよくあります。てっぺんでは何が起きているでしょうか。</p>
+        <p>山を左から登っていくと、上り坂(傾きは正)です。頂上を越えると下り坂(傾きは負)になります。その境目、ちょうど頂上では坂が平ら — つまり<strong>傾きが0</strong>です。これが「最大の場所では微分が0」というルールです。</p>
+
+        <figure class="figure">
+          <svg viewBox="0 0 320 180" width="320" aria-label="山の頂上では傾きが0">
+            <line x1="20" y1="155" x2="300" y2="155" stroke="var(--border)" stroke-width="2"/>
+            <line x1="20" y1="155" x2="20" y2="15" stroke="var(--border)" stroke-width="2"/>
+            <path d="M30,150 C100,150 120,30 160,30 C200,30 220,150 290,150"
+                  fill="none" stroke="var(--level-color)" stroke-width="3"/>
+            <!-- 頂上の水平接線 -->
+            <line x1="115" y1="30" x2="205" y2="30" stroke="var(--text-muted)" stroke-width="2" stroke-dasharray="5 4"/>
+            <circle cx="160" cy="30" r="4" fill="var(--level-color)"/>
+            <text x="120" y="22" font-size="11" fill="var(--text-muted)">傾き＝0</text>
+            <text x="60"  y="100" font-size="11" fill="var(--text-muted)">上り(＋)</text>
+            <text x="215" y="100" font-size="11" fill="var(--text-muted)">下り(−)</text>
+          </svg>
+          <figcaption>図3: 山の頂上(最大の場所)では接線が水平になる。つまり微分＝0。</figcaption>
+        </figure>
+
+        <div class="box box-thm">
+          <div class="box-title">公式 — 最大の場所の見つけ方</div>
+          <p>関数 \( f(x) \) がいちばん大きくなる \(x\) は、傾きが0になる場所、つまり次を満たす点の中にあります。</p>
+          $$ f'(x) = 0 $$
+          <p>てっぺんでは坂が平ら、というだけの話です。最小(谷底)でも傾きは0になるので、最後にてっぺんか谷底かはグラフの形で見分けます。</p>
+        </div>
+
+        <div class="box box-ex">
+          <div class="box-title">例題</div>
+          <p>面積を測る練習です。横軸の0から2の間で、高さがずっと \( p(x) = \dfrac{1}{2} \) の平らなグラフ(横一直線)を考えます。この区間に値が入る確率はいくつでしょう。</p>
+          <p><strong>解</strong>: 高さ \( \dfrac{1}{2} \)、幅 \( 2 - 0 = 2 \) の長方形の面積です。</p>
+          $$ \int_0^2 \frac{1}{2}\, dx = \frac{1}{2} \times 2 = 1 $$
+          <p>面積は1。これは「0から2のどこかに必ず入る」ことを表しています。確率密度の全体の面積が1になる、という決まりとぴったり合っていますね。ちなみに「0から1の間」だけなら面積は \( \dfrac{1}{2} \times 1 = \dfrac{1}{2} \)、つまり確率は0.5です。</p>
+        </div>
+
+        <div class="box box-ex">
+          <div class="box-title">例題</div>
+          <p>微分の符号の練習です。あるグラフが、左から右へ「上り → 頂上 → 下り」と変化しています。頂上での傾き \( f'(x) \) は、正・0・負のどれでしょう。</p>
+          <p><strong>解</strong>: 上りの間は傾きが正、下りの間は負です。その境目である頂上では、ちょうど坂が平らになり傾きは<strong>0</strong>です。だから最大の場所を探すときは \( f'(x) = 0 \) を手がかりにします。</p>
+        </div>
+
+        <h2>理解度チェック</h2>
+
+        <div class="quiz" data-answer="b">
+          <p class="quiz-q">問: 微分(その点での傾き)が表しているのは、次のどれでしょう?</p>
+          <button class="quiz-option" data-key="a">グラフの下の面積</button>
+          <button class="quiz-option" data-key="b">\(x\) を少し増やしたときの \(f\) の変化の速さ</button>
+          <button class="quiz-option" data-key="c">グラフの高さそのもの</button>
+          <div class="quiz-explain"><p>微分は「傾き＝変化率」です。\(x\) をほんの少し増やすと \(f\) がどれだけ変わるかを表します。面積を表すのは積分の方なので a は誤りです。</p></div>
+        </div>
+
+        <div class="quiz" data-answer="c">
+          <p class="quiz-q">問: 連続した値で「\(X\) が \(a\) と \(b\) の間に入る確率」は、確率密度 \( p(x) \) を使うとどう求まりますか?</p>
+          <button class="quiz-option" data-key="a">\( p(a) \) と \( p(b) \) を足す</button>
+          <button class="quiz-option" data-key="b">\( p(x) \) のいちばん高い値を読む</button>
+          <button class="quiz-option" data-key="c">\(a\) から \(b\) まで \( p(x) \) を積分する(その区間の面積)</button>
+          <div class="quiz-explain"><p>連続した値の確率は「区間の下の面積」、つまり \( \displaystyle\int_a^b p(x)\,dx \) です。点での高さ \( p(a) \) は密度であって確率そのものではない点に注意しましょう。</p></div>
+        </div>
+
+        <div class="quiz" data-answer="a">
+          <p class="quiz-q">問: なめらかな山の形のグラフで、いちばん高いところ(最大)では傾き \( f'(x) \) はどうなっていますか?</p>
+          <button class="quiz-option" data-key="a">0(平らになっている)</button>
+          <button class="quiz-option" data-key="b">いちばん大きい正の値</button>
+          <button class="quiz-option" data-key="c">いちばん小さい負の値</button>
+          <div class="quiz-explain"><p>頂上では上り坂から下り坂に切り替わり、ちょうど坂が平らになります。だから傾きは0です。「最大の場所では \( f'(x)=0 \)」を手がかりにてっぺんを探します。</p></div>
+        </div>
+
+        <h2>演習</h2>
+
+        <div class="box box-practice">
+          <div class="box-title">演習1</div>
+          <p>横軸の0から4の間で、高さがずっと \( p(x) = \dfrac{1}{4} \) の平らなグラフを考えます。値が「0から4のどこか」に入る確率を、面積として求めなさい。</p>
+          <details class="answer">
+            <summary>解答を見る</summary>
+            <p>高さ \( \dfrac{1}{4} \)、幅 \( 4 \) の長方形の面積です。</p>
+            $$ \int_0^4 \frac{1}{4}\, dx = \frac{1}{4} \times 4 = 1 $$
+            <p>面積は1。確率密度は、全体の面積がいつも1になります。「必ずどこかに入る」を表しています。</p>
+          </details>
+        </div>
+
+        <div class="box box-practice">
+          <div class="box-title">演習2</div>
+          <p>演習1と同じ、高さ \( \dfrac{1}{4} \) のグラフです。今度は「1から3の間」に入る確率を面積として求めなさい。</p>
+          <details class="answer">
+            <summary>解答を見る</summary>
+            <p>幅は \( 3 - 1 = 2 \)、高さは \( \dfrac{1}{4} \) です。</p>
+            $$ \int_1^3 \frac{1}{4}\, dx = \frac{1}{4} \times 2 = \frac{1}{2} $$
+            <p>確率は \( \dfrac{1}{2} = 0.5 \)。全体(幅4)のうち、ちょうど真ん中の幅2の部分なので、確率も半分になります。区間の確率＝その区間の面積、という感覚をつかみましょう。</p>
+          </details>
+        </div>
+
+        <div class="box box-practice">
+          <div class="box-title">演習3</div>
+          <p>あるグラフを左から右へたどると、傾きが「正 → 0 → 負 → 0 → 正」と変わりました。最初の「傾き0」の点は、山の頂上(最大)・谷底(最小)のどちらでしょうか。理由も書きなさい。</p>
+          <details class="answer">
+            <summary>解答を見る</summary>
+            <p><strong>山の頂上(その付近での最大)</strong>です。最初の0の前は正(上り)、後は負(下り)。上ってきて下りに変わる切り替え点なので、てっぺんになります。</p>
+            <p>ちなみに2つめの0は、負(下り)から正(上り)へ変わる点なので谷底(最小)です。同じ「傾き0」でも、前後の符号でてっぺんか谷底か見分けられます。</p>
+          </details>
+        </div>
+
+        <div class="box box-practice">
+          <div class="box-title">演習4</div>
+          <p>「確率密度 \( p(x) \) の高さが3だった。だから確率は3だ」と友だちが言いました。どこが間違いか、ひとことで説明しなさい。</p>
+          <details class="answer">
+            <summary>解答を見る</summary>
+            <p>高さ(密度)はそのままでは確率ではありません。確率になるのは「高さ × 幅」を足し合わせた<strong>面積</strong>の方です。密度の高さは1を超えても構いません(3でもOK)。確率は必ず0以上1以下で、区間の面積として求めます。</p>
+          </details>
+        </div>
+
+        <h2>まとめ</h2>
+        <ul>
+          <li><strong>微分＝傾き＝変化率</strong>。その点で \(x\) を少し増やすと \(f\) がどれだけ変わるか。上りは正、下りは負、平らは0。</li>
+          <li><strong>積分＝面積</strong>。グラフと横軸ではさまれた部分の広さ。細い長方形をたし合わせたもの。</li>
+          <li>連続した値の<strong>確率は区間の面積</strong>。\( \displaystyle\int_a^b p(x)\,dx \) で求まり、全体の面積は必ず1。</li>
+          <li>確率密度の<strong>高さは確率そのものではない</strong>。確率になるのは面積の方。</li>
+          <li><strong>最大(てっぺん)では傾きが0</strong>。だから \( f'(x)=0 \) を手がかりにいちばんありそうな値を探せる。</li>
+        </ul>
+        <p>覚えるのは「傾き」と「面積」の2枚の絵だけで十分です。Level 2 以降で確率密度や最尤(さいゆう)の話が出てきたら、このページに戻ってきてくださいね。次は <a href="a-3.html">a-3 用語集</a> で、つまずいた言葉をいつでも引けるようにしておきましょう。</p>
+
+      </div>
+
+      <div class="complete-area">
+        <button class="btn btn-level" id="complete-btn">このページを完了にする</button>
+        <p class="complete-note">進捗はこのブラウザに保存されます</p>
+      </div>
+
+      <nav class="lesson-nav" id="lesson-nav" aria-label="前後のレッスン"></nav>
+
+    </main>
+
+    <aside class="toc">
+      <div class="toc-title">このページの内容</div>
+      <nav id="toc"></nav>
+    </aside>
+
+  </div>
+
+  <footer class="site-footer">
+    <p>ベイズの階段 — 中学数学から最前線まで、一段ずつ。</p>
+  </footer>
+
+  <script src="../assets/js/curriculum.js"></script>
+  <script src="../assets/js/main.js"></script>
+</body>
+</html>

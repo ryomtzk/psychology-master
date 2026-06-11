@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>4-4 ギブスサンプリング | ベイズの階段</title>
+  <meta name="description" content="条件付き分布を順番にサンプルする戦略">
+  <script>
+    document.documentElement.dataset.theme =
+      localStorage.getItem("bayes-stairs-theme") ||
+      (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Noto+Serif+JP:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../assets/css/main.css">
+
+  <!-- KaTeX: 数式を使うページでは必ずこの3行を入れる -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+          onload="renderMathInElement(document.body, {delimiters: [
+            {left: '$$', right: '$$', display: true},
+            {left: '\\(', right: '\\)', display: false}
+          ]});"></script>
+</head>
+<body data-root="../../" data-level="4" data-lesson-id="4-4">
+
+  <header class="site-header">
+    <button class="sidebar-toggle" id="sidebar-toggle" aria-label="メニュー">☰</button>
+    <a class="brand" href="../../index.html">
+      <span class="brand-mark">階</span>
+      <span>ベイズの階段</span>
+    </a>
+    <div class="header-spacer"></div>
+    <div class="header-progress" id="header-progress"></div>
+    <button class="theme-toggle" id="theme-toggle" aria-label="テーマ切替">🌙</button>
+  </header>
+
+  <div class="layout">
+
+    <!-- サイドバー: main.js がカリキュラムから自動生成 -->
+    <aside class="sidebar"><nav id="sidebar-nav" aria-label="カリキュラム"></nav></aside>
+
+    <main class="lesson">
+
+      <nav class="breadcrumbs" aria-label="パンくず">
+        <a href="../../index.html">ホーム</a><span class="sep">›</span>
+        <a href="index.html">Level 4 計算ベイズ — MCMCと近似推論</a><span class="sep">›</span>
+        <span>4-4 ギブスサンプリング</span>
+      </nav>
+
+      <header class="lesson-header">
+        <div class="lesson-meta">
+          <span class="level-badge">Level 4</span>
+          <span class="small">レッスン 4-4</span>
+        </div>
+        <h1>ギブスサンプリング</h1>
+
+        <div class="lesson-goals">
+          <h2>このレッスンでできるようになること</h2>
+          <ul>
+            <li>各変数を順番に「完全条件付き分布」からサンプルする手順を説明できる</li>
+            <li>二変数正規分布を例に、ギブスサンプリングの1ステップを書き下せる</li>
+            <li>ギブスサンプリングがメトロポリス・ヘイスティングス法の特殊形(受理率1)であることを説明できる</li>
+          </ul>
+          <p class="prereq">前提: <a href="4-3.html">4-3 メトロポリス・ヘイスティングス法</a> と <a href="../level1/1-1.html">1-1 条件付き確率</a> を読んでいること</p>
+        </div>
+      </header>
+
+      <!-- ▼▼▼ ここからレッスン本文 ▼▼▼ -->
+      <div class="lesson-body">
+
+        <h2>2つのつまみを、片方ずつ回す</h2>
+        <p>前のレッスンでは、提案して受理・棄却を繰り返す<a href="4-3.html">メトロポリス・ヘイスティングス法</a>を学びました。あの方法は強力ですが、提案がうまく合わないと棄却ばかりで前に進みません。</p>
+        <p>そこで今回は、別の戦略を考えます。たとえば調べたい未知数が2つあるとします。\(x\) と \(y\) の2つです。両方を同時にうまく動かすのは大変です。</p>
+        <p>でも、こう考えたらどうでしょう。「\(y\) はいまの値で固定したまま、\(x\) だけをちょうどよい場所に置く」。次は逆に「\(x\) を固定して、\(y\) だけを置き直す」。これを交互に繰り返すのです。難しい2変数の問題を、やさしい1変数の問題に分けて解くわけです。</p>
+
+        <div class="box box-intuition">
+          <div class="box-title">直感でつかむ</div>
+          <p>お風呂の蛇口を思い浮かべてください。「お湯」と「水」の2つのつまみがあります。ちょうどよい温度と水量にしたいとき、両方を同時に回すのは難しいですよね。</p>
+          <p>そこで、まず水の量はそのままにして、お湯のつまみだけを「いまの水量にいちばん合う位置」へ動かします。次にお湯はそのままで、水のつまみだけを合わせます。これを交互に繰り返すと、だんだん理想の状態に近づきます。ギブスサンプリングは、まさにこの「片方ずつ合わせる」やり方です。</p>
+        </div>
+
+        <h2>完全条件付き分布</h2>
+        <p>ギブスサンプリングの主役は<span class="term">完全条件付き分布（かんぜんじょうけんつきぶんぷ）</span>です。これは「自分以外のすべての変数の値を決め打ちしたとき、ある1つの変数がしたがう分布」のことです。</p>
+        <p>変数が \(x\) と \(y\) の2つなら、完全条件付き分布は次の2つです。記号 \(p(x \mid y)\) は『\(y\) を決めたもとでの \(x\) の分布』と読みます。</p>
+
+        <div class="box box-def">
+          <div class="box-title">定義 — 完全条件付き分布</div>
+          <p>同時分布 \(p(x, y)\) が与えられたとき、各変数の完全条件付き分布を次で定めます:
+          $$ p(x \mid y) = \frac{p(x, y)}{p(y)}, \qquad p(y \mid x) = \frac{p(x, y)}{p(x)} $$
+          ここで \(p(x, y)\) は <a href="../level1/1-2.html">同時分布</a>、\(p(x)\)・\(p(y)\) は周辺分布です。要するに「他方の変数を定数とみなして、自分だけの分布として読み直したもの」です。</p>
+        </div>
+
+        <p>ベイズ推定では、この同時分布が「事後分布」になります。\(x\) と \(y\) がともに知りたいパラメータで、データを見たあとの事後分布 \(p(x, y \mid \text{データ})\) からサンプルを取りたい、という場面を考えてください。</p>
+
+        <h2>ギブスサンプリングの手順</h2>
+        <p>手順そのものは驚くほど単純です。各変数を、その完全条件付き分布から順番にサンプルしていくだけです。</p>
+
+        <div class="box box-thm">
+          <div class="box-title">アルゴリズム — ギブスサンプリング(2変数)</div>
+          <p>初期値 \((x^{(0)}, y^{(0)})\) を適当に決める。\(t = 0, 1, 2, \dots\) について次を繰り返す:</p>
+          <p>$$ x^{(t+1)} \sim p\!\left(x \mid y^{(t)}\right) $$</p>
+          <p>$$ y^{(t+1)} \sim p\!\left(x^{(t+1)} \text{ を固定した } y\right) = p\!\left(y \mid x^{(t+1)}\right) $$</p>
+          <p>こうして得た列 \((x^{(0)}, y^{(0)}), (x^{(1)}, y^{(1)}), \dots\) は、十分まわせば同時分布 \(p(x, y)\) からのサンプルとみなせます。</p>
+        </div>
+
+        <div class="box box-warn">
+          <div class="box-title">つまずき注意</div>
+          <p>2行目で \(y\) を更新するとき、使う \(x\) は<strong>たったいま更新したばかりの新しい値 \(x^{(t+1)}\)</strong> です。古い \(x^{(t)}\) ではありません。「いつも最新の値を使って次を決める」と覚えてください。変数が3つ以上でも同じで、1つ更新するたびにその新しい値を以降に反映します。</p>
+        </div>
+
+        <figure class="figure">
+          <svg viewBox="0 0 320 240" width="320" aria-label="ギブスサンプリングが直角に折れながら進む様子">
+            <!-- axes -->
+            <line x1="40" y1="200" x2="300" y2="200" stroke="var(--border)" stroke-width="2"/>
+            <line x1="40" y1="200" x2="40" y2="20" stroke="var(--border)" stroke-width="2"/>
+            <text x="295" y="218" fill="var(--text-muted)" font-size="13" text-anchor="end">x</text>
+            <text x="22" y="28" fill="var(--text-muted)" font-size="13">y</text>
+            <!-- target contour (ellipse for correlated normal) -->
+            <ellipse cx="170" cy="110" rx="95" ry="55" fill="none" stroke="var(--level-color)" stroke-width="1.5" opacity="0.4" transform="rotate(-28 170 110)"/>
+            <ellipse cx="170" cy="110" rx="55" ry="30" fill="none" stroke="var(--level-color)" stroke-width="1.5" opacity="0.7" transform="rotate(-28 170 110)"/>
+            <!-- zigzag path: horizontal then vertical moves -->
+            <polyline points="70,180 120,180 120,150 165,150 165,125 200,125 200,108 175,108"
+                      fill="none" stroke="var(--level-color)" stroke-width="2.5"
+                      stroke-linejoin="round" stroke-linecap="round"/>
+            <circle cx="70" cy="180" r="4" fill="var(--level-color)"/>
+            <circle cx="175" cy="108" r="4" fill="var(--level-color)"/>
+            <text x="64" y="196" fill="var(--text-muted)" font-size="11">開始</text>
+          </svg>
+          <figcaption>図1: ギブスサンプリングは、軸に平行に「横→縦→横→縦」と直角に折れながら進む。1回の移動では1つの変数しか動かないため、経路は階段状になる。</figcaption>
+        </figure>
+
+        <h2>例: 二変数正規分布</h2>
+        <p>いちばん見通しのよい例が、相関のある<span class="term">二変数正規分布（にへんすうせいきぶんぷ）</span>です。<a href="../level2/2-3.html">正規分布</a>を2次元に広げたもので、\(x\) と \(y\) が相関係数 \(\rho\)(ロー)でつながっています。ここでは平均を \(0\)、分散を \(1\) とします。</p>
+        <p>このとき、片方を固定したときの条件付き分布は、また正規分布になります。これは正規分布の便利な性質です。</p>
+
+        <div class="formula">
+          <span class="formula-label">二変数標準正規分布の完全条件付き分布</span>
+          $$ x \mid y \;\sim\; \mathcal{N}\!\left(\rho\, y,\; 1 - \rho^2\right), \qquad y \mid x \;\sim\; \mathcal{N}\!\left(\rho\, x,\; 1 - \rho^2\right) $$
+          <div class="formula-parts">
+            <span class="part"><b>平均 \(\rho y\)</b>: 相手の値 \(y\) に相関 \(\rho\) を掛けた位置に引き寄せられる</span>
+            <span class="part"><b>分散 \(1-\rho^2\)</b>: 相関が強いほど散らばりは小さくなる</span>
+          </div>
+        </div>
+
+        <p>つまり手順は、こうなります。いまの \(y\) を見て、平均 \(\rho y\)・分散 \(1-\rho^2\) の正規分布から新しい \(x\) を1つ引く。次にその \(x\) を見て、同じ形の正規分布から新しい \(y\) を引く。この単純な往復だけで、相関した二変数正規分布をきれいに描き出せます。</p>
+
+        <div class="box box-ex">
+          <div class="box-title">例題</div>
+          <p>相関 \(\rho = 0.8\) の二変数標準正規分布をギブスサンプリングします。いまの状態が \((x^{(t)}, y^{(t)}) = (1.0,\ 2.0)\) のとき、次の \(x^{(t+1)}\) を引く分布の平均と分散を求めましょう。さらに、運よく \(x^{(t+1)} = 1.5\) が出たとして、続けて引く \(y^{(t+1)}\) の分布の平均と分散も求めましょう。</p>
+          <p><strong>解</strong>:</p>
+          <p>まず \(x^{(t+1)} \sim \mathcal{N}(\rho\, y^{(t)},\ 1-\rho^2)\) です。\(y^{(t)} = 2.0\) なので</p>
+          <p>$$ \text{平均} = 0.8 \times 2.0 = 1.6, \qquad \text{分散} = 1 - 0.8^2 = 1 - 0.64 = 0.36 $$</p>
+          <p>つまり \(x^{(t+1)} \sim \mathcal{N}(1.6,\ 0.36)\) から引きます。</p>
+          <p>次に \(y^{(t+1)} \sim \mathcal{N}(\rho\, x^{(t+1)},\ 1-\rho^2)\) です。ここで使う \(x\) は<strong>たったいま出た新しい値 \(x^{(t+1)} = 1.5\)</strong> なので</p>
+          <p>$$ \text{平均} = 0.8 \times 1.5 = 1.2, \qquad \text{分散} = 1 - 0.64 = 0.36 $$</p>
+          <p>つまり \(y^{(t+1)} \sim \mathcal{N}(1.2,\ 0.36)\) から引きます。古い \(x^{(t)} = 1.0\) は使いません。</p>
+        </div>
+
+        <h2>MHの特殊形 — 受理率はいつも1</h2>
+        <p>ギブスサンプリングは、じつは<a href="4-3.html">メトロポリス・ヘイスティングス法</a>の特別な場合です。MH法では「提案分布」から候補を出し、ある受理率で受け入れるかどうかを決めました。</p>
+        <p>ギブスサンプリングでは、提案分布として<strong>完全条件付き分布そのもの</strong>を使います。すると、不思議なことが起きます。受理率を計算すると、必ず \(1\) になるのです。つまり提案は一度も棄却されません。出した候補をそのまま採用してよい、ということです。</p>
+
+        <div class="box box-thm">
+          <div class="box-title">定理 — ギブスは受理率1のMH</div>
+          <p>完全条件付き分布 \(p(x \mid y)\) を提案分布に使うと、MH法の受理率は</p>
+          <p>$$ A = \min\!\left(1,\; \frac{p(x', y)\, \cdot\, p(x \mid y)}{p(x, y)\, \cdot\, p(x' \mid y)}\right) = 1 $$</p>
+          <p>になります。提案分布の項と事後分布の項がちょうど打ち消し合うためです。だからギブスサンプリングは「棄却のないMH法」とみなせます。</p>
+        </div>
+
+        <div class="box box-intuition">
+          <div class="box-title">直感でつかむ — なぜ打ち消し合うのか</div>
+          <p>完全条件付き分布 \(p(x \mid y) = p(x, y) / p(y)\) は、固定した \(y\) のもとでの \(x\) の正しい分布です。「正しい分布」から提案しているので、わざわざ受理・棄却で補正する必要がありません。だから受理率が1になり、棄却ゼロで効率よく進めるのです。</p>
+        </div>
+
+        <div class="box box-warn">
+          <div class="box-title">つまずき注意 — いつでも使えるわけではない</div>
+          <p>ギブスサンプリングが使えるのは、<strong>すべての完全条件付き分布が分かっていて、そこから簡単にサンプルできるとき</strong>だけです。今回の正規分布のように条件付き分布がきれいな形になる場合は最高に便利です。でも、条件付き分布が複雑で式に書けないときは使えません。そういうときは前回のMH法の出番です。両者は競争相手ではなく、状況で使い分ける道具だと考えてください。</p>
+        </div>
+
+        <h2>理解度チェック</h2>
+
+        <div class="quiz" data-answer="b">
+          <p class="quiz-q">問1: ギブスサンプリングで \(y^{(t+1)}\) を引くとき、条件として使う \(x\) はどれですか?</p>
+          <button class="quiz-option" data-key="a">古い値 \(x^{(t)}\)</button>
+          <button class="quiz-option" data-key="b">たったいま更新した新しい値 \(x^{(t+1)}\)</button>
+          <button class="quiz-option" data-key="c">\(x^{(t)}\) と \(x^{(t+1)}\) の平均</button>
+          <div class="quiz-explain"><p>ギブスサンプリングでは、1つ更新するたびに最新の値を以降のステップに反映します。\(y\) を更新する時点ですでに \(x\) は新しくなっているので、使うのは \(x^{(t+1)}\) です。</p></div>
+        </div>
+
+        <div class="quiz" data-answer="c">
+          <p class="quiz-q">問2: ギブスサンプリングをMH法の特殊形とみなしたとき、その受理率はいくつになりますか?</p>
+          <button class="quiz-option" data-key="a">提案ごとに変わり、0に近いことが多い</button>
+          <button class="quiz-option" data-key="b">ちょうど \(0.5\)</button>
+          <button class="quiz-option" data-key="c">つねに \(1\)(棄却が起きない)</button>
+          <div class="quiz-explain"><p>完全条件付き分布を提案分布に使うと、受理率の式で提案分布の項と事後分布の項が打ち消し合い、受理率は必ず \(1\) になります。だから提案はすべて採用され、棄却が起きません。</p></div>
+        </div>
+
+        <div class="quiz" data-answer="a">
+          <p class="quiz-q">問3: ギブスサンプリングを使うための条件として正しいものはどれですか?</p>
+          <button class="quiz-option" data-key="a">各変数の完全条件付き分布が分かり、そこからサンプルできること</button>
+          <button class="quiz-option" data-key="b">同時分布が正規分布であること</button>
+          <button class="quiz-option" data-key="c">変数がちょうど2つであること</button>
+          <div class="quiz-explain"><p>ギブスサンプリングの前提は、すべての完全条件付き分布が分かっていて簡単にサンプルできることです。正規分布である必要も、変数が2つである必要もありません(変数は何個でも、順番に回せます)。</p></div>
+        </div>
+
+        <h2>演習</h2>
+
+        <div class="box box-practice">
+          <div class="box-title">演習1</div>
+          <p>相関 \(\rho = 0.5\) の二変数標準正規分布をギブスサンプリングします。いまの状態が \((x^{(t)}, y^{(t)}) = (0,\ 4)\) のとき、次に \(x^{(t+1)}\) を引く正規分布の平均と分散を求めなさい。</p>
+          <details class="answer">
+            <summary>解答を見る</summary>
+            <p>\(x \mid y \sim \mathcal{N}(\rho y,\ 1-\rho^2)\) を使います。\(\rho = 0.5\)、\(y^{(t)} = 4\) なので</p>
+            <p>$$ \text{平均} = 0.5 \times 4 = 2, \qquad \text{分散} = 1 - 0.5^2 = 1 - 0.25 = 0.75 $$</p>
+            <p>よって \(x^{(t+1)} \sim \mathcal{N}(2,\ 0.75)\) から引きます。相手の値 \(y=4\) に相関 \(0.5\) を掛けた \(2\) のあたりへ引き寄せられているのが分かります。</p>
+          </details>
+        </div>
+
+        <div class="box box-practice">
+          <div class="box-title">演習2</div>
+          <p>変数が \(x, y, z\) の3つあるとき、ギブスサンプリングの1巡(\(t\) 番目から \(t+1\) 番目への更新)を、それぞれどの完全条件付き分布から引くか順番に書きなさい。</p>
+          <details class="answer">
+            <summary>解答を見る</summary>
+            <p>1つずつ順番に、つねに最新の値を使って更新します。</p>
+            <p>$$ x^{(t+1)} \sim p\!\left(x \mid y^{(t)}, z^{(t)}\right) $$</p>
+            <p>$$ y^{(t+1)} \sim p\!\left(y \mid x^{(t+1)}, z^{(t)}\right) $$</p>
+            <p>$$ z^{(t+1)} \sim p\!\left(z \mid x^{(t+1)}, y^{(t+1)}\right) $$</p>
+            <p>ポイントは、\(y\) を更新する時点で \(x\) はもう新しい \(x^{(t+1)}\) になっていること、\(z\) を更新する時点では \(x\) も \(y\) も新しい値になっていることです。「更新したらすぐ反映」がギブスのルールです。</p>
+          </details>
+        </div>
+
+        <div class="box box-practice">
+          <div class="box-title">演習3</div>
+          <p>相関 \(\rho\) がとても強い(たとえば \(\rho = 0.99\))二変数正規分布をギブスサンプリングすると、サンプルの動きはどうなると予想できますか。条件付き分布の分散 \(1-\rho^2\) に注目して説明しなさい。</p>
+          <details class="answer">
+            <summary>解答を見る</summary>
+            <p>\(\rho = 0.99\) のとき条件付き分散は \(1 - 0.99^2 = 1 - 0.9801 = 0.0199\) と、とても小さくなります。これは「相手を固定したとき、自分が動ける幅がほとんどない」という意味です。</p>
+            <p>図1のように経路は軸に平行な小さな階段になりますが、その一歩一歩がとても短くなります。そのため、分布全体(細長い楕円)を端から端まで動き回るのに非常に多くのステップがかかります。サンプルどうしが似た値になりやすく、効率が落ちるのです。相関が強い問題は、ギブスサンプリングが苦手とする場面のひとつです。</p>
+          </details>
+        </div>
+
+        <h2>まとめ</h2>
+        <ul>
+          <li>ギブスサンプリングは、各変数をその<strong>完全条件付き分布</strong>から順番にサンプルする方法です。</li>
+          <li>変数を1つ更新したら、その新しい値をすぐ以降のステップに反映します。難しい多変数問題を、やさしい1変数問題の繰り返しに分解します。</li>
+          <li>二変数正規分布では条件付き分布がまた正規分布になり \(x \mid y \sim \mathcal{N}(\rho y,\ 1-\rho^2)\)、とても扱いやすい例になります。</li>
+          <li>ギブスは<strong>受理率がつねに1のMH法</strong>とみなせます。提案分布が正しい条件付き分布なので、棄却が起きません。</li>
+          <li>使えるのは<strong>完全条件付き分布が分かるとき</strong>だけ。分からなければMH法を使う、と状況で使い分けます。</li>
+        </ul>
+        <p>これでMCMCの2大手法、MH法とギブスサンプリングがそろいました。次は、サンプリングとは別のアプローチで事後分布を近づける「近似推論」の世界へ進みます。</p>
+
+      </div>
+      <!-- ▲▲▲ レッスン本文ここまで ▲▲▲ -->
+
+      <div class="complete-area">
+        <button class="btn btn-level" id="complete-btn">このレッスンを完了にする</button>
+        <p class="complete-note">進捗はこのブラウザに保存されます</p>
+      </div>
+
+      <!-- 前後ナビ: main.js がカリキュラムから自動生成 -->
+      <nav class="lesson-nav" id="lesson-nav" aria-label="前後のレッスン"></nav>
+
+    </main>
+
+    <!-- ページ内目次: main.js が本文の h2 から自動生成 -->
+    <aside class="toc">
+      <div class="toc-title">このページの内容</div>
+      <nav id="toc"></nav>
+    </aside>
+
+  </div>
+
+  <footer class="site-footer">
+    <p>ベイズの階段 — 中学数学から最前線まで、一段ずつ。</p>
+  </footer>
+
+  <script src="../../assets/js/curriculum.js"></script>
+  <script src="../../assets/js/main.js"></script>
+</body>
+</html>

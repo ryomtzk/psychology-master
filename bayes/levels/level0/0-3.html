@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>0-3 割合・比・パーセント | ベイズの階段</title>
+  <meta name="description" content="確率の計算に必要な割合の感覚を固める">
+  <script>
+    document.documentElement.dataset.theme =
+      localStorage.getItem("bayes-stairs-theme") ||
+      (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Noto+Serif+JP:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../assets/css/main.css">
+
+  <!-- KaTeX: 数式を使うページでは必ずこの3行を入れる -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+          onload="renderMathInElement(document.body, {delimiters: [
+            {left: '$$', right: '$$', display: true},
+            {left: '\\(', right: '\\)', display: false}
+          ]});"></script>
+</head>
+<body data-root="../../" data-level="0" data-lesson-id="0-3">
+
+  <header class="site-header">
+    <button class="sidebar-toggle" id="sidebar-toggle" aria-label="メニュー">☰</button>
+    <a class="brand" href="../../index.html">
+      <span class="brand-mark">階</span>
+      <span>ベイズの階段</span>
+    </a>
+    <div class="header-spacer"></div>
+    <div class="header-progress" id="header-progress"></div>
+    <button class="theme-toggle" id="theme-toggle" aria-label="テーマ切替">🌙</button>
+  </header>
+
+  <div class="layout">
+
+    <!-- サイドバー: main.js がカリキュラムから自動生成 -->
+    <aside class="sidebar"><nav id="sidebar-nav" aria-label="カリキュラム"></nav></aside>
+
+    <main class="lesson">
+
+      <nav class="breadcrumbs" aria-label="パンくず">
+        <a href="../../index.html">ホーム</a><span class="sep">›</span>
+        <a href="index.html">Level 0 確率の直感をつくる</a><span class="sep">›</span>
+        <span>0-3 割合・比・パーセント</span>
+      </nav>
+
+      <header class="lesson-header">
+        <div class="lesson-meta">
+          <span class="level-badge">Level 0</span>
+          <span class="small">レッスン 0-3</span>
+        </div>
+        <h1>割合・比・パーセント</h1>
+
+        <div class="lesson-goals">
+          <h2>このレッスンでできるようになること</h2>
+          <ul>
+            <li>分数・小数・パーセントを自由に往復して変換できる</li>
+            <li>「全体のうち何割」を割合の式で計算できる</li>
+            <li>確率が割合の一種であることを自分の言葉で説明できる</li>
+          </ul>
+          <p class="prereq">前提: <a href="0-1.html">0-1 確率ってなんだろう</a> を読んでいること</p>
+        </div>
+      </header>
+
+      <!-- ▼▼▼ ここからレッスン本文 ▼▼▼ -->
+      <div class="lesson-body">
+
+        <h2>「半分」をいくつもの言い方で</h2>
+        <p>テストが返ってきました。「20問中10問正解」でした。これを友だちに伝えるとき、いろんな言い方ができます。</p>
+        <p>「半分できた」「正解率は5割」「50パーセント」「だいたい0.5くらい」。どれも同じ事実を指しています。言い方がちがうだけです。</p>
+        <p>確率も、じつはこの「同じ事実の言い方ちがい」の仲間です。<span class="term">割合（わりあい）</span>を自由に変換できると、確率の計算がぐっと楽になります。今日はその土台を固めます。</p>
+
+        <div class="box box-intuition">
+          <div class="box-title">直感でつかむ</div>
+          <p>割合とは「全体を1としたときの、注目している部分の大きさ」です。ピザを思い浮かべてください。1枚まるごとが全体（＝1）。そのうち何切れ食べたかが部分です。</p>
+          <p>「半分食べた」はピザ全体の \(0.5\)。これを「100切れに切ったうちの50切れ」と言いかえれば \(50\%\)、「2切れのうち1切れ」と言えば \( \tfrac{1}{2} \)。<strong>全部おなじ量</strong>を、ちがう物差しで測っているだけです。</p>
+        </div>
+
+        <h2>割合の正体は「わり算」</h2>
+        <p>割合は、部分を全体でわった数です。これがすべての出発点になります。</p>
+
+        <div class="box box-def">
+          <div class="box-title">定義 — 割合</div>
+          <p>全体のうち、注目する部分が占める大きさを<span class="term">割合</span>と呼び、次で計算します:
+          $$ \text{割合} = \frac{\text{部分の量}}{\text{全体の量}} $$</p>
+          <p>たとえば20問中10問正解なら、割合は \( \dfrac{10}{20} = 0.5 \) です。</p>
+        </div>
+
+        <p>この \(0.5\) という小数は、そのままでは少しイメージしづらいかもしれません。そこで登場するのが<span class="term">百分率（ひゃくぶんりつ）</span>、いわゆるパーセントです。</p>
+
+        <div class="box box-def">
+          <div class="box-title">定義 — 百分率（パーセント）</div>
+          <p>割合を100倍して、単位「\(\%\)」（パーセント）をつけたものを<span class="term">百分率</span>と呼びます。「全体を100としたとき、いくつ分か」を表します:
+          $$ \text{百分率}(\%) = \text{割合} \times 100 $$</p>
+          <p>割合 \(0.5\) なら、\(0.5 \times 100 = 50\) なので \(50\%\) です。</p>
+        </div>
+
+        <p>日本では「割（わり）」もよく使います。これは割合を10倍したものです。\(0.5\) は「5割」。野球の打率で「3割バッター」と言うのは、打率（ヒットの割合）が \(0.3\) という意味です。</p>
+
+        <h2>分数・小数・パーセントを往復する</h2>
+        <p>3つの表し方は、かけ算・わり算で行き来できます。下の図で全体像をつかみましょう。</p>
+
+        <figure class="figure">
+          <svg viewBox="0 0 460 200" width="460" aria-label="分数・小数・パーセントの相互変換">
+            <!-- 3つのノード -->
+            <rect x="20"  y="80" width="110" height="44" rx="8" fill="none" stroke="var(--level-color)" stroke-width="2.5"/>
+            <text x="75"  y="100" text-anchor="middle" font-size="15" font-weight="700" fill="var(--text)">分数</text>
+            <text x="75"  y="117" text-anchor="middle" font-size="12" fill="var(--text-muted)">1/2</text>
+
+            <rect x="175" y="80" width="110" height="44" rx="8" fill="none" stroke="var(--level-color)" stroke-width="2.5"/>
+            <text x="230" y="100" text-anchor="middle" font-size="15" font-weight="700" fill="var(--text)">小数</text>
+            <text x="230" y="117" text-anchor="middle" font-size="12" fill="var(--text-muted)">0.5</text>
+
+            <rect x="330" y="80" width="110" height="44" rx="8" fill="none" stroke="var(--level-color)" stroke-width="2.5"/>
+            <text x="385" y="100" text-anchor="middle" font-size="15" font-weight="700" fill="var(--text)">パーセント</text>
+            <text x="385" y="117" text-anchor="middle" font-size="12" fill="var(--text-muted)">50%</text>
+
+            <!-- 分数→小数（上向き矢印） -->
+            <path d="M130,92 C150,82 158,82 173,90" fill="none" stroke="var(--level-color)" stroke-width="2"/>
+            <polygon points="173,90 165,87 167,93" fill="var(--level-color)"/>
+            <text x="152" y="74" text-anchor="middle" font-size="11" fill="var(--text-muted)">わり算</text>
+
+            <!-- 小数→分数（下向き矢印） -->
+            <path d="M173,114 C158,122 150,122 132,112" fill="none" stroke="var(--text-muted)" stroke-width="1.6" stroke-dasharray="4 3"/>
+            <polygon points="132,112 140,113 138,107" fill="var(--text-muted)"/>
+            <text x="152" y="140" text-anchor="middle" font-size="11" fill="var(--text-muted)">約分</text>
+
+            <!-- 小数→% -->
+            <path d="M285,92 C305,82 313,82 328,90" fill="none" stroke="var(--level-color)" stroke-width="2"/>
+            <polygon points="328,90 320,87 322,93" fill="var(--level-color)"/>
+            <text x="307" y="74" text-anchor="middle" font-size="11" fill="var(--text-muted)">×100</text>
+
+            <!-- %→小数 -->
+            <path d="M328,114 C313,122 305,122 287,112" fill="none" stroke="var(--text-muted)" stroke-width="1.6" stroke-dasharray="4 3"/>
+            <polygon points="287,112 295,113 293,107" fill="var(--text-muted)"/>
+            <text x="307" y="140" text-anchor="middle" font-size="11" fill="var(--text-muted)">÷100</text>
+
+            <text x="230" y="175" text-anchor="middle" font-size="12" fill="var(--text-muted)">同じ量を、ちがう物差しで表しているだけ</text>
+          </svg>
+          <figcaption>図1: 分数・小数・パーセントの相互変換。実線が「進む」向き、点線が「戻る」向き。</figcaption>
+        </figure>
+
+        <div class="box box-thm">
+          <div class="box-title">変換のルール</div>
+          <ul>
+            <li><strong>分数 → 小数</strong>: 分子を分母でわる。\( \tfrac{3}{4} = 3 \div 4 = 0.75 \)</li>
+            <li><strong>小数 → パーセント</strong>: 100をかけて \(\%\) をつける。\( 0.75 \times 100 = 75\% \)</li>
+            <li><strong>パーセント → 小数</strong>: 100でわる。\( 75\% \div 100 = 0.75 \)</li>
+            <li><strong>パーセント → 分数</strong>: 「\(/100\)」と書いて約分する。\( 75\% = \tfrac{75}{100} = \tfrac{3}{4} \)</li>
+          </ul>
+        </div>
+
+        <div class="box box-warn">
+          <div class="box-title">つまずき注意</div>
+          <p>パーセントを小数に直すとき、\(100\) でわるのを忘れがちです。\(30\%\) は \(30\) ではなく \(0.3\) です。<strong>確率の計算では小数か分数を使う</strong>のが基本なので、まずパーセントを小数へ直す習慣をつけましょう。</p>
+        </div>
+
+        <h2>「全体のうち何割」を求める</h2>
+        <p>割合がわかれば、逆に「部分の量」も計算できます。式を入れかえるだけです。</p>
+
+        <div class="formula">
+          <span class="formula-label">割合と部分・全体の関係</span>
+          $$ \text{部分の量} = \text{全体の量} \times \text{割合} $$
+          <div class="formula-parts">
+            <span class="part"><b>全体の量</b>: もとにする数（クラスの人数など）</span>
+            <span class="part"><b>割合</b>: 小数で表した割合（4割なら 0.4）</span>
+            <span class="part"><b>部分の量</b>: 求めたい人数や個数</span>
+          </div>
+        </div>
+
+        <p>たとえば「40人クラスの \(0.4\)（4割）」は、\(40 \times 0.4 = 16\) 人です。「全体 × 割合」で部分が出る、と覚えておけば困りません。</p>
+
+        <div class="box box-ex">
+          <div class="box-title">例題</div>
+          <p>あるお店のセールで、定価2000円の服が「30%引き」になっています。割引額は何円ですか。また、支払う金額は何円ですか。</p>
+          <p><strong>解</strong>: まず「30%」を小数に直します。\(30 \div 100 = 0.3\) です。</p>
+          <p>割引額は「全体 × 割合」で求められます。全体は定価2000円なので、
+          $$ 2000 \times 0.3 = 600 \text{ 円}。 $$</p>
+          <p>支払う金額は、定価から割引額を引いて \(2000 - 600 = 1400\) 円です。</p>
+          <p>（別解）「30%引き」とは「定価の70%を払う」ことです。\(0.7 \times 2000 = 1400\) 円。同じ答えになりますね。</p>
+        </div>
+
+        <h2>比 — 「2つの量の関係」を表す</h2>
+        <p>割合は「全体に対する部分」でしたが、<span class="term">比（ひ）</span>は「2つ以上の量の大小関係」を表します。「\(a\) 対 \(b\)」を \(a:b\) と書きます。</p>
+
+        <div class="box box-def">
+          <div class="box-title">定義 — 比</div>
+          <p>2つの量 \(a\)、\(b\) の関係を、記号「\(:\)」を使って \(a : b\) と表したものを<span class="term">比</span>と呼びます。「\(a\) 対 \(b\)」と読みます。両方を同じ数でかけたりわったりしても、比の意味は変わりません。</p>
+          <p>例: \(6 : 4\) は、両方を2でわって \(3 : 2\) と同じです。これを比の<span class="term">簡約（かんやく）</span>といいます。</p>
+        </div>
+
+        <p>比と割合はつながっています。赤玉と白玉が \(3 : 2\) で入った袋を考えましょう。全体は \(3 + 2 = 5\) 個分。だから赤玉の割合は \( \tfrac{3}{5} = 0.6 = 60\% \) です。</p>
+        <p>これは <a href="0-1.html">0-1 確率ってなんだろう</a> で見た「同様に確からしい玉から1個引く」状況そのものです。<strong>赤玉を引く確率は \( \tfrac{3}{5} \)</strong>。比から確率がそのまま読み取れます。</p>
+
+        <div class="box box-intuition">
+          <div class="box-title">直感でつかむ — 確率は割合の一種</div>
+          <p>確率は「起こりうる全部のうち、注目する出来事が占める割合」でした。つまり確率も <span class="term">部分 ÷ 全体</span> なのです。</p>
+          <p>サイコロで「偶数が出る確率」は、全6目のうち偶数は3目（2,4,6）。だから \( \tfrac{3}{6} = 0.5 = 50\% \)。割合・小数・パーセントの行き来は、そのまま確率の言いかえになります。</p>
+        </div>
+
+        <div class="formula">
+          <span class="formula-label">確率も「部分 ÷ 全体」</span>
+          $$ \text{確率} = \frac{\text{注目する場合の数}}{\text{全部の場合の数}} $$
+        </div>
+
+        <p>場合の数の数え方は <a href="0-2.html">0-2 場合の数の数え方</a> で練習しました。割合の感覚と組み合わせれば、確率はもう「数えてわるだけ」です。</p>
+
+        <h2>分割表で割合を読む</h2>
+        <p>表にまとめると割合が見やすくなります。ある学校で50人にアンケートをとった結果です。</p>
+
+        <table>
+          <thead>
+            <tr><th></th><th>犬が好き</th><th>犬が好きでない</th><th>合計</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>男子</td><td>12</td><td>8</td><td>20</td></tr>
+            <tr><td>女子</td><td>18</td><td>12</td><td>30</td></tr>
+            <tr><td><strong>合計</strong></td><td>30</td><td>20</td><td>50</td></tr>
+          </tbody>
+        </table>
+
+        <p>「全体のうち犬が好きな人の割合」は \( \tfrac{30}{50} = 0.6 = 60\% \)。「男子のうち犬が好きな人の割合」は \( \tfrac{12}{20} = 0.6 = 60\% \) です。<strong>分母（＝全体）を何にするか</strong>で割合が変わる点に注意しましょう。</p>
+
+        <div class="quiz" data-answer="b">
+          <p class="quiz-q">問: \(0.08\) をパーセントで表すと?</p>
+          <button class="quiz-option" data-key="a">0.08%</button>
+          <button class="quiz-option" data-key="b">8%</button>
+          <button class="quiz-option" data-key="c">80%</button>
+          <div class="quiz-explain"><p>小数をパーセントにするには100をかけます。\(0.08 \times 100 = 8\) なので \(8\%\) です。小数点が2つ右に動く、と覚えると速いです。</p></div>
+        </div>
+
+        <div class="quiz" data-answer="c">
+          <p class="quiz-q">問: 25人のクラスの「4割」は何人?</p>
+          <button class="quiz-option" data-key="a">4人</button>
+          <button class="quiz-option" data-key="b">6.25人</button>
+          <button class="quiz-option" data-key="c">10人</button>
+          <div class="quiz-explain"><p>「4割」は割合 \(0.4\) のことです。部分 ＝ 全体 × 割合 なので、\(25 \times 0.4 = 10\) 人。「4人」と答えてしまうのは、割合をかけ忘れた典型的なミスです。</p></div>
+        </div>
+
+        <div class="quiz" data-answer="a">
+          <p class="quiz-q">問: 赤玉と白玉が \(2 : 3\) で入った袋から1個引くとき、赤玉が出る確率は?</p>
+          <button class="quiz-option" data-key="a">2/5</button>
+          <button class="quiz-option" data-key="b">2/3</button>
+          <button class="quiz-option" data-key="c">3/5</button>
+          <div class="quiz-explain"><p>比 \(2:3\) の全体は \(2 + 3 = 5\) 個分。赤玉はそのうち2個分なので、赤玉を引く確率は \( \tfrac{2}{5} \) です。\( \tfrac{2}{3} \) は「赤玉の数 ÷ 白玉の数」で、確率ではありません。</p></div>
+        </div>
+
+        <div class="box box-practice">
+          <div class="box-title">演習1</div>
+          <p>次の値を、指示された形に直しなさい。</p>
+          <ul>
+            <li>(1) \( \tfrac{3}{5} \) を小数とパーセントに</li>
+            <li>(2) \(0.125\) をパーセントに</li>
+            <li>(3) \(40\%\) を小数と、約分した分数に</li>
+          </ul>
+          <details class="answer">
+            <summary>解答を見る</summary>
+            <p>(1) \(3 \div 5 = 0.6\)。\(0.6 \times 100 = 60\%\)。よって \(0.6\)、\(60\%\)。</p>
+            <p>(2) \(0.125 \times 100 = 12.5\)。よって \(12.5\%\)。</p>
+            <p>(3) \(40 \div 100 = 0.4\)。分数は \( \tfrac{40}{100} \) を20で約分して \( \tfrac{2}{5} \)。よって \(0.4\)、\( \tfrac{2}{5} \)。</p>
+          </details>
+        </div>
+
+        <div class="box box-practice">
+          <div class="box-title">演習2</div>
+          <p>定価1500円のお弁当が「2割引き」で売られています。支払う金額は何円ですか。</p>
+          <details class="answer">
+            <summary>解答を見る</summary>
+            <p>「2割引き」は「定価の8割を払う」ことです。8割は割合 \(0.8\)。</p>
+            <p>\(1500 \times 0.8 = 1200\) 円。</p>
+            <p>（割引額から求めるなら、\(1500 \times 0.2 = 300\) 円引き。\(1500 - 300 = 1200\) 円。同じ答えです。）</p>
+          </details>
+        </div>
+
+        <div class="box box-practice">
+          <div class="box-title">演習3</div>
+          <p>袋の中に赤玉、青玉、黄玉が \(4 : 3 : 1\) の比で入っています。1個取り出すとき、青玉が出る確率を分数と小数で答えなさい。</p>
+          <details class="answer">
+            <summary>解答を見る</summary>
+            <p>比の全体は \(4 + 3 + 1 = 8\) 個分。青玉はそのうち3個分です。</p>
+            <p>よって青玉を引く確率は \( \tfrac{3}{8} \)。小数に直すと \(3 \div 8 = 0.375\)。</p>
+          </details>
+        </div>
+
+        <div class="box box-practice">
+          <div class="box-title">演習4</div>
+          <p>上の「犬が好きか」の分割表（50人）を使います。「女子のうち、犬が好きでない人」の割合をパーセントで求めなさい。</p>
+          <details class="answer">
+            <summary>解答を見る</summary>
+            <p>分母は「女子」なので30人。そのうち犬が好きでない女子は12人です。</p>
+            <p>割合は \( \tfrac{12}{30} = 0.4\)。パーセントにして \(0.4 \times 100 = 40\%\)。</p>
+            <p>ポイントは、分母を「全体50人」ではなく「女子30人」にすること。何を全体とみなすかで答えが変わります。</p>
+          </details>
+        </div>
+
+        <h2>まとめ</h2>
+        <ul>
+          <li>割合とは「全体を1としたときの、部分の大きさ」。式は 割合 ＝ 部分 ÷ 全体。</li>
+          <li>分数・小数・パーセントは同じ量の言いかえ。小数 ×100 で％、％ ÷100 で小数。</li>
+          <li>「全体のうち何割」は、部分 ＝ 全体 × 割合 で求める。割引も同じ式で解ける。</li>
+          <li>比 \(a:b\) は2つの量の関係。全体は \(a+b\) で、各部分の割合（＝確率）が読み取れる。</li>
+          <li>確率も「部分 ÷ 全体」の割合の一種。割合の往復ができれば確率の計算もできる。</li>
+        </ul>
+        <p>これで「数える」と「わって割合にする」の両方がそろいました。次のレッスンでは、こうした割合や確率を<strong>表で整理</strong>して見通しよく扱う方法へ進みます。</p>
+
+      </div>
+      <!-- ▲▲▲ レッスン本文ここまで ▲▲▲ -->
+
+      <div class="complete-area">
+        <button class="btn btn-level" id="complete-btn">このレッスンを完了にする</button>
+        <p class="complete-note">進捗はこのブラウザに保存されます</p>
+      </div>
+
+      <!-- 前後ナビ: main.js がカリキュラムから自動生成 -->
+      <nav class="lesson-nav" id="lesson-nav" aria-label="前後のレッスン"></nav>
+
+    </main>
+
+    <!-- ページ内目次: main.js が本文の h2 から自動生成 -->
+    <aside class="toc">
+      <div class="toc-title">このページの内容</div>
+      <nav id="toc"></nav>
+    </aside>
+
+  </div>
+
+  <footer class="site-footer">
+    <p>ベイズの階段 — 中学数学から最前線まで、一段ずつ。</p>
+  </footer>
+
+  <script src="../../assets/js/curriculum.js"></script>
+  <script src="../../assets/js/main.js"></script>
+</body>
+</html>

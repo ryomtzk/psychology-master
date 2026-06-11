@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>2-6 ベータ分布 — 確率の確率 | ベイズの階段</title>
+  <meta name="description" content="「コインの表が出る確率」自体を分布で表す">
+  <script>
+    document.documentElement.dataset.theme =
+      localStorage.getItem("bayes-stairs-theme") ||
+      (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Noto+Serif+JP:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../assets/css/main.css">
+
+  <!-- KaTeX: 数式を使うページでは必ずこの3行を入れる -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+          onload="renderMathInElement(document.body, {delimiters: [
+            {left: '$$', right: '$$', display: true},
+            {left: '\\(', right: '\\)', display: false}
+          ]});"></script>
+</head>
+<body data-root="../../" data-level="2" data-lesson-id="2-6">
+
+  <header class="site-header">
+    <button class="sidebar-toggle" id="sidebar-toggle" aria-label="メニュー">☰</button>
+    <a class="brand" href="../../index.html">
+      <span class="brand-mark">階</span>
+      <span>ベイズの階段</span>
+    </a>
+    <div class="header-spacer"></div>
+    <div class="header-progress" id="header-progress"></div>
+    <button class="theme-toggle" id="theme-toggle" aria-label="テーマ切替">🌙</button>
+  </header>
+
+  <div class="layout">
+
+    <!-- サイドバー: main.js がカリキュラムから自動生成 -->
+    <aside class="sidebar"><nav id="sidebar-nav" aria-label="カリキュラム"></nav></aside>
+
+    <main class="lesson">
+
+      <nav class="breadcrumbs" aria-label="パンくず">
+        <a href="../../index.html">ホーム</a><span class="sep">›</span>
+        <a href="index.html">Level 2 確率分布と尤度</a><span class="sep">›</span>
+        <span>2-6 ベータ分布 — 確率の確率</span>
+      </nav>
+
+      <header class="lesson-header">
+        <div class="lesson-meta">
+          <span class="level-badge">Level 2</span>
+          <span class="small">レッスン 2-6</span>
+        </div>
+        <h1>ベータ分布 — 確率の確率</h1>
+
+        <div class="lesson-goals">
+          <h2>このレッスンでできるようになること</h2>
+          <ul>
+            <li>ベータ分布が「\(0\) から \(1\) までの割合そのもの」を表す分布だと説明できる</li>
+            <li>\( \alpha \) と \( \beta \) を変えると、山の形がどう動くかを読み取れる</li>
+            <li>ベータ分布の平均を公式 \( \alpha/(\alpha+\beta) \) で計算できる</li>
+          </ul>
+          <p class="prereq">前提: <a href="2-3.html">2-3 連続型の分布 — 一様分布と正規分布</a> と <a href="2-4.html">2-4 期待値・分散・標準偏差</a> を読んでいること</p>
+        </div>
+      </header>
+
+      <div class="lesson-body">
+
+        <h2>「確率がいくつか」を、まだ知らないとき</h2>
+        <p>1枚のコインがあります。表が出る確率は、いくつでしょうか。</p>
+        <p>ふつうのコインなら「だいたい \(0.5\)」と答えたくなります。でも、もしそれが手作りのいびつなコインだったら? 表が出やすいかもしれないし、裏が出やすいかもしれません。確率そのものが、まだわからない数なのです。</p>
+        <p>これまでは「表が出る確率は \(0.5\)」のように、確率を<strong>ひとつに決めて</strong>から話を進めてきました。ここでは発想を変えます。「表が出る確率」という数自体を、まだ定まっていない量とみなしてみましょう。</p>
+        <p>定まっていない数を表すには、<a href="2-1.html">2-1</a> でやったように分布を使えばいいですね。つまり「確率の確率分布」を考えるのです。その主役が、今回学ぶ<span class="term">ベータ分布</span>（べーたぶんぷ）です。</p>
+
+        <div class="box box-intuition">
+          <div class="box-title">直感でつかむ</div>
+          <p>アンケートで「賛成の人の割合」を当てる場面を想像してください。割合は \(0\%\) から \(100\%\) のどこか、つまり \(0\) から \(1\) のあいだの数です。</p>
+          <p>まだデータを見ていないと、「たぶん半々くらいかな」「いや、かなり賛成が多そう」など、いろいろな見立てがありえます。この<strong>「割合がこのあたりだろう」という見立ての強さ</strong>を、なめらかな山の形で表したものがベータ分布です。山の高いところほど「ありそうな割合」、低いところほど「なさそうな割合」を意味します。</p>
+        </div>
+
+        <h2>横軸が「割合」になっている分布</h2>
+        <p>これまで見てきた分布の横軸は、サイコロの目だったり、人の身長だったりしました。ベータ分布のいちばんの特徴は、横軸そのものが「割合」だということです。</p>
+
+        <div class="box box-def">
+          <div class="box-title">定義 — ベータ分布</div>
+          <p><span class="term">ベータ分布</span>とは、\(0\) から \(1\) までの値だけを取る連続型の確率分布です。\( \alpha \)（アルファ）と \( \beta \)（ベータ）という2つの正の数で形が決まり、\( \mathrm{Beta}(\alpha, \beta) \) と書きます。</p>
+          <p>横軸は \(0\) から \(1\) までの<strong>割合</strong>を表します。たとえば「コインの表が出る確率」「賛成の人の割合」「打者の打率」など、\(0\) と \(1\) のあいだに収まる量にぴったりです。</p>
+        </div>
+
+        <p>連続型の分布なので、<a href="2-3.html">2-3</a> で学んだ正規分布や一様分布の仲間です。山の高さそのものは確率ではなく、<strong>曲線とよこ軸ではさまれた面積</strong>が「その範囲に入る確率」を表します。そして全体の面積は、いつも \(1\) です。</p>
+
+        <div class="box box-warn">
+          <div class="box-title">つまずき注意</div>
+          <p>横軸の数を「回数」と勘違いしないでください。ベータ分布の横軸は \(0.3\) や \(0.72\) といった<strong>割合（確率の値）</strong>です。「表が \(3\) 回出た」ではなく「表が出る確率が \(0.3\) らしい」を表す、という点に注意しましょう。</p>
+        </div>
+
+        <h2>α と β で山の形が変わる</h2>
+        <p>ベータ分布のおもしろさは、\( \alpha \) と \( \beta \) を変えるだけで、山の形が自在に変わるところです。ざっくり言うと、こうです。</p>
+        <ul>
+          <li>\( \alpha \) を大きくすると、山は<strong>右</strong>（割合が大きいほう）に寄ります。</li>
+          <li>\( \beta \) を大きくすると、山は<strong>左</strong>（割合が小さいほう）に寄ります。</li>
+          <li>\( \alpha \) と \( \beta \) が同じなら、山は左右対称で、まん中（\(0.5\)）にできます。</li>
+        </ul>
+        <p>覚え方はかんたんです。\( \alpha \) は「成功（たとえば表）の票」、\( \beta \) は「失敗（たとえば裏）の票」だと思ってください。票が多いほうに山が引っぱられます。代表的な4つの形を並べてみましょう。</p>
+
+        <figure class="figure">
+          <svg viewBox="0 0 480 260" width="480" aria-label="さまざまなパラメータのベータ分布の形">
+            <!-- 軸 -->
+            <line x1="40" y1="210" x2="450" y2="210" stroke="var(--border)" stroke-width="2"/>
+            <line x1="40" y1="20" x2="40" y2="210" stroke="var(--border)" stroke-width="2"/>
+            <!-- 横軸の目盛り 0, 0.5, 1 -->
+            <line x1="40"  y1="210" x2="40"  y2="216" stroke="var(--border)" stroke-width="2"/>
+            <line x1="245" y1="210" x2="245" y2="216" stroke="var(--border)" stroke-width="1"/>
+            <line x1="450" y1="210" x2="450" y2="216" stroke="var(--border)" stroke-width="2"/>
+            <text x="40"  y="230" text-anchor="middle" font-size="11" fill="var(--text-muted)">0</text>
+            <text x="245" y="230" text-anchor="middle" font-size="11" fill="var(--text-muted)">0.5</text>
+            <text x="450" y="230" text-anchor="middle" font-size="11" fill="var(--text-muted)">1</text>
+            <text x="245" y="250" text-anchor="middle" font-size="11" fill="var(--text-muted)">割合（表が出る確率）</text>
+
+            <!-- Beta(1,1): 一様（平らな線） -->
+            <line x1="40" y1="150" x2="450" y2="150" stroke="var(--text-muted)" stroke-width="2.5" stroke-dasharray="6 4"/>
+            <text x="120" y="142" text-anchor="middle" font-size="11" fill="var(--text-muted)">Beta(1,1) 平ら</text>
+
+            <!-- Beta(2,2): 左右対称の山 (頂点 x=0.5) -->
+            <path d="M40,210 Q245,40 450,210" fill="none" stroke="var(--level-color)" stroke-width="2.5"/>
+            <text x="245" y="58" text-anchor="middle" font-size="11" fill="var(--level-color)">Beta(2,2)</text>
+
+            <!-- Beta(8,4): 右寄りの山 (頂点 x≈0.7 → 約327px) -->
+            <path d="M40,210 C200,205 290,55 327,55 C370,55 420,150 450,200" fill="none" stroke="var(--level-color)" stroke-width="2.5" stroke-dasharray="2 3"/>
+            <text x="360" y="48" text-anchor="middle" font-size="11" fill="var(--level-color)">Beta(8,4) 右寄り</text>
+
+            <!-- Beta(2,5): 左寄りの山 (頂点 x≈0.25 → 約143px) -->
+            <path d="M40,205 C90,140 120,70 143,70 C200,70 320,200 450,210" fill="none" stroke="var(--level-color)" stroke-width="1.6"/>
+            <text x="120" y="62" text-anchor="middle" font-size="11" fill="var(--level-color)">Beta(2,5) 左寄り</text>
+          </svg>
+          <figcaption>図1: 同じ \(0\)〜\(1\) の横軸の上に、4種類のベータ分布を重ねたもの。\( \mathrm{Beta}(1,1) \) は平ら、\( \mathrm{Beta}(2,2) \) は左右対称、\( \mathrm{Beta}(8,4) \) は右寄り、\( \mathrm{Beta}(2,5) \) は左寄りです。\( \alpha \) と \( \beta \) の大小で山の位置と高さが変わります。</figcaption>
+        </figure>
+
+        <p>図の \( \mathrm{Beta}(1,1) \) に注目してください。平らな直線になっていますね。これは <a href="2-3.html">2-3</a> で学んだ \(0\) から \(1\) の<strong>一様分布</strong>とまったく同じものです。「どの割合も同じくらいありそう」という、いちばん何も決めつけていない状態を表します。</p>
+
+        <div class="box box-intuition">
+          <div class="box-title">直感でつかむ</div>
+          <p>票の例えをもう一度。\( \mathrm{Beta}(8,4) \) は「表の票が \(8\)、裏の票が \(4\)」のイメージです。表のほうが多いので、山は右（割合が大きいほう）に寄ります。逆に \( \mathrm{Beta}(2,5) \) は裏の票が多いので、山は左に寄ります。票の総数（\( \alpha + \beta \)）が増えるほど山は細くとがり、「だいたいこのあたり」という自信が強くなります。</p>
+        </div>
+
+        <h2>山のてっぺんではなく「平均」をつかむ</h2>
+        <p>分布をひと言で代表する数といえば、<a href="2-4.html">2-4</a> で学んだ<span class="term">平均</span>（期待値）でしたね。ベータ分布の平均は、とてもきれいな形をしています。</p>
+
+        <div class="box box-thm">
+          <div class="box-title">公式 — ベータ分布の平均</div>
+          <p>\( \mathrm{Beta}(\alpha, \beta) \) にしたがう割合の平均は、次で求められます。</p>
+          $$ \text{平均} = \frac{\alpha}{\alpha + \beta} $$
+          <p>右辺は『\( \alpha \) を、\( \alpha \) と \( \beta \) の合計で割る』と読みます。これは、票の例えそのままです。「成功の票」を「全部の票」で割った割合になっています。</p>
+        </div>
+
+        <p>たとえば \( \mathrm{Beta}(8,4) \) なら、平均は \( \dfrac{8}{8+4} = \dfrac{8}{12} \approx 0.67 \) です。図1で山が右寄りだったことと、ちゃんと合っていますね。\( \mathrm{Beta}(2,2) \) なら \( \dfrac{2}{2+2} = \dfrac{1}{2} \) で、ぴったりまん中になります。</p>
+
+        <div class="box box-warn">
+          <div class="box-title">つまずき注意</div>
+          <p>平均と「山のてっぺん（いちばん高い割合）」は、いつも同じとはかぎりません。山が左右対称なときは一致しますが、左右にかたよった山ではズレます。公式 \( \alpha/(\alpha+\beta) \) で求まるのは<strong>平均</strong>のほうです。まずはこちらを使えるようにしておきましょう。</p>
+        </div>
+
+        <div class="box box-ex">
+          <div class="box-title">例題</div>
+          <p>あるアプリの「広告をタップする人の割合」を、\( \mathrm{Beta}(3, 9) \) というベータ分布で表すことにしました。(1) この割合の平均を求めましょう。(2) 山は \(0.5\) より左寄りか、右寄りか答えましょう。</p>
+          <p><strong>解</strong>: (1) 平均の公式に \( \alpha = 3 \)、\( \beta = 9 \) を入れます。</p>
+          $$ \text{平均} = \frac{3}{3 + 9} = \frac{3}{12} = 0.25 $$
+          <p>平均は \(0.25\)、つまり「だいたい \(25\%\) くらいの人がタップしそう」という見立てです。</p>
+          <p>(2) \( \beta = 9 \) のほうが \( \alpha = 3 \) より大きいので、山は<strong>左寄り</strong>（割合が小さいほう）になります。平均が \(0.25\) で \(0.5\) より小さいこととも合っています。</p>
+        </div>
+
+        <h2>これがベイズの「事前分布」になる</h2>
+        <p>さて、ここまでで「割合そのものの分布」が手に入りました。これがなぜ大事なのでしょうか。</p>
+        <p>思い出してください。<a href="../level1/1-4.html">1-4</a> で、データを見る<strong>前</strong>の信念を<span class="term">事前分布</span>（じぜんぶんぷ）と呼びました。コインの表が出る確率について「データを見る前は、どの割合もありそう」と考えるなら、その気持ちはまさに \( \mathrm{Beta}(1,1) \)（平らな分布）で書けます。</p>
+        <p>「ふつうのコインっぽいから、たぶん \(0.5\) あたり」と思うなら、\( \mathrm{Beta}(10,10) \) のような、まん中に寄った山を事前分布にすればよいのです。ベータ分布は、こうした<strong>「割合についての事前の見立て」を表すのにぴったりの道具</strong>なのです。</p>
+
+        <div class="box box-intuition">
+          <div class="box-title">直感でつかむ</div>
+          <p>事前分布は「データを見る前の地図」、データはそこに加わる「新しい手がかり」でした。ベータ分布を事前分布にしておくと、コイン投げのようなデータが入ってきたとき、見立てをきれいに更新できます。その具体的なやり方は、次のレベルでじっくり扱います。いまは「割合を分布で表せる道具を手に入れた」と思っておけば十分です。</p>
+        </div>
+
+        <h2>理解度チェック</h2>
+
+        <div class="quiz" data-answer="b">
+          <p class="quiz-q">問1: ベータ分布の横軸は、何を表していますか?</p>
+          <button class="quiz-option" data-key="a">サイコロを振った回数</button>
+          <button class="quiz-option" data-key="b">\(0\) から \(1\) までの割合（確率の値）</button>
+          <button class="quiz-option" data-key="c">人の身長のように、いくらでも大きくなる量</button>
+          <div class="quiz-explain"><p>ベータ分布の横軸は \(0\) から \(1\) までの割合です。「表が出る確率」「賛成の割合」など、\(0\) と \(1\) のあいだに収まる量を表すのに使います。回数（整数）や身長（青天井の量）ではありません。</p></div>
+        </div>
+
+        <div class="quiz" data-answer="c">
+          <p class="quiz-q">問2: \( \mathrm{Beta}(6, 2) \) の平均はいくつですか?</p>
+          <button class="quiz-option" data-key="a">2</button>
+          <button class="quiz-option" data-key="b">0.25</button>
+          <button class="quiz-option" data-key="c">0.75</button>
+          <div class="quiz-explain"><p>平均は \( \dfrac{\alpha}{\alpha+\beta} = \dfrac{6}{6+2} = \dfrac{6}{8} = 0.75 \) です。\( \alpha \) のほうが大きいので山は右寄りになり、平均も \(0.5\) より大きくなります。</p></div>
+        </div>
+
+        <div class="quiz" data-answer="a">
+          <p class="quiz-q">問3: \( \mathrm{Beta}(1, 1) \) は、どんな分布と同じものですか?</p>
+          <button class="quiz-option" data-key="a">\(0\) から \(1\) の一様分布（どの割合も同じくらいありそう）</button>
+          <button class="quiz-option" data-key="b">まん中がとがった正規分布</button>
+          <button class="quiz-option" data-key="c">右にずっと伸びていく分布</button>
+          <div class="quiz-explain"><p>\( \mathrm{Beta}(1,1) \) は平らな直線になり、\(0\) から \(1\) の一様分布と同じです。「どの割合もありそうで、特にどことも決めつけていない」状態を表します。事前分布として使うと、いちばん中立な出発点になります。</p></div>
+        </div>
+
+        <h2>演習</h2>
+
+        <div class="box box-practice">
+          <div class="box-title">演習1</div>
+          <p>\( \mathrm{Beta}(4, 4) \) の平均を求めなさい。また、山は \(0.5\) より左寄りか、右寄りか、ちょうどまん中か答えなさい。</p>
+          <details class="answer">
+            <summary>解答を見る</summary>
+            <p>平均は \( \dfrac{4}{4+4} = \dfrac{4}{8} = 0.5 \) です。\( \alpha \) と \( \beta \) が同じ値なので、山は左右対称になり、ちょうど<strong>まん中（\(0.5\)）</strong>にできます。</p>
+          </details>
+        </div>
+
+        <div class="box box-practice">
+          <div class="box-title">演習2</div>
+          <p>2つのベータ分布 \( \mathrm{Beta}(9, 3) \) と \( \mathrm{Beta}(3, 9) \) があります。それぞれの平均を求め、どちらの山が右寄りか答えなさい。</p>
+          <details class="answer">
+            <summary>解答を見る</summary>
+            <p>\( \mathrm{Beta}(9,3) \) の平均は \( \dfrac{9}{9+3} = \dfrac{9}{12} = 0.75 \)。\( \mathrm{Beta}(3,9) \) の平均は \( \dfrac{3}{3+9} = \dfrac{3}{12} = 0.25 \) です。平均が大きいほうが右寄りなので、<strong>\( \mathrm{Beta}(9,3) \) の山が右寄り</strong>です。\( \alpha \) と \( \beta \) を入れかえると、山が左右にひっくり返ることがわかります。</p>
+          </details>
+        </div>
+
+        <div class="box box-practice">
+          <div class="box-title">演習3</div>
+          <p>「このサイトのリンクをクリックする人の割合」について、データを見る前は「どの割合もありそうで、特に見当がつかない」と考えています。この気持ちを表すのに、いちばん合うベータ分布はどれですか。\( \mathrm{Beta}(1,1) \)、\( \mathrm{Beta}(10,1) \)、\( \mathrm{Beta}(1,10) \) から選びなさい。</p>
+          <details class="answer">
+            <summary>解答を見る</summary>
+            <p>\( \mathrm{Beta}(1,1) \) です。これは平らな分布（一様分布）で、\(0\) から \(1\) のどの割合も同じくらいありそう、という中立な見立てを表します。\( \mathrm{Beta}(10,1) \) は強く右寄り、\( \mathrm{Beta}(1,10) \) は強く左寄りなので、「見当がつかない」気持ちには合いません。</p>
+          </details>
+        </div>
+
+        <div class="box box-practice">
+          <div class="box-title">演習4</div>
+          <p>\( \mathrm{Beta}(\alpha, \beta) \) の平均がちょうど \(0.5\) になるのは、\( \alpha \) と \( \beta \) のあいだにどんな関係があるときですか。理由もそえて答えなさい。</p>
+          <details class="answer">
+            <summary>解答を見る</summary>
+            <p>\( \alpha = \beta \)（2つが等しい）ときです。平均の公式は \( \dfrac{\alpha}{\alpha+\beta} \) なので、これが \(0.5 = \dfrac{1}{2}\) になるには、分子 \( \alpha \) が分母 \( \alpha+\beta \) のちょうど半分であればよく、それは \( \alpha = \beta \) と同じことです。たとえば \( \mathrm{Beta}(2,2) \) も \( \mathrm{Beta}(7,7) \) も、平均は \(0.5\) になります。</p>
+          </details>
+        </div>
+
+        <h2>まとめ</h2>
+        <ul>
+          <li><span class="term">ベータ分布</span> \( \mathrm{Beta}(\alpha, \beta) \) は、\(0\) から \(1\) までの<strong>割合そのもの</strong>を表す連続型の分布です。横軸が「割合（確率の値）」になっているのが特徴です。</li>
+          <li>\( \alpha \) を大きくすると山は右へ、\( \beta \) を大きくすると山は左へ寄ります。\( \alpha \) は「成功の票」、\( \beta \) は「失敗の票」と覚えると見通しがよくなります。</li>
+          <li>平均は \( \dfrac{\alpha}{\alpha + \beta} \)。「成功の票 ÷ 全部の票」という、わかりやすい形です。</li>
+          <li>\( \mathrm{Beta}(1,1) \) は \(0\) から \(1\) の一様分布と同じで、いちばん中立な「何も決めつけていない」状態を表します。</li>
+          <li>ベータ分布は、割合についての<span class="term">事前分布</span>を書くのにぴったりの道具です。</li>
+        </ul>
+        <p>「確率を、まだ定まらない数として分布で表す」。この見方は、ベイズ推定の入り口にまっすぐつながります。つぎのレベルでは、この事前分布にコイン投げのデータを加えて、見立てを更新していく方法を学びます。確率の確率を手にした今、いよいよ本格的なベイズ推定へ一歩を踏み出しましょう。</p>
+
+      </div>
+
+      <div class="complete-area">
+        <button class="btn btn-level" id="complete-btn">このレッスンを完了にする</button>
+        <p class="complete-note">進捗はこのブラウザに保存されます</p>
+      </div>
+
+      <!-- 前後ナビ: main.js がカリキュラムから自動生成 -->
+      <nav class="lesson-nav" id="lesson-nav" aria-label="前後のレッスン"></nav>
+
+    </main>
+
+    <!-- ページ内目次: main.js が本文の h2 から自動生成 -->
+    <aside class="toc">
+      <div class="toc-title">このページの内容</div>
+      <nav id="toc"></nav>
+    </aside>
+
+  </div>
+
+  <footer class="site-footer">
+    <p>ベイズの階段 — 中学数学から最前線まで、一段ずつ。</p>
+  </footer>
+
+  <script src="../../assets/js/curriculum.js"></script>
+  <script src="../../assets/js/main.js"></script>
+</body>
+</html>

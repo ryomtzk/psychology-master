@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>Level 5 実践ベイズモデリング | ベイズの階段</title>
+  <meta name="description" content="PyMCを使い、現実のデータ分析にベイズを適用する">
+  <script>
+    document.documentElement.dataset.theme =
+      localStorage.getItem("bayes-stairs-theme") ||
+      (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Noto+Serif+JP:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../assets/css/main.css">
+</head>
+<body data-root="../../" data-level="5">
+
+  <header class="site-header">
+    <button class="sidebar-toggle" id="sidebar-toggle" aria-label="メニュー">☰</button>
+    <a class="brand" href="../../index.html">
+      <span class="brand-mark">階</span>
+      <span>ベイズの階段</span>
+    </a>
+    <div class="header-spacer"></div>
+    <div class="header-progress" id="header-progress"></div>
+    <button class="theme-toggle" id="theme-toggle" aria-label="テーマ切替">🌙</button>
+  </header>
+
+  <div class="layout">
+
+    <aside class="sidebar"><nav id="sidebar-nav" aria-label="カリキュラム"></nav></aside>
+
+    <main class="lesson">
+
+      <nav class="breadcrumbs" aria-label="パンくず">
+        <a href="../../index.html">ホーム</a><span class="sep">›</span>
+        <span>Level 5 実践ベイズモデリング</span>
+      </nav>
+
+      <header class="lesson-header">
+        <div class="lesson-meta">
+          <span class="level-badge">Level 5</span>
+        </div>
+        <h1>実践ベイズモデリング</h1>
+        <p class="lead">PyMCを使い、現実のデータ分析にベイズを適用する</p>
+      </header>
+
+      <div class="lesson-body">
+        <p>このレベルでは、確率的プログラミングライブラリ PyMC を道具に、紙の上の計算からコードによる実践へと踏み出します。線形回帰やロジスティック回帰といったおなじみのモデルをベイズの枠組みで組み直し、推定結果を一つの数値ではなく分布として読み解けるようになります。さらに階層モデルや状態空間モデル、ガウス過程まで扱い、複雑な現実のデータに立ち向かう力を養います。最後にはモデルを組んで検証し、必要なら作り直すという一連のベイズワークフローを、自分の手で回せるようになることを目指します。</p>
+        <p class="muted">Level 4 を終えていることが前提です。Python の基礎があると理解が深まります。</p>
+
+        <h2>レッスン一覧</h2>
+        <!-- main.js が data-level を見て自動生成 -->
+        <ul class="lesson-list" id="lesson-list"></ul>
+      </div>
+
+    </main>
+
+    <aside class="toc"></aside>
+
+  </div>
+
+  <footer class="site-footer">
+    <p>ベイズの階段 — 中学数学から最前線まで、一段ずつ。</p>
+  </footer>
+
+  <script src="../../assets/js/curriculum.js"></script>
+  <script src="../../assets/js/main.js"></script>
+</body>
+</html>

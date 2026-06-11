@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>1-6 モンティ・ホール問題と迷惑メールフィルタ | ベイズの階段</title>
+  <meta name="description" content="有名問題と実用例でベイズの定理を使い倒す">
+  <script>
+    document.documentElement.dataset.theme =
+      localStorage.getItem("bayes-stairs-theme") ||
+      (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Noto+Serif+JP:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../assets/css/main.css">
+
+  <!-- KaTeX: 数式を使うページでは必ずこの3行を入れる -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+          onload="renderMathInElement(document.body, {delimiters: [
+            {left: '$$', right: '$$', display: true},
+            {left: '\\(', right: '\\)', display: false}
+          ]});"></script>
+</head>
+<body data-root="../../" data-level="1" data-lesson-id="1-6">
+
+  <header class="site-header">
+    <button class="sidebar-toggle" id="sidebar-toggle" aria-label="メニュー">☰</button>
+    <a class="brand" href="../../index.html">
+      <span class="brand-mark">階</span>
+      <span>ベイズの階段</span>
+    </a>
+    <div class="header-spacer"></div>
+    <div class="header-progress" id="header-progress"></div>
+    <button class="theme-toggle" id="theme-toggle" aria-label="テーマ切替">🌙</button>
+  </header>
+
+  <div class="layout">
+
+    <!-- サイドバー: main.js がカリキュラムから自動生成 -->
+    <aside class="sidebar"><nav id="sidebar-nav" aria-label="カリキュラム"></nav></aside>
+
+    <main class="lesson">
+
+      <nav class="breadcrumbs" aria-label="パンくず">
+        <a href="../../index.html">ホーム</a><span class="sep">›</span>
+        <a href="index.html">Level 1 条件付き確率とベイズの定理</a><span class="sep">›</span>
+        <span>1-6 モンティ・ホール問題と迷惑メールフィルタ</span>
+      </nav>
+
+      <header class="lesson-header">
+        <div class="lesson-meta">
+          <span class="level-badge">Level 1</span>
+          <span class="small">レッスン 1-6</span>
+        </div>
+        <h1>モンティ・ホール問題と迷惑メールフィルタ</h1>
+
+        <div class="lesson-goals">
+          <h2>このレッスンでできるようになること</h2>
+          <ul>
+            <li>モンティ・ホール問題をベイズの定理で解き、扉を変えるべき理由を説明できる</li>
+            <li>迷惑メールフィルタが単語の尤度から事後確率を計算するしくみを説明できる</li>
+            <li>身近な問題を「仮説・データ・尤度」に翻訳して、定理を道具として使える</li>
+          </ul>
+          <p class="prereq">前提: <a href="1-3.html">1-3 ベイズの定理の導出</a> と <a href="1-4.html">1-4 事前確率・尤度・事後確率</a> を読んでいること</p>
+        </div>
+      </header>
+
+      <!-- ▼▼▼ ここからレッスン本文 ▼▼▼ -->
+      <div class="lesson-body">
+
+        <h2>道具を手に、有名問題へ</h2>
+        <p>ここまでで、ベイズの定理という道具が手に入りました。前回（<a href="1-5.html">1-5</a>）は検査の問題で「直感がだまされる」体験をしましたね。</p>
+        <p>今回はその道具を、もっと使い倒します。テレビ番組で生まれた<span class="term">モンティ・ホール問題</span>と、あなたのメールボックスを守る<span class="term">迷惑メールフィルタ</span>。一見まったく別物ですが、どちらも同じ式で解けます。</p>
+        <p>新しい理論は出てきません。すでに知っている定理を、ちがう服を着た問題に当てはめる練習回です。気楽にいきましょう。</p>
+
+        <h2>モンティ・ホール問題</h2>
+        <p>アメリカのクイズ番組で、こんなゲームがありました。司会者の名前からモンティ・ホール問題と呼ばれています。</p>
+        <ul>
+          <li>3つの扉があります。1つの後ろには車、残り2つの後ろにはヤギ。</li>
+          <li>あなたは1つの扉を選びます（たとえば扉A）。</li>
+          <li>司会者は、<strong>残りの扉のうちハズレ（ヤギ）の扉を1つ開けます</strong>。司会者は中身を知っていて、必ずヤギの扉を開けます。</li>
+          <li>あなたに選択権が与えられます。「最初の扉のまま」か「もう一方の閉じた扉に変える」か。</li>
+        </ul>
+        <p>さて、車を当てたいあなたは、扉を変えるべきでしょうか。それとも変えないほうがいい？　多くの人は「残り2つなら五分五分、どっちでも同じ」と感じます。でも、そこに落とし穴があります。</p>
+
+        <div class="box box-intuition">
+          <div class="box-title">直感でつかむ</div>
+          <p>カギは「司会者はわざとハズレを開けている」ことです。司会者は中身を知っていて、ヒントを漏らしているのです。</p>
+          <p>最初に選んだ扉が当たりの確率は \(1/3\) です。これは司会者が何をしても変わりません。すると、残り全体が当たりの確率は \(2/3\) のまま。司会者がハズレを1つつぶしてくれたので、その \(2/3\) が「もう一方の扉」に集まります。だから扉を変えると当たる確率は \(2/3\) になります。</p>
+        </div>
+
+        <p>言葉だけでは納得しづらいですよね。きちんとベイズの定理で確かめましょう。</p>
+
+        <div class="box box-def">
+          <div class="box-title">問題を仮説とデータに翻訳する</div>
+          <p>あなたが扉Aを選んだとします。当たりがどこかが<strong>仮説</strong>、司会者がどの扉を開けたかが<strong>データ</strong>です。司会者が扉Bを開けた場合を考えましょう。</p>
+          <ul>
+            <li>仮説 \(A\): 車は扉Aの後ろ（最初の選択が当たり）</li>
+            <li>仮説 \(C\): 車は扉Cの後ろ（もう一方が当たり）</li>
+            <li>データ \(D\): 司会者が扉Bを開けた</li>
+          </ul>
+          <p>知りたいのは「データを見た後で、車が扉Cにある確率」つまり \(P(C \mid D)\) です。\(P(C \mid D)\) は『Dが起きたもとでのCの確率』と読みます。</p>
+        </div>
+
+        <p>まず<span class="term">事前確率</span>（じぜんかくりつ。データを見る前の確率）は、3つの扉が同じなので次の通りです。</p>
+        <div class="formula">
+          <span class="formula-label">事前確率（どの扉も平等）</span>
+          $$ P(A) = P(B) = P(C) = \frac{1}{3} $$
+        </div>
+
+        <p>次に<span class="term">尤度</span>（ゆうど。その仮説のもとでデータが起きる確率）を考えます。「車がそこにあると仮定したら、司会者が扉Bを開ける確率はいくつか」を一つずつ見ます。</p>
+        <ul>
+          <li><strong>仮説 \(A\) が正しいとき</strong>（車はA、あなたの選択が当たり）: 司会者は残るBとCのどちらもヤギなので、自由に選べます。Bを開ける確率は \(P(D \mid A) = \dfrac{1}{2}\)。</li>
+          <li><strong>仮説 \(C\) が正しいとき</strong>（車はC）: 司会者はあなたの扉Aも当たりの扉Cも開けられません。開けられるのはBだけ。だから \(P(D \mid C) = 1\)。</li>
+        </ul>
+
+        <div class="box box-ex">
+          <div class="box-title">例題 — ベイズの定理で計算する</div>
+          <p>上の事前確率と尤度から、\(P(C \mid D)\)（扉を変えると当たる確率）を求めましょう。</p>
+          <p><strong>解</strong>: まず分母の \(P(D)\)（司会者がBを開ける全体の確率）を求めます。Bが当たりだと司会者はBを開けられないので、関係するのは仮説 \(A\) と \(C\) です。</p>
+          <p>$$ P(D) = P(D \mid A)P(A) + P(D \mid C)P(C) = \frac{1}{2}\cdot\frac{1}{3} + 1\cdot\frac{1}{3} = \frac{1}{6} + \frac{2}{6} = \frac{3}{6} = \frac{1}{2} $$</p>
+          <p>これをベイズの定理に入れます。</p>
+          <p>$$ P(C \mid D) = \frac{P(D \mid C)\,P(C)}{P(D)} = \frac{1 \cdot \frac{1}{3}}{\frac{1}{2}} = \frac{\frac{1}{3}}{\frac{1}{2}} = \frac{2}{3} $$</p>
+          <p>同じように最初の扉のままの確率は \(P(A \mid D) = \dfrac{\frac{1}{2}\cdot\frac{1}{3}}{\frac{1}{2}} = \dfrac{1}{3}\)。</p>
+          <p><strong>結論</strong>: 扉を変えると当たる確率は \(2/3\)、変えないと \(1/3\)。<strong>扉は変えるべき</strong>です。直感が \(1/2\) と感じたのは、司会者のヒントを無視していたからでした。</p>
+        </div>
+
+        <div class="box box-warn">
+          <div class="box-title">つまずき注意</div>
+          <p>「残り2つだから五分五分」は、<strong>司会者がランダムに扉を開けるなら</strong>正しい話です。モンティ・ホール問題が特別なのは、司会者が中身を知っていて<strong>必ずハズレを開ける</strong>から。司会者の行動が尤度に効き、確率を偏らせます。ルールが少し変わるだけで答えが変わる、いい例です。</p>
+        </div>
+
+        <figure class="figure">
+          <svg viewBox="0 0 420 170" width="420" aria-label="モンティ・ホール問題の確率の流れ">
+            <!-- 最初の選択 -->
+            <text x="20" y="20" font-size="12" fill="var(--text-muted)">最初の確率</text>
+            <rect x="20" y="30" width="110" height="40" rx="6" fill="none" stroke="var(--level-color)" stroke-width="2"/>
+            <text x="75" y="48" font-size="12" text-anchor="middle" fill="var(--text)">扉A（選択）</text>
+            <text x="75" y="63" font-size="12" text-anchor="middle" fill="var(--level-color)">1/3</text>
+
+            <rect x="20" y="90" width="110" height="60" rx="6" fill="none" stroke="var(--border)" stroke-width="2"/>
+            <text x="75" y="110" font-size="12" text-anchor="middle" fill="var(--text)">扉B・扉C</text>
+            <text x="75" y="126" font-size="12" text-anchor="middle" fill="var(--text-muted)">（残り）</text>
+            <text x="75" y="142" font-size="12" text-anchor="middle" fill="var(--level-color)">2/3</text>
+
+            <!-- 矢印 -->
+            <text x="200" y="48" font-size="11" text-anchor="middle" fill="var(--text-muted)">司会者が</text>
+            <text x="200" y="62" font-size="11" text-anchor="middle" fill="var(--text-muted)">Bを開ける</text>
+            <line x1="135" y1="120" x2="280" y2="105" stroke="var(--text-muted)" stroke-width="1.5" stroke-dasharray="4 3"/>
+            <polygon points="280,105 271,103 274,111" fill="var(--text-muted)"/>
+
+            <!-- 結果 -->
+            <text x="380" y="20" font-size="12" text-anchor="middle" fill="var(--text-muted)">開けた後</text>
+            <rect x="290" y="30" width="120" height="40" rx="6" fill="none" stroke="var(--level-color)" stroke-width="2"/>
+            <text x="350" y="48" font-size="12" text-anchor="middle" fill="var(--text)">扉A（そのまま）</text>
+            <text x="350" y="63" font-size="12" text-anchor="middle" fill="var(--level-color)">1/3</text>
+
+            <rect x="290" y="90" width="120" height="60" rx="6" fill="none" stroke="var(--level-color)" stroke-width="3"/>
+            <text x="350" y="112" font-size="12" text-anchor="middle" fill="var(--text)">扉C（変える）</text>
+            <text x="350" y="134" font-size="14" text-anchor="middle" fill="var(--level-color)" font-weight="700">2/3</text>
+          </svg>
+          <figcaption>図1: 残り2扉が持っていた \(2/3\) が、司会者がBをつぶしたことで扉Cに集まる。だから変えると \(2/3\)。</figcaption>
+        </figure>
+
+        <div class="quiz" data-answer="b">
+          <p class="quiz-q">問: モンティ・ホール問題で、扉を変えると当たる確率はいくつ？</p>
+          <button class="quiz-option" data-key="a">1/2</button>
+          <button class="quiz-option" data-key="b">2/3</button>
+          <button class="quiz-option" data-key="c">1/3</button>
+          <div class="quiz-explain">
+            <p>正解は \(2/3\) です。最初の選択が当たる確率は \(1/3\) のまま変わりません。残りの \(2/3\) が、司会者がハズレを開けたことで「もう一方の扉」に集まります。ベイズの定理で計算しても \(P(C \mid D) = \dfrac{1 \cdot \frac{1}{3}}{1/2} = \dfrac{2}{3}\) となります。</p>
+          </div>
+        </div>
+
+        <h2>迷惑メールフィルタ</h2>
+        <p>次は実用例です。メールソフトは、届いたメールが迷惑メール（スパム）かどうかを自動で判定しています。その心臓部にもベイズの定理が使われています。</p>
+        <p>考え方はこうです。「<strong>当選</strong>」「<strong>無料</strong>」といった単語は、迷惑メールによく出てきます。逆にふつうのメールにはあまり出ません。この「単語の出やすさの差」が尤度になります。</p>
+
+        <div class="box box-intuition">
+          <div class="box-title">直感でつかむ</div>
+          <p>あなたは経験的に「『無料』って書いてあるメールは怪しいな」と感じますよね。それを数で表すだけです。</p>
+          <p>迷惑メールでは「無料」が出やすく、ふつうのメールでは出にくい。すると「無料」という単語は、そのメールが迷惑メールだという<strong>証拠</strong>になります。ベイズの定理は、こうした証拠を集めて事前確率を更新し、事後確率（迷惑メールである確率）を出してくれます。</p>
+        </div>
+
+        <p>仮説とデータに翻訳しましょう。</p>
+        <div class="box box-def">
+          <div class="box-title">仮説とデータ</div>
+          <ul>
+            <li>仮説 \(S\): そのメールは迷惑メール（spam）</li>
+            <li>仮説 \(H\): そのメールはふつうのメール（ham と呼びます）</li>
+            <li>データ \(W\): メールに「無料」という単語が含まれている</li>
+          </ul>
+          <p>知りたいのは \(P(S \mid W)\)、つまり「『無料』が入っているメールが迷惑メールである確率」です。</p>
+        </div>
+
+        <p>過去のメールを集計して、次の数字がわかったとします。</p>
+        <table>
+          <thead>
+            <tr><th></th><th>「無料」あり</th><th>「無料」なし</th><th>合計</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>迷惑メール (S)</td><td>240</td><td>60</td><td>300</td></tr>
+            <tr><td>ふつう (H)</td><td>70</td><td>630</td><td>700</td></tr>
+            <tr><td><strong>合計</strong></td><td>310</td><td>690</td><td>1,000</td></tr>
+          </tbody>
+        </table>
+
+        <p>この表から、必要な確率を読み取ります。</p>
+        <ul>
+          <li>事前確率: 全メールのうち迷惑メールは \(P(S) = \dfrac{300}{1000} = 0.3\)、ふつうは \(P(H) = 0.7\)。</li>
+          <li>尤度: 迷惑メールが「無料」を含む確率 \(P(W \mid S) = \dfrac{240}{300} = 0.8\)。ふつうのメールが含む確率 \(P(W \mid H) = \dfrac{70}{700} = 0.1\)。</li>
+        </ul>
+
+        <div class="box box-ex">
+          <div class="box-title">例題 — 「無料」を見て確率を更新する</div>
+          <p>「無料」を含むメールが届きました。これが迷惑メールである確率 \(P(S \mid W)\) を求めましょう。</p>
+          <p><strong>解</strong>: まず分母 \(P(W)\)（どんなメールでも「無料」を含む確率）を求めます。</p>
+          <p>$$ P(W) = P(W \mid S)P(S) + P(W \mid H)P(H) = 0.8 \times 0.3 + 0.1 \times 0.7 = 0.24 + 0.07 = 0.31 $$</p>
+          <p>ベイズの定理に入れます。</p>
+          <p>$$ P(S \mid W) = \frac{P(W \mid S)\,P(S)}{P(W)} = \frac{0.8 \times 0.3}{0.31} = \frac{0.24}{0.31} \approx 0.77 $$</p>
+          <p><strong>結論</strong>: 事前は \(30\%\) だった「迷惑メールらしさ」が、「無料」という単語1つで約 \(77\%\) まで跳ね上がりました。表の「無料あり」列で確かめると \(240 / 310 \approx 0.77\) と一致します。これがフィルタが行っている計算です。</p>
+        </div>
+
+        <div class="box box-warn">
+          <div class="box-title">つまずき注意 — 尤度と事後確率はちがう</div>
+          <p>\(P(W \mid S) = 0.8\)（迷惑メールが「無料」を含む確率）と、\(P(S \mid W) \approx 0.77\)（「無料」を含むメールが迷惑メールである確率）は別物です。向きが逆ですね。実際この問題では値も少しちがいます。\(P(A \mid B)\) と \(P(B \mid A)\) を取りちがえないこと。ベイズの定理は、この2つを正しく行き来させる橋でした。</p>
+        </div>
+
+        <h3>単語が増えたらどうする？</h3>
+        <p>実際のフィルタは「無料」だけでなく「当選」「クリック」など、たくさんの単語を同時に見ます。そのとき、各単語が独立だと割り切って、尤度をかけ算でつなげていきます。たとえば最初の「無料」で得た事後確率を、次の単語を見るときの事前確率として使い、次々と更新していくのです。</p>
+        <p>この「単語どうしは独立とみなしてかけ算する」割り切った方法を<span class="term">ナイーブベイズ</span>（素朴ベイズ）と呼びます。本当は単語どうしに関係があるのに「ない」とみなすので素朴（ナイーブ）なのですが、これがおどろくほどよく効きます。</p>
+
+        <div class="box box-sim">
+          <div class="box-title">やってみよう</div>
+          <p>上の例で、もし「無料」に続いて2つ目の怪しい単語が見つかったら、確率はどうなるでしょう。約 \(0.77\) を新しい事前確率にして、2つ目の単語の尤度（迷惑なら出やすく、ふつうなら出にくい）をかければ、確率はさらに \(1\) に近づきます。逆にふつうのメールに多い単語が見つかれば下がります。証拠を1つずつ積み上げて信念を更新する、これがベイズの世界観です。</p>
+        </div>
+
+        <p>くわしいナイーブベイズの数式やゼロ頻度の扱いは <a href="../level5/index.html">Level 5</a> で本格的に扱います。ここでは「単語の尤度を集めて事後確率を出す」という骨組みがつかめれば十分です。</p>
+
+        <div class="quiz" data-answer="c">
+          <p class="quiz-q">問: 「無料」を含むメールの迷惑メール確率が \(0.77\) と求まりました。この計算で「データ」にあたるのはどれ？</p>
+          <button class="quiz-option" data-key="a">そのメールが迷惑メールであること</button>
+          <button class="quiz-option" data-key="b">事前確率が \(0.3\) であること</button>
+          <button class="quiz-option" data-key="c">メールに「無料」という単語が含まれていること</button>
+          <div class="quiz-explain">
+            <p>正解はCです。ベイズの定理では「観測した事実」がデータです。ここでは「『無料』が含まれている」という観測がデータ \(W\) で、求めたい仮説 \(S\)（迷惑メールである）の確率を更新する材料になります。Aは仮説、Bは事前確率です。</p>
+          </div>
+        </div>
+
+        <h2>演習</h2>
+
+        <div class="box box-practice">
+          <div class="box-title">演習1 — モンティ・ホール、扉が増えたら</div>
+          <p>扉が100個あり、当たりは1つだけ。あなたが1つ選んだあと、司会者は<strong>残り99個のうち98個のハズレ</strong>を開けます。残ったのはあなたの扉と、もう1つの扉だけ。扉を変えると当たる確率はいくつでしょう。</p>
+          <details class="answer">
+            <summary>解答を見る</summary>
+            <p>最初に選んだ扉が当たる確率は \(\dfrac{1}{100}\)。これは変わりません。残り99個全体が当たりの確率は \(\dfrac{99}{100}\) で、司会者が98個のハズレを開けてつぶしたので、その \(\dfrac{99}{100}\) がまるごと「もう1つの扉」に集まります。よって<strong>扉を変えると当たる確率は \(\dfrac{99}{100}\)</strong>。扉が多いほど、変えるべき理由がはっきりします。3扉のときの \(2/3\) も同じ理屈です。</p>
+          </details>
+        </div>
+
+        <div class="box box-practice">
+          <div class="box-title">演習2 — 別の単語で計算する</div>
+          <p>あるメールサービスで、迷惑メールは全体の \(40\%\)（\(P(S)=0.4\)、\(P(H)=0.6\)）。単語「当選」について、\(P(\text{当選} \mid S) = 0.5\)、\(P(\text{当選} \mid H) = 0.02\) でした。「当選」を含むメールが迷惑メールである確率 \(P(S \mid \text{当選})\) を求めなさい。</p>
+          <details class="answer">
+            <summary>解答を見る</summary>
+            <p>分母 \(P(\text{当選})\) を求めます。</p>
+            <p>$$ P(\text{当選}) = 0.5 \times 0.4 + 0.02 \times 0.6 = 0.20 + 0.012 = 0.212 $$</p>
+            <p>ベイズの定理に入れます。</p>
+            <p>$$ P(S \mid \text{当選}) = \frac{0.5 \times 0.4}{0.212} = \frac{0.20}{0.212} \approx 0.94 $$</p>
+            <p>約 \(94\%\)。「当選」はふつうのメールにほとんど出ない（\(0.02\)）ぶん、強い証拠になります。ふつうのメールで出にくい単語ほど、見つかったときに確率を大きく動かすのがポイントです。</p>
+          </details>
+        </div>
+
+        <div class="box box-practice">
+          <div class="box-title">演習3 — 司会者がランダムだったら</div>
+          <p>モンティ・ホール問題で、もし司会者が中身を知らず、残り2つの扉から<strong>でたらめに</strong>開けたとします（たまたまヤギが出た場合を考える）。このとき扉を変えると当たる確率はいくつ？　ベイズの定理で確かめなさい。</p>
+          <details class="answer">
+            <summary>解答を見る</summary>
+            <p>あなたが扉Aを選び、司会者がでたらめに扉Bを開けてヤギが出た、という状況です。尤度が変わります。司会者は中身を知らないので、Bを開ける確率はどの仮説でも \(1/2\)。ただしBが当たりだと「ヤギが出た」という条件に合わないので、仮説 \(A\) と \(C\) を比べます。</p>
+            <p>\(P(D \mid A) = \dfrac{1}{2}\)（Bを選ぶ、中身はヤギ）、\(P(D \mid C) = \dfrac{1}{2}\)（Bを選ぶ、中身はヤギ）。事前はどちらも \(1/3\) なので、</p>
+            <p>$$ P(C \mid D) = \frac{\frac{1}{2}\cdot\frac{1}{3}}{\frac{1}{2}\cdot\frac{1}{3} + \frac{1}{2}\cdot\frac{1}{3}} = \frac{1}{2} $$</p>
+            <p>今度は<strong>五分五分</strong>です。司会者がわざとハズレを開けるという情報がないと、ヒントが消えてしまう。だから本物のモンティ・ホール問題では「司会者は中身を知っている」というルールが決定的に効くのです。</p>
+          </details>
+        </div>
+
+        <h2>まとめ</h2>
+        <ul>
+          <li>モンティ・ホール問題では、扉を変えると当たる確率は \(2/3\)。司会者が必ずハズレを開けるという行動が尤度に効くからです。</li>
+          <li>司会者がでたらめに開けるなら五分五分。ルール（＝尤度）が変われば答えも変わります。</li>
+          <li>迷惑メールフィルタは、単語の尤度（迷惑なら出やすい・ふつうなら出にくい）から事後確率を計算する装置です。</li>
+          <li>「無料」のような単語1つで、事前 \(30\%\) が事後 \(77\%\) へ。証拠を見て信念を更新するのがベイズです。</li>
+          <li>単語を独立とみなしてかけ算で更新する方法をナイーブベイズと呼びます。くわしくは <a href="../level5/index.html">Level 5</a> で。</li>
+        </ul>
+        <p>どんな問題も「仮説・データ・尤度」に翻訳できれば、あとは同じ式に当てはめるだけ。次のレベルからは、点の確率ではなく「分布」を相手にして、ベイズの世界をぐっと広げていきます。</p>
+
+      </div>
+      <!-- ▲▲▲ レッスン本文ここまで ▲▲▲ -->
+
+      <div class="complete-area">
+        <button class="btn btn-level" id="complete-btn">このレッスンを完了にする</button>
+        <p class="complete-note">進捗はこのブラウザに保存されます</p>
+      </div>
+
+      <!-- 前後ナビ: main.js がカリキュラムから自動生成 -->
+      <nav class="lesson-nav" id="lesson-nav" aria-label="前後のレッスン"></nav>
+
+    </main>
+
+    <!-- ページ内目次: main.js が本文の h2 から自動生成 -->
+    <aside class="toc">
+      <div class="toc-title">このページの内容</div>
+      <nav id="toc"></nav>
+    </aside>
+
+  </div>
+
+  <footer class="site-footer">
+    <p>ベイズの階段 — 中学数学から最前線まで、一段ずつ。</p>
+  </footer>
+
+  <script src="../../assets/js/curriculum.js"></script>
+  <script src="../../assets/js/main.js"></script>
+</body>
+</html>

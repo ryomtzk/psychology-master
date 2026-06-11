@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>Level 2 確率分布と尤度 | ベイズの階段</title>
+  <meta name="description" content="高校〜大学初年級。点の確率から「分布」へ視野を広げる">
+  <script>
+    document.documentElement.dataset.theme =
+      localStorage.getItem("bayes-stairs-theme") ||
+      (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Noto+Serif+JP:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../assets/css/main.css">
+</head>
+<body data-root="../../" data-level="2">
+
+  <header class="site-header">
+    <button class="sidebar-toggle" id="sidebar-toggle" aria-label="メニュー">☰</button>
+    <a class="brand" href="../../index.html">
+      <span class="brand-mark">階</span>
+      <span>ベイズの階段</span>
+    </a>
+    <div class="header-spacer"></div>
+    <div class="header-progress" id="header-progress"></div>
+    <button class="theme-toggle" id="theme-toggle" aria-label="テーマ切替">🌙</button>
+  </header>
+
+  <div class="layout">
+
+    <aside class="sidebar"><nav id="sidebar-nav" aria-label="カリキュラム"></nav></aside>
+
+    <main class="lesson">
+
+      <nav class="breadcrumbs" aria-label="パンくず">
+        <a href="../../index.html">ホーム</a><span class="sep">›</span>
+        <span>Level 2 確率分布と尤度</span>
+      </nav>
+
+      <header class="lesson-header">
+        <div class="lesson-meta">
+          <span class="level-badge">Level 2</span>
+        </div>
+        <h1>確率分布と尤度</h1>
+        <p class="lead">高校〜大学初年級。点の確率から「分布」へ視野を広げる</p>
+      </header>
+
+      <div class="lesson-body">
+        <p>このレベルでは、ひとつの結果に対する確率から一歩進んで、起こりうる結果の全体を「確率分布」としてとらえる見方を身につけます。二項分布や正規分布といった代表的な分布に親しみ、期待値・分散で分布の特徴を手短に言い表せるようになります。さらに、データを手がかりに「どの値がもっともらしいか」を測る尤度の考え方を学び、確率の確率まで扱うベータ分布へと進みます。これらはベイズ推定を支える道具であり、次のレベルへの足場になります。</p>
+        <p class="muted">Level 1 を終えていることが前提です。Σ記法が出てきたら付録 a-1 を参照してください。</p>
+
+        <h2>レッスン一覧</h2>
+        <!-- main.js が data-level を見て自動生成 -->
+        <ul class="lesson-list" id="lesson-list"></ul>
+      </div>
+
+    </main>
+
+    <aside class="toc"></aside>
+
+  </div>
+
+  <footer class="site-footer">
+    <p>ベイズの階段 — 中学数学から最前線まで、一段ずつ。</p>
+  </footer>
+
+  <script src="../../assets/js/curriculum.js"></script>
+  <script src="../../assets/js/main.js"></script>
+</body>
+</html>

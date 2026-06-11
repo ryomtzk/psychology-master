@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>Level 0 確率の直感をつくる | ベイズの階段</title>
+  <meta name="description" content="中学レベルの数学だけで「確率で考える」感覚を育てる">
+  <script>
+    document.documentElement.dataset.theme =
+      localStorage.getItem("bayes-stairs-theme") ||
+      (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Noto+Serif+JP:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../assets/css/main.css">
+</head>
+<body data-root="../../" data-level="0">
+
+  <header class="site-header">
+    <button class="sidebar-toggle" id="sidebar-toggle" aria-label="メニュー">☰</button>
+    <a class="brand" href="../../index.html">
+      <span class="brand-mark">階</span>
+      <span>ベイズの階段</span>
+    </a>
+    <div class="header-spacer"></div>
+    <div class="header-progress" id="header-progress"></div>
+    <button class="theme-toggle" id="theme-toggle" aria-label="テーマ切替">🌙</button>
+  </header>
+
+  <div class="layout">
+
+    <aside class="sidebar"><nav id="sidebar-nav" aria-label="カリキュラム"></nav></aside>
+
+    <main class="lesson">
+
+      <nav class="breadcrumbs" aria-label="パンくず">
+        <a href="../../index.html">ホーム</a><span class="sep">›</span>
+        <span>Level 0 確率の直感をつくる</span>
+      </nav>
+
+      <header class="lesson-header">
+        <div class="lesson-meta">
+          <span class="level-badge">Level 0</span>
+        </div>
+        <h1>確率の直感をつくる</h1>
+        <p class="lead">中学レベルの数学だけで「確率で考える」感覚を育てる</p>
+      </header>
+
+      <div class="lesson-body">
+        <p>このレベルでは、サイコロやくじ引きといった身近な例を通して「確率とは何か」を体で覚えていきます。場合の数の数え方や、割合・比・パーセントといった基礎を整えながら、クロス集計表（分割表）を使って2つの条件を同時に扱う練習をします。最後には「結果から原因をさかのぼって推測する」という、ベイズの考え方そのものを数えて体験します。難しい数式を使わなくても、確率で物事をとらえる感覚がしっかり身につくはずです。</p>
+        <p class="muted">前提知識はありません。中学数学（分数・割合）だけで読めます。</p>
+
+        <h2>レッスン一覧</h2>
+        <!-- main.js が data-level を見て自動生成 -->
+        <ul class="lesson-list" id="lesson-list"></ul>
+      </div>
+
+    </main>
+
+    <aside class="toc"></aside>
+
+  </div>
+
+  <footer class="site-footer">
+    <p>ベイズの階段 — 中学数学から最前線まで、一段ずつ。</p>
+  </footer>
+
+  <script src="../../assets/js/curriculum.js"></script>
+  <script src="../../assets/js/main.js"></script>
+</body>
+</html>

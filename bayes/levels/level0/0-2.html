@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>0-2 場合の数の数え方 | ベイズの階段</title>
+  <meta name="description" content="樹形図と表で「すべての可能性」を漏れなく数える">
+  <script>
+    document.documentElement.dataset.theme =
+      localStorage.getItem("bayes-stairs-theme") ||
+      (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Noto+Serif+JP:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../assets/css/main.css">
+
+  <!-- KaTeX: 数式を使うページでは必ずこの3行を入れる -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+          onload="renderMathInElement(document.body, {delimiters: [
+            {left: '$$', right: '$$', display: true},
+            {left: '\\(', right: '\\)', display: false}
+          ]});"></script>
+</head>
+<body data-root="../../" data-level="0" data-lesson-id="0-2">
+
+  <header class="site-header">
+    <button class="sidebar-toggle" id="sidebar-toggle" aria-label="メニュー">☰</button>
+    <a class="brand" href="../../index.html">
+      <span class="brand-mark">階</span>
+      <span>ベイズの階段</span>
+    </a>
+    <div class="header-spacer"></div>
+    <div class="header-progress" id="header-progress"></div>
+    <button class="theme-toggle" id="theme-toggle" aria-label="テーマ切替">🌙</button>
+  </header>
+
+  <div class="layout">
+
+    <!-- サイドバー: main.js がカリキュラムから自動生成 -->
+    <aside class="sidebar"><nav id="sidebar-nav" aria-label="カリキュラム"></nav></aside>
+
+    <main class="lesson">
+
+      <nav class="breadcrumbs" aria-label="パンくず">
+        <a href="../../index.html">ホーム</a><span class="sep">›</span>
+        <a href="index.html">Level 0 確率の直感をつくる</a><span class="sep">›</span>
+        <span>0-2 場合の数の数え方</span>
+      </nav>
+
+      <header class="lesson-header">
+        <div class="lesson-meta">
+          <span class="level-badge">Level 0</span>
+          <span class="small">レッスン 0-2</span>
+        </div>
+        <h1>場合の数の数え方</h1>
+
+        <div class="lesson-goals">
+          <h2>このレッスンでできるようになること</h2>
+          <ul>
+            <li>樹形図と表を使って「起こりうるすべての場合」を漏れなく数えられる</li>
+            <li>段階ごとの選び方をかけ算でまとめ、場合の数をすばやく求められる</li>
+            <li>数えた数の比から、確率を自分で計算できる</li>
+          </ul>
+          <p class="prereq">前提: <a href="0-1.html">0-1 確率ってなんだろう</a> を読んでいること</p>
+        </div>
+      </header>
+
+      <!-- ▼▼▼ ここからレッスン本文 ▼▼▼ -->
+      <div class="lesson-body">
+
+        <h2>「全部で何通り?」を正しく数える</h2>
+        <p>前のレッスンで、確率は「あたりの数 ÷ ぜんぶの数」で求められる、という話をしました。</p>
+        <p>でも、ちょっと困ることがあります。コインを2枚いっぺんに投げたら、結果は「ぜんぶで何通り」あるのでしょうか。</p>
+        <p>「表2枚・表と裏・裏2枚」の3通り、と答えたくなります。じつは、これだと正しい確率が出ません。今回は、こういう「ぜんぶの数」を<strong>漏らさず・重ねず</strong>に数える方法を身につけます。</p>
+        <p>数え方の道具は2つだけです。<span class="term">樹形図（じゅけいず）</span>と<span class="term">表</span>。どちらも「枝分かれをぜんぶ書き出す」ための地図のようなものです。</p>
+
+        <div class="box box-intuition">
+          <div class="box-title">直感でつかむ</div>
+          <p>場合の数とは「起こりうる結果を全部ならべたときの個数」です。</p>
+          <p>大事なのは、結果を<strong>区別できる形</strong>でならべること。コイン2枚も、1円玉と10円玉のように「左のコイン・右のコイン」と分けて考えると、迷子になりません。</p>
+          <p>「表と裏」と「裏と表」を同じ1通りにまとめてしまうのが、最初のつまずきです。左右を区別すれば、別の出来事として数えられます。</p>
+        </div>
+
+        <h2>樹形図 — 枝を伸ばして数える</h2>
+        <p><span class="term">樹形図（じゅけいず）</span>とは、選び方を木の枝のように順番に書き出した図です。「まず何が起きて、次に何が起きるか」を段階に分けて描きます。</p>
+        <p>コインを2枚投げる場合を描いてみましょう。1枚目（左のコイン）は表（オモテ）か裏（ウラ）の2通り。その<strong>それぞれに対して</strong>、2枚目（右のコイン）も表か裏の2通りです。</p>
+
+        <figure class="figure">
+          <svg viewBox="0 0 360 200" width="360" aria-label="コイン2枚の樹形図">
+            <!-- 起点 -->
+            <circle cx="30" cy="100" r="5" fill="var(--level-color)"/>
+            <text x="20" y="90" font-size="11" fill="var(--text-muted)">開始</text>
+
+            <!-- 1枚目の枝 -->
+            <line x1="35" y1="100" x2="120" y2="50" stroke="var(--level-color)" stroke-width="2"/>
+            <line x1="35" y1="100" x2="120" y2="150" stroke="var(--level-color)" stroke-width="2"/>
+            <circle cx="125" cy="50" r="5" fill="var(--level-color)"/>
+            <circle cx="125" cy="150" r="5" fill="var(--level-color)"/>
+            <text x="60" y="62" font-size="12" fill="var(--text)">表</text>
+            <text x="60" y="140" font-size="12" fill="var(--text)">裏</text>
+
+            <!-- 2枚目の枝(上) -->
+            <line x1="130" y1="50" x2="230" y2="25" stroke="var(--level-color)" stroke-width="2"/>
+            <line x1="130" y1="50" x2="230" y2="75" stroke="var(--level-color)" stroke-width="2"/>
+            <text x="165" y="30" font-size="12" fill="var(--text)">表</text>
+            <text x="165" y="74" font-size="12" fill="var(--text)">裏</text>
+
+            <!-- 2枚目の枝(下) -->
+            <line x1="130" y1="150" x2="230" y2="125" stroke="var(--level-color)" stroke-width="2"/>
+            <line x1="130" y1="150" x2="230" y2="175" stroke="var(--level-color)" stroke-width="2"/>
+            <text x="165" y="122" font-size="12" fill="var(--text)">表</text>
+            <text x="165" y="180" font-size="12" fill="var(--text)">裏</text>
+
+            <!-- 結果ラベル -->
+            <text x="240" y="29" font-size="12" fill="var(--text)">(表, 表)</text>
+            <text x="240" y="79" font-size="12" fill="var(--text)">(表, 裏)</text>
+            <text x="240" y="129" font-size="12" fill="var(--text)">(裏, 表)</text>
+            <text x="240" y="179" font-size="12" fill="var(--text)">(裏, 裏)</text>
+          </svg>
+          <figcaption>図1: コイン2枚の樹形図。枝の先まで数えると、ぜんぶで4通りある。</figcaption>
+        </figure>
+
+        <p>枝の先（いちばん右）を数えると、<strong>4通り</strong>あります。(表,表)・(表,裏)・(裏,表)・(裏,裏) です。</p>
+        <p>ここで注目してほしいのが、(表,裏) と (裏,表) が<strong>別々の枝</strong>になっていること。左のコインが表で右が裏、というのと、その逆。たしかに違う出来事です。だから2通りと数えます。これを1つにまとめてしまうと、数が合わなくなります。</p>
+
+        <div class="box box-warn">
+          <div class="box-title">つまずき注意</div>
+          <p>「表2枚・表と裏・裏2枚」で3通り、と数えると確率がずれます。<strong>(表,裏) と (裏,表) は起こりやすさが2倍</strong>だからです。樹形図で左右を区別して描けば、自然に4通りに分かれ、この落とし穴を避けられます。</p>
+        </div>
+
+        <h2>表 — マス目をうめて数える</h2>
+        <p>段階が2つのときは、<span class="term">表</span>（マス目）が便利です。たてに1つ目の結果、よこに2つ目の結果をならべ、交わるマスを1通りずつ数えます。</p>
+        <p>サイコロを2個投げる場合を表にしてみましょう。1個目が1〜6、2個目も1〜6です。マスは縦6 × 横6 で、ぜんぶで<strong>36マス</strong>。これがそのまま36通りです。</p>
+
+        <table>
+          <thead>
+            <tr><th>1個目 \ 2個目</th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><strong>1</strong></td><td>2</td><td>3</td><td>4</td><td>5</td><td>6</td><td>7</td></tr>
+            <tr><td><strong>2</strong></td><td>3</td><td>4</td><td>5</td><td>6</td><td>7</td><td>8</td></tr>
+            <tr><td><strong>3</strong></td><td>4</td><td>5</td><td>6</td><td>7</td><td>8</td><td>9</td></tr>
+            <tr><td><strong>4</strong></td><td>5</td><td>6</td><td>7</td><td>8</td><td>9</td><td>10</td></tr>
+            <tr><td><strong>5</strong></td><td>6</td><td>7</td><td>8</td><td>9</td><td>10</td><td>11</td></tr>
+            <tr><td><strong>6</strong></td><td>7</td><td>8</td><td>9</td><td>10</td><td>11</td><td>12</td></tr>
+          </tbody>
+        </table>
+
+        <p>マスの中に書いたのは「2個の目の和」です。表を使うと、和ごとの場合の数も一目でわかります。たとえば和が7になるマスは、ななめ一列に6個ならんでいますね。</p>
+
+        <div class="box box-intuition">
+          <div class="box-title">直感でつかむ — かけ算でまとめる</div>
+          <p>樹形図でも表でも、結果の数は同じ計算で出てきます。<strong>段階ごとの選び方をかけ算する</strong>だけです。</p>
+          <p>コイン2枚なら「2通り × 2通り = 4通り」。サイコロ2個なら「6通り × 6通り = 36通り」。これは、樹形図で「枝が枝分かれする」のをかけ算で表したものです。</p>
+          <p>逆に「コインかサイコロ、どちらか一方の結果」のように<strong>場面を分けて足す</strong>こともあります。同時に起きないものは、たし算でまとめます。</p>
+        </div>
+
+        <div class="box box-def">
+          <div class="box-title">数え方の2つの基本</div>
+          <p><strong>かけ算でまとめる</strong>: 段階Aが \(a\) 通り、続く段階Bが（Aの結果に関わらず）\(b\) 通りあるとき、AとBの組み合わせは
+          $$ a \times b \text{ 通り} $$
+          「Aが起きて、<strong>続けて</strong>Bが起きる」場面で使います。</p>
+          <p><strong>たし算でまとめる</strong>: 場面Pが \(p\) 通り、場面Qが \(q\) 通りで、両方が<strong>同時には起きない</strong>とき、PまたはQの場合は
+          $$ p + q \text{ 通り} $$
+          「PかQの<strong>どちらか</strong>」という場面で使います。</p>
+        </div>
+
+        <div class="box box-warn">
+          <div class="box-title">つまずき注意 — かけ算と足し算の見分け方</div>
+          <p>迷ったら、文の言葉を見てください。「〜して、<strong>そして</strong>〜する」(続けて起きる) ならかけ算。「〜<strong>または</strong>〜」(どちらか一方) ならたし算です。「コインを投げ、<strong>そして</strong>サイコロを振る」はかけ算、「赤いカード<strong>または</strong>青いカードを引く」はたし算、というイメージです。</p>
+        </div>
+
+        <h2>数えた数から確率へ</h2>
+        <p>場合の数が数えられれば、確率はもう目の前です。0-1で学んだとおり、どの結果も同じくらい起こりやすいとき、確率は次の比で決まります。</p>
+
+        <div class="formula">
+          <span class="formula-label">確率 = 数えた数の比</span>
+          $$ \text{確率} = \frac{\text{あてはまる場合の数}}{\text{ぜんぶの場合の数}} $$
+          <div class="formula-parts">
+            <span class="part"><b>ぜんぶの場合の数</b>: 樹形図や表で数えた全体</span>
+            <span class="part"><b>あてはまる場合の数</b>: 知りたい出来事の枝・マスの数</span>
+          </div>
+        </div>
+
+        <p>つまり確率を求める手順は、たった2ステップです。<strong>(1) ぜんぶの場合を数える。(2) あてはまる場合を数える。</strong>あとは割り算するだけ。難しい公式は要りません。</p>
+
+        <div class="box box-ex">
+          <div class="box-title">例題1 — コイン2枚で「ちょうど表1枚」</div>
+          <p>コイン2枚を投げるとき、表がちょうど1枚出る確率を求めましょう。</p>
+          <p><strong>解</strong>:</p>
+          <p>(1) ぜんぶの場合の数。図1の樹形図より、(表,表)・(表,裏)・(裏,表)・(裏,裏) の <strong>4通り</strong>。</p>
+          <p>(2) あてはまる場合の数。「表ちょうど1枚」は (表,裏) と (裏,表) の <strong>2通り</strong>。</p>
+          <p>よって確率は \( \dfrac{2}{4} = \dfrac{1}{2} \)。</p>
+          <p>ちなみに「表2枚」は (表,表) の1通りで確率 \( \dfrac{1}{4} \)、「表0枚」も1通りで \( \dfrac{1}{4} \)。3つを足すと \( \dfrac{1}{4} + \dfrac{1}{2} + \dfrac{1}{4} = 1 \) となり、つじつまが合います。</p>
+        </div>
+
+        <div class="box box-ex">
+          <div class="box-title">例題2 — サイコロ2個で「目の和が7」</div>
+          <p>サイコロ2個を投げるとき、目の和が7になる確率を求めましょう。</p>
+          <p><strong>解</strong>:</p>
+          <p>(1) ぜんぶの場合の数。表より縦6 × 横6 で <strong>36通り</strong>。</p>
+          <p>(2) あてはまる場合の数。表の中で「7」と書かれたマスを数えると、(1,6)(2,5)(3,4)(4,3)(5,2)(6,1) の <strong>6通り</strong>。</p>
+          <p>よって確率は \( \dfrac{6}{36} = \dfrac{1}{6} \)。</p>
+          <p>表のおかげで「(3,4) と (4,3) は別もの」と自然に区別できています。ここでも左右の区別が効いていますね。</p>
+        </div>
+
+        <div class="quiz" data-answer="b">
+          <p class="quiz-q">問: コイン3枚を投げると、起こりうる結果はぜんぶで何通り?</p>
+          <button class="quiz-option" data-key="a">6通り</button>
+          <button class="quiz-option" data-key="b">8通り</button>
+          <button class="quiz-option" data-key="c">9通り</button>
+          <div class="quiz-explain"><p>各コインが表・裏の2通りで、3枚を続けて投げます。かけ算でまとめて \( 2 \times 2 \times 2 = 8 \) 通り。樹形図なら、2枚で4本だった枝が、3枚目でそれぞれ2本に分かれて8本になります。「2 × 3 = 6」と足したり混ぜたりしないよう注意しましょう。</p></div>
+        </div>
+
+        <div class="quiz" data-answer="c">
+          <p class="quiz-q">問: サイコロ2個を投げて、目の和が4になる確率は?</p>
+          <button class="quiz-option" data-key="a">1/6</button>
+          <button class="quiz-option" data-key="b">1/9</button>
+          <button class="quiz-option" data-key="c">1/12</button>
+          <div class="quiz-explain"><p>ぜんぶは36通り。和が4になるマスは (1,3)(2,2)(3,1) の3通りです。よって \( \dfrac{3}{36} = \dfrac{1}{12} \)。(2,2) はひっくり返しても同じなので1通りだけ、という点に気をつけましょう。</p></div>
+        </div>
+
+        <div class="box box-practice">
+          <div class="box-title">演習1</div>
+          <p>赤・青・緑の3色の帽子から1つ、長そで・半そでの2種類のシャツから1つを選びます。帽子とシャツの組み合わせは、ぜんぶで何通りありますか。樹形図を思いうかべて答えなさい。</p>
+          <details class="answer">
+            <summary>解答を見る</summary>
+            <p>帽子の選び方が3通り、その<strong>それぞれに対して</strong>シャツが2通り。続けて選ぶのでかけ算でまとめて \( 3 \times 2 = 6 \) 通り。</p>
+            <p>具体的には (赤,長)(赤,半)(青,長)(青,半)(緑,長)(緑,半) の6通りです。</p>
+          </details>
+        </div>
+
+        <div class="box box-practice">
+          <div class="box-title">演習2</div>
+          <p>サイコロ2個を投げるとき、目の和が <strong>5以下</strong>になる確率を求めなさい。</p>
+          <details class="answer">
+            <summary>解答を見る</summary>
+            <p>ぜんぶは36通り。表で和が5以下のマスを数えます。</p>
+            <p>和2: (1,1) … 1通り / 和3: (1,2)(2,1) … 2通り / 和4: (1,3)(2,2)(3,1) … 3通り / 和5: (1,4)(2,3)(3,2)(4,1) … 4通り。</p>
+            <p>合計 \( 1 + 2 + 3 + 4 = 10 \) 通り。よって確率は \( \dfrac{10}{36} = \dfrac{5}{18} \)。</p>
+            <p>「和2まで」「和3まで」…と場面を分けて、最後にたし算でまとめている点に注目してください。</p>
+          </details>
+        </div>
+
+        <div class="box box-practice">
+          <div class="box-title">演習3</div>
+          <p>コイン2枚とサイコロ1個を、まとめて投げます。起こりうる結果はぜんぶで何通りありますか。</p>
+          <details class="answer">
+            <summary>解答を見る</summary>
+            <p>コイン1枚目が2通り、コイン2枚目が2通り、サイコロが6通り。すべて続けて起きるので、かけ算でまとめて \( 2 \times 2 \times 6 = 24 \) 通り。</p>
+            <p>段階が3つに増えても、やることは同じ。「各段階の通り数をかけ算する」だけです。</p>
+          </details>
+        </div>
+
+        <div class="box box-practice">
+          <div class="box-title">演習4</div>
+          <p>サイコロ2個を投げるとき、<strong>少なくとも片方が6</strong>になる確率を求めなさい。(ヒント: 表の「6が入っている行・列」をぬりつぶして数えてみましょう。)</p>
+          <details class="answer">
+            <summary>解答を見る</summary>
+            <p>ぜんぶは36通り。1個目が6の行が6マス、2個目が6の列が6マス。ただし (6,6) の1マスは両方に重なって<strong>ダブって</strong>数えてしまいます。</p>
+            <p>そこで \( 6 + 6 - 1 = 11 \) 通り。重なりを1回引くのがコツです。よって確率は \( \dfrac{11}{36} \)。</p>
+            <p>「漏れなく・ダブりなく」のうち、ここでは<strong>ダブりを取りのぞく</strong>感覚が活きています。</p>
+          </details>
+        </div>
+
+        <h2>まとめ</h2>
+        <ul>
+          <li>場合の数は、<strong>樹形図</strong>(枝で書き出す) と <strong>表</strong>(マスをうめる) で漏れなく・ダブりなく数える。</li>
+          <li>コインやサイコロは、<strong>左右を区別</strong>して数える。(表,裏) と (裏,表) は別もの。</li>
+          <li>続けて起きる選び方は<strong>かけ算</strong>でまとめる。どちらか一方の場面は<strong>たし算</strong>でまとめる。</li>
+          <li>確率は「<strong>あてはまる場合の数 ÷ ぜんぶの場合の数</strong>」。数えてから割るだけ。</li>
+          <li>重なりがあるときは、ダブって数えた分を引く。</li>
+        </ul>
+        <p>数える力がつくと、確率はぐっと身近になります。次の <a href="0-3.html">0-3 割合・比・パーセント</a> では、この「数の比」をもっと自由にあつかうための、割合とパーセントの感覚を固めていきましょう。</p>
+
+      </div>
+      <!-- ▲▲▲ レッスン本文ここまで ▲▲▲ -->
+
+      <div class="complete-area">
+        <button class="btn btn-level" id="complete-btn">このレッスンを完了にする</button>
+        <p class="complete-note">進捗はこのブラウザに保存されます</p>
+      </div>
+
+      <!-- 前後ナビ: main.js がカリキュラムから自動生成 -->
+      <nav class="lesson-nav" id="lesson-nav" aria-label="前後のレッスン"></nav>
+
+    </main>
+
+    <!-- ページ内目次: main.js が本文の h2 から自動生成 -->
+    <aside class="toc">
+      <div class="toc-title">このページの内容</div>
+      <nav id="toc"></nav>
+    </aside>
+
+  </div>
+
+  <footer class="site-footer">
+    <p>ベイズの階段 — 中学数学から最前線まで、一段ずつ。</p>
+  </footer>
+
+  <script src="../../assets/js/curriculum.js"></script>
+  <script src="../../assets/js/main.js"></script>
+</body>
+</html>

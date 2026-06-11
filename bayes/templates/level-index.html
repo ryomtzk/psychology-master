@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- ============================================================
+       レベル目次ページ テンプレート
+       使い方:
+         1. このファイルを levels/level{N}/index.html にコピー
+            (付録の場合は appendix/index.html、data-level="appendix")
+         2. {{...}} プレースホルダをすべて置換
+         3. レッスン一覧は main.js が自動生成するので書かない
+       プレースホルダ一覧:
+         {{LEVEL_NUM}}      例: 3
+         {{LEVEL_TITLE}}    例: ベイズ推定の基礎
+         {{LEVEL_SUBTITLE}} curriculum.js の subtitle と同じ文
+         {{LEVEL_INTRO}}    このレベルで何を学び、何ができるようになるか (2〜4文)
+         {{PREREQ_TEXT}}    前提レベルの案内 (例: Level 2 を完了していることが前提です)
+       ============================================================ -->
+
+  <title>Level {{LEVEL_NUM}} {{LEVEL_TITLE}} | ベイズの階段</title>
+  <meta name="description" content="{{LEVEL_SUBTITLE}}">
+  <script>
+    document.documentElement.dataset.theme =
+      localStorage.getItem("bayes-stairs-theme") ||
+      (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Noto+Serif+JP:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../assets/css/main.css">
+</head>
+<body data-root="../../" data-level="{{LEVEL_NUM}}">
+
+  <header class="site-header">
+    <button class="sidebar-toggle" id="sidebar-toggle" aria-label="メニュー">☰</button>
+    <a class="brand" href="../../index.html">
+      <span class="brand-mark">階</span>
+      <span>ベイズの階段</span>
+    </a>
+    <div class="header-spacer"></div>
+    <div class="header-progress" id="header-progress"></div>
+    <button class="theme-toggle" id="theme-toggle" aria-label="テーマ切替">🌙</button>
+  </header>
+
+  <div class="layout">
+
+    <aside class="sidebar"><nav id="sidebar-nav" aria-label="カリキュラム"></nav></aside>
+
+    <main class="lesson">
+
+      <nav class="breadcrumbs" aria-label="パンくず">
+        <a href="../../index.html">ホーム</a><span class="sep">›</span>
+        <span>Level {{LEVEL_NUM}} {{LEVEL_TITLE}}</span>
+      </nav>
+
+      <header class="lesson-header">
+        <div class="lesson-meta">
+          <span class="level-badge">Level {{LEVEL_NUM}}</span>
+        </div>
+        <h1>{{LEVEL_TITLE}}</h1>
+        <p class="lead">{{LEVEL_SUBTITLE}}</p>
+      </header>
+
+      <div class="lesson-body">
+        <p>{{LEVEL_INTRO}}</p>
+        <p class="muted">{{PREREQ_TEXT}}</p>
+
+        <h2>レッスン一覧</h2>
+        <!-- main.js が data-level を見て自動生成 -->
+        <ul class="lesson-list" id="lesson-list"></ul>
+      </div>
+
+    </main>
+
+    <aside class="toc"></aside>
+
+  </div>
+
+  <footer class="site-footer">
+    <p>ベイズの階段 — 中学数学から最前線まで、一段ずつ。</p>
+  </footer>
+
+  <script src="../../assets/js/curriculum.js"></script>
+  <script src="../../assets/js/main.js"></script>
+</body>
+</html>

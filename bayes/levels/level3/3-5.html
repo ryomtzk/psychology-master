@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>3-5 事後分布の要約 — MAP推定と信用区間 | ベイズの階段</title>
+  <meta name="description" content="分布から一つの答えと不確かさの幅を取り出す">
+  <script>
+    document.documentElement.dataset.theme =
+      localStorage.getItem("bayes-stairs-theme") ||
+      (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Noto+Serif+JP:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../assets/css/main.css">
+
+  <!-- KaTeX: 数式を使うページでは必ずこの3行を入れる -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+          onload="renderMathInElement(document.body, {delimiters: [
+            {left: '$$', right: '$$', display: true},
+            {left: '\\(', right: '\\)', display: false}
+          ]});"></script>
+</head>
+<body data-root="../../" data-level="3" data-lesson-id="3-5">
+
+  <header class="site-header">
+    <button class="sidebar-toggle" id="sidebar-toggle" aria-label="メニュー">☰</button>
+    <a class="brand" href="../../index.html">
+      <span class="brand-mark">階</span>
+      <span>ベイズの階段</span>
+    </a>
+    <div class="header-spacer"></div>
+    <div class="header-progress" id="header-progress"></div>
+    <button class="theme-toggle" id="theme-toggle" aria-label="テーマ切替">🌙</button>
+  </header>
+
+  <div class="layout">
+
+    <!-- サイドバー: main.js がカリキュラムから自動生成 -->
+    <aside class="sidebar"><nav id="sidebar-nav" aria-label="カリキュラム"></nav></aside>
+
+    <main class="lesson">
+
+      <nav class="breadcrumbs" aria-label="パンくず">
+        <a href="../../index.html">ホーム</a><span class="sep">›</span>
+        <a href="index.html">Level 3 ベイズ推定の基礎</a><span class="sep">›</span>
+        <span>3-5 事後分布の要約 — MAP推定と信用区間</span>
+      </nav>
+
+      <header class="lesson-header">
+        <div class="lesson-meta">
+          <span class="level-badge">Level 3</span>
+          <span class="small">レッスン 3-5</span>
+        </div>
+        <h1>事後分布の要約 — MAP推定と信用区間</h1>
+
+        <div class="lesson-goals">
+          <h2>このレッスンでできるようになること</h2>
+          <ul>
+            <li>事後分布から事後平均とMAP推定（事後最大）を求め、両者の違いを説明できる</li>
+            <li>信用区間を等裾区間とHDIの2通りで説明し、95%という数字の意味を言える</li>
+            <li>「一つの数」に潰しすぎる危うさを、幅の言葉で説明できる</li>
+          </ul>
+          <p class="prereq">前提: <a href="3-2.html">3-2 ベータ・二項モデル</a> と <a href="../level2/2-4.html">2-4 期待値・分散・標準偏差</a> を読んでいること</p>
+        </div>
+      </header>
+
+      <!-- ▼▼▼ ここからレッスン本文 ▼▼▼ -->
+      <div class="lesson-body">
+
+        <h2>分布まるごとは持ち運べない</h2>
+        <p>ここまでのレッスンで、ベイズ推定の答えは「一つの数」ではなく「分布まるごと」だと学びました。たとえばコインの表が出る確率 \(\theta\)（シータ）について、データを見たあとの<span class="term">事後分布（じごぶんぷ）</span>、つまりデータを見た後の信念を表す確率分布が手に入ります。</p>
+        <p>でも、人に「で、結局その確率はいくつなの？」と聞かれたら、分布のグラフを丸ごと見せるわけにもいきません。一言で答える必要があるときがあります。</p>
+        <p>そこで分布を<strong>短く言い直す</strong>方法を学びます。これを事後分布の<span class="term">要約（ようやく）</span>と呼びます。要約には2種類あります。一つは「代表する1点」を選ぶ点推定、もう一つは「だいたいこの幅」を示す区間推定です。順に見ていきましょう。</p>
+
+        <div class="box box-intuition">
+          <div class="box-title">直感でつかむ</div>
+          <p>クラスの身長分布を一言で言うとき、「平均は160cm」と言ったり「いちばん多いのは158cm前後」と言ったりしますね。これが点推定です。さらに「だいたい150〜170cmの間」と幅で言えば、ばらつきも伝わります。これが区間です。</p>
+          <p>事後分布の要約も同じです。山のどこを「代表」とするか、どこからどこまでを「だいたいの範囲」とするか、を決めるだけです。</p>
+        </div>
+
+        <h2>1点で代表する — 事後平均とMAP</h2>
+        <p>分布を1つの数で代表することを<span class="term">点推定（てんすいてい）</span>と言います。よく使う代表点は2つあります。</p>
+
+        <div class="box box-def">
+          <div class="box-title">定義 — 事後平均とMAP推定</div>
+          <p><strong>事後平均（じごへいきん）</strong>は、事後分布の期待値です。分布の「重心」にあたります。\(\theta\) の事後分布を \(p(\theta \mid D)\)（『データ \(D\) のもとでの \(\theta\) の分布』と読みます）と書くと、連続のときは次の積分で表されます:</p>
+          <p>$$ \hat{\theta}_{\text{平均}} = \int \theta \; p(\theta \mid D)\, d\theta $$</p>
+          <p><strong>MAP推定（マップすいてい）</strong>は <span class="term">事後最大（じごさいだい）</span>、つまり事後分布がいちばん高くなる \(\theta\) です。MAP は Maximum A Posteriori（最大事後確率）の頭文字です:</p>
+          <p>$$ \hat{\theta}_{\text{MAP}} = \underset{\theta}{\arg\max}\; p(\theta \mid D) $$</p>
+          <p>\(\arg\max\)（アーグマックス）は「いちばん大きくする \(\theta\) はどれか」を表す記号です。値そのものではなく、場所を返します。</p>
+        </div>
+
+        <p>事後平均は分布全体の重心、MAPは分布の頂上（最頻値）です。山が左右対称ならこの2つは一致しますが、山が片側に傾いている（ゆがんでいる）ときはズレます。</p>
+
+        <figure class="figure">
+          <svg viewBox="0 0 380 230" width="380" aria-label="左右非対称な事後分布における事後平均とMAPの位置">
+            <!-- 軸 -->
+            <line x1="30" y1="185" x2="360" y2="185" stroke="var(--border)" stroke-width="2"/>
+            <line x1="30" y1="20" x2="30" y2="185" stroke="var(--border)" stroke-width="2"/>
+            <!-- 非対称な分布(右に裾を引く) -->
+            <path d="M30,185 C70,185 95,40 130,40 C175,40 210,150 280,175 C320,183 345,185 360,185"
+                  fill="var(--level-color)" fill-opacity="0.18"
+                  stroke="var(--level-color)" stroke-width="3"/>
+            <!-- MAP(頂上) -->
+            <line x1="130" y1="40" x2="130" y2="185" stroke="var(--level-color)" stroke-width="2" stroke-dasharray="5 4"/>
+            <circle cx="130" cy="40" r="4" fill="var(--level-color)"/>
+            <text x="130" y="32" text-anchor="middle" font-size="12" fill="var(--text-muted)">MAP（頂上）</text>
+            <!-- 事後平均(重心。頂上より右側) -->
+            <line x1="172" y1="78" x2="172" y2="185" stroke="var(--text-muted)" stroke-width="2" stroke-dasharray="2 3"/>
+            <text x="200" y="110" text-anchor="middle" font-size="12" fill="var(--text-muted)">事後平均（重心）</text>
+            <text x="195" y="205" text-anchor="middle" font-size="11" fill="var(--text-muted)">θ（推定したい量）</text>
+          </svg>
+          <figcaption>図1: 右に裾を引いた非対称な事後分布。頂上（MAP）は左寄り、重心（事後平均）は裾に引っぱられて少し右に来ます。山がゆがむと2つの代表点はズレます。</figcaption>
+        </figure>
+
+        <div class="box box-ex">
+          <div class="box-title">例題1 — ベータ分布の点推定</div>
+          <p>あるコインを10回投げたら表が3回出ました。事前分布を一様（\(\mathrm{Beta}(1,1)\)）とすると、<a href="3-2.html">3-2 ベータ・二項モデル</a>より事後分布は \(\mathrm{Beta}(\alpha, \beta)\) で、\(\alpha = 1+3 = 4\)、\(\beta = 1+7 = 8\) です。事後平均とMAPを求めましょう。</p>
+          <p><strong>解</strong>: <a href="../level2/2-6.html">2-6 ベータ分布</a>で学んだ公式を使います。</p>
+          <p>事後平均は \(\dfrac{\alpha}{\alpha + \beta} = \dfrac{4}{4+8} = \dfrac{4}{12} \approx 0.33\)。</p>
+          <p>MAP（最頻値）は \(\alpha>1,\ \beta>1\) のとき \(\dfrac{\alpha-1}{\alpha + \beta - 2} = \dfrac{3}{10} = 0.30\)。</p>
+          <p>表が出た割合そのもの（\(3/10 = 0.30\)）がMAPと一致しました。一方、事後平均は事前分布の「水増し」のぶん、ほんの少しだけ \(0.5\) 寄りの \(0.33\) になっています。山が左に寄っているため、重心（平均）が頂上（MAP）より右に来ているのですね。</p>
+        </div>
+
+        <div class="box box-warn">
+          <div class="box-title">つまずき注意</div>
+          <p>「点推定はどれを使えばいい？」と迷ったら、まず<strong>分布の形を見る</strong>のが基本です。左右対称なら平均でもMAPでもほぼ同じ。大きくゆがんでいるなら、どちらを選ぶかで数字が変わります。「正解の1点」が天から決まるのではなく、目的に合わせて選ぶ、と覚えておきましょう。</p>
+        </div>
+
+        <h2>幅で表す — 信用区間</h2>
+        <p>1点だけ伝えると、不確かさが消えてしまいます。「\(\theta\) は \(0.33\) です」と言い切ると、それが「ほぼ確実」なのか「あてずっぽうに近い」のか分かりません。そこで「だいたいこの範囲」を示すのが区間推定です。</p>
+
+        <div class="box box-def">
+          <div class="box-title">定義 — 信用区間</div>
+          <p><span class="term">信用区間（しんようくかん）</span>とは、事後分布のもとで \(\theta\) がその中に入る確率が、決めた値（たとえば95%）になるような区間のことです。95%信用区間 \([L, U]\) なら、次が成り立ちます:</p>
+          <p>$$ P(\,L \le \theta \le U \mid D\,) = 0.95 $$</p>
+          <p>読み方は「データ \(D\) を見た今、\(\theta\) がこの幅に入っている確率は95%」です。ベイズでは \(\theta\) を確率変数のように扱うので、こう素直に言えます。</p>
+        </div>
+
+        <div class="box box-warn">
+          <div class="box-title">つまずき注意 — 信用区間と信頼区間は別物</div>
+          <p>頻度論で出てくる<span class="term">信頼区間（しんらいくかん）</span>とは意味が違います。ベイズの<strong>信用区間</strong>は「\(\theta\) がこの幅に95%の確率で入る」と素直に読めます。頻度論の信頼区間は「同じ実験を何度も繰り返すと、作った区間の95%が真の値を含む」という回りくどい意味で、\(\theta\) 自体の確率は語りません。このレッスンで扱うのはベイズの信用区間です。「確信区間」という呼び方は使いません。</p>
+        </div>
+
+        <p>ところで、確率が95%になる区間は<strong>1通りではありません</strong>。同じ95%でも、どこを切り取るかで区間は変わります。代表的な決め方が2つあります。</p>
+
+        <div class="box box-def">
+          <div class="box-title">定義 — 等裾区間とHDI</div>
+          <p><span class="term">等裾区間（とうきょくかん）</span>は、左右の裾（はみ出す部分）を等しく切り落とす決め方です。95%なら、左の裾2.5%と右の裾2.5%を捨て、残り95%を区間にします。左右で同じだけ捨てるのが特徴です。</p>
+          <p><span class="term">HDI</span>（エイチ・ディー・アイ。最高密度区間、Highest Density Interval）は、<strong>区間の中の高さが外より必ず高い</strong>ように選ぶ決め方です。同じ95%でも幅がいちばん狭くなり、いちばん「濃い」95%を切り取ります。</p>
+        </div>
+
+        <figure class="figure">
+          <svg viewBox="0 0 400 250" width="400" aria-label="等裾区間とHDIの比較">
+            <!-- 上段: 等裾区間 -->
+            <text x="20" y="18" font-size="12" fill="var(--text-muted)">等裾区間（左右の裾を2.5%ずつ捨てる）</text>
+            <line x1="20" y1="105" x2="380" y2="105" stroke="var(--border)" stroke-width="2"/>
+            <path d="M20,105 C70,105 95,30 140,30 C195,30 230,90 300,100 C335,104 360,105 380,105"
+                  fill="var(--level-color)" fill-opacity="0.12"
+                  stroke="var(--level-color)" stroke-width="2.5"/>
+            <!-- 区間の境界(左L1, 右U1) -->
+            <line x1="62" y1="98" x2="62" y2="120" stroke="var(--level-color)" stroke-width="2"/>
+            <line x1="320" y1="100" x2="320" y2="120" stroke="var(--level-color)" stroke-width="2"/>
+            <line x1="62" y1="118" x2="320" y2="118" stroke="var(--level-color)" stroke-width="2"/>
+            <text x="62" y="134" text-anchor="middle" font-size="10" fill="var(--text-muted)">L</text>
+            <text x="320" y="134" text-anchor="middle" font-size="10" fill="var(--text-muted)">U</text>
+            <text x="40" y="100" text-anchor="middle" font-size="9" fill="var(--text-muted)">2.5%</text>
+            <text x="350" y="100" text-anchor="middle" font-size="9" fill="var(--text-muted)">2.5%</text>
+
+            <!-- 下段: HDI -->
+            <text x="20" y="166" font-size="12" fill="var(--text-muted)">HDI（区間の中の高さが外より高い／幅は最小）</text>
+            <line x1="20" y1="240" x2="380" y2="240" stroke="var(--border)" stroke-width="2"/>
+            <path d="M20,240 C70,240 95,165 140,165 C195,165 230,225 300,235 C335,239 360,240 380,240"
+                  fill="var(--level-color)" fill-opacity="0.12"
+                  stroke="var(--level-color)" stroke-width="2.5"/>
+            <!-- HDIは頂上を含み、幅が狭い -->
+            <line x1="78" y1="222" x2="78" y2="240" stroke="var(--level-color)" stroke-width="2"/>
+            <line x1="288" y1="231" x2="288" y2="240" stroke="var(--level-color)" stroke-width="2"/>
+            <!-- 同じ高さの水平線で囲うイメージ -->
+            <line x1="78" y1="222" x2="288" y2="231" stroke="var(--level-color)" stroke-width="2" stroke-dasharray="5 3"/>
+            <text x="78" y="252" text-anchor="middle" font-size="10" fill="var(--text-muted)">L'</text>
+            <text x="288" y="252" text-anchor="middle" font-size="10" fill="var(--text-muted)">U'</text>
+          </svg>
+          <figcaption>図2: 同じ95%でも切り取り方が違います。上の等裾区間は左右の裾を等しく捨てるだけ。下のHDIは破線の高さより上だけを集めるので、いちばん狭い区間になります。非対称な分布では両者がズレます。</figcaption>
+        </figure>
+
+        <p>左右対称な分布なら、等裾区間とHDIはぴったり一致します。違いが出るのは、図1のような<strong>ゆがんだ分布</strong>のときです。HDIのほうが幅は狭くなり、必ず頂上（最も濃いところ）を含みます。等裾区間は計算が楽で、左右の裾の確率を別々に報告しやすいのが利点です。</p>
+
+        <div class="box box-ex">
+          <div class="box-title">例題2 — 区間で不確かさを伝える</div>
+          <p>例題1の続きです。事後分布 \(\mathrm{Beta}(4, 8)\) の95%等裾区間を計算すると、およそ \([0.11,\ 0.61]\) になりました（計算機で求めた値）。これをどう読めばよいでしょうか。</p>
+          <p><strong>解</strong>: 「データを見た今、表の確率 \(\theta\) は95%の確率でだいたい \(0.11\) から \(0.61\) の間にある」と読みます。点推定だけなら「\(\theta \approx 0.33\)」で終わりですが、区間まで添えると幅がとても広いと分かります。</p>
+          <p>たった10回しか投げていないので、これだけ不確かなのは当然です。もし1000回投げて300回表なら、事後分布は \(\mathrm{Beta}(301, 701)\) となり、区間はぐっと狭く \([0.27,\ 0.33]\) くらいに締まります。データが増えるほど幅が縮む、これがベイズ更新の感触です。</p>
+        </div>
+
+        <div class="box box-sim">
+          <div class="box-title">やってみよう</div>
+          <p>下のスライダーで「投げた回数」を変えると、事後分布の山と95%区間の幅がどう変わるかが見られます。表が出る割合はおよそ \(0.3\) のまま、回数だけを増やしてみましょう。区間（青い帯）が回数とともに狭まっていくのが要点です。</p>
+          <div style="margin:1rem 0;">
+            <label style="font-size:0.9rem;">投げた回数 n = <span id="sim-n-label">10</span>（表は約30%）</label><br>
+            <input type="range" id="sim-n" min="10" max="1000" step="10" value="10" style="width:100%; accent-color: var(--level-color);">
+          </div>
+          <figure class="figure" style="margin-top:0.5rem;">
+            <canvas id="sim-canvas" width="600" height="260" style="width:100%; max-width:600px; height:auto;"></canvas>
+            <figcaption>図3: 回数を増やすと山がとがり、95%区間（帯）が狭まります。割合の推定はほぼ同じでも、不確かさが減っていきます。</figcaption>
+          </figure>
+        </div>
+
+        <h2>1つの数に潰しすぎない</h2>
+        <p>点推定は便利ですが、危うさもあります。\(\theta = 0.33\) と書くと、まるで確定した事実のように見えてしまいます。でも例題2のように、本当は \(0.11\) から \(0.61\) まで広く散らばっているかもしれません。</p>
+
+        <div class="box box-warn">
+          <div class="box-title">つまずき注意 — 幅を捨てない</div>
+          <p>ベイズ推定のいちばんの強みは「分布まるごと」を持てることです。点推定で1つの数に潰すと、その強みを自分で捨てることになります。だから実務では「点推定 ＋ 区間」をセットで報告するのが基本です。たとえば「事後平均 0.33（95%信用区間 0.11〜0.61）」のように書きます。</p>
+        </div>
+
+        <div class="quiz" data-answer="b">
+          <p class="quiz-q">問1: 左右に大きくゆがんだ（非対称な）事後分布で、事後平均とMAPの関係として正しいのはどれ？</p>
+          <button class="quiz-option" data-key="a">いつでも必ず一致する</button>
+          <button class="quiz-option" data-key="b">一致するとは限らず、ズレることがある</button>
+          <button class="quiz-option" data-key="c">MAPは存在しなくなる</button>
+          <div class="quiz-explain"><p>事後平均は分布の重心、MAPは頂上です。左右対称なら一致しますが、ゆがんだ分布では重心が裾に引っぱられて、頂上とズレます（図1）。よって正解はBです。</p></div>
+        </div>
+
+        <div class="quiz" data-answer="c">
+          <p class="quiz-q">問2: 「95%信用区間が \([0.11,\ 0.61]\)」の正しい読み方はどれ？</p>
+          <button class="quiz-option" data-key="a">100回測れば95回はこの幅に収まる、という実験の繰り返しの話</button>
+          <button class="quiz-option" data-key="b">θ がちょうど 0.11 か 0.61 のどちらかである確率が95%</button>
+          <button class="quiz-option" data-key="c">データを見た今、θ がこの幅に入っている確率が95%</button>
+          <div class="quiz-explain"><p>ベイズの信用区間は素直に「\(\theta\) がこの幅に入る確率が95%」と読めます。Aは頻度論の信頼区間の説明で、別物です（混同しないこと）。Bは端点だけを指していて誤り。正解はCです。</p></div>
+        </div>
+
+        <div class="quiz" data-answer="a">
+          <p class="quiz-q">問3: 同じ95%でも、等裾区間とHDIで幅が違ってくるのはどんなとき？</p>
+          <button class="quiz-option" data-key="a">分布が左右非対称（ゆがんでいる）とき</button>
+          <button class="quiz-option" data-key="b">分布が完全に左右対称のとき</button>
+          <button class="quiz-option" data-key="c">データが多いとき、必ず違う</button>
+          <div class="quiz-explain"><p>左右対称なら等裾区間とHDIは一致します。違いが出るのは分布がゆがんでいるときで、HDIのほうが幅が狭く、必ず頂上を含みます（図2）。よって正解はAです。</p></div>
+        </div>
+
+        <div class="box box-practice">
+          <div class="box-title">演習1</div>
+          <p>サイコロが「いかさま」かどうかを調べています。20回振って6の目が8回出ました。事前分布を \(\mathrm{Beta}(1,1)\) とするとき、6が出る確率 \(\theta\) の事後分布を書き、事後平均とMAPを求めなさい。</p>
+          <details class="answer">
+            <summary>解答を見る</summary>
+            <p>事後分布は \(\mathrm{Beta}(1+8,\ 1+12) = \mathrm{Beta}(9,\ 13)\) です。</p>
+            <p>事後平均 \(= \dfrac{9}{9+13} = \dfrac{9}{22} \approx 0.41\)。</p>
+            <p>MAP \(= \dfrac{9-1}{9+13-2} = \dfrac{8}{20} = 0.40\)。これは実際に出た割合 \(8/20\) と一致します。</p>
+            <p>正しいサイコロなら \(\theta = 1/6 \approx 0.17\) のはず。事後平均0.41はそれよりだいぶ大きく、いかさまが疑わしいと言えそうです。ただし1点だけでは早とちりのもと。次の演習で区間も見ます。</p>
+          </details>
+        </div>
+
+        <div class="box box-practice">
+          <div class="box-title">演習2</div>
+          <p>演習1の事後分布 \(\mathrm{Beta}(9, 13)\) の95%等裾区間は、計算機で求めるとおよそ \([0.22,\ 0.61]\) でした。この区間から、サイコロが正しい（\(\theta = 1/6 \approx 0.17\)）と言えるか考えなさい。</p>
+          <details class="answer">
+            <summary>解答を見る</summary>
+            <p>区間 \([0.22,\ 0.61]\) に、正しいサイコロの値 \(0.17\) は入っていません。下端の0.22より小さいからです。</p>
+            <p>「\(\theta\) は95%の確率でこの幅にある」のに、その幅から0.17が外れている。つまり「正しいサイコロ」という見方は、今のデータとはかなり合いにくい、と読めます。いかさまの疑いを区間が後押ししているわけですね。点推定だけでなく区間まで見ることで、判断に自信がつきます。</p>
+          </details>
+        </div>
+
+        <div class="box box-practice">
+          <div class="box-title">演習3</div>
+          <p>ある人が「事後平均は0.5なので、答えは0.5です」とだけ報告しました。この報告の問題点を、このレッスンの言葉で説明しなさい。</p>
+          <details class="answer">
+            <summary>解答を見る</summary>
+            <p>不確かさ（幅）が報告されていないのが問題です。事後平均0.5が、ほぼ確実な0.5なのか、それとも0.1〜0.9まで広く散らばった末の重心なのかが分かりません。</p>
+            <p>1つの数に潰すと、ベイズの強みである「分布まるごと」の情報が消えてしまいます。「事後平均0.5（95%信用区間 ◯◯〜◯◯）」のように、点推定と区間をセットで報告すべきです。</p>
+          </details>
+        </div>
+
+        <h2>まとめ</h2>
+        <ul>
+          <li>事後分布を短く言い直すのが<strong>要約</strong>。1点で表す点推定と、幅で表す区間推定がある。</li>
+          <li>点推定の代表は<strong>事後平均</strong>（重心）と<strong>MAP</strong>（頂上＝事後最大）。対称なら一致し、ゆがむとズレる。</li>
+          <li><strong>信用区間</strong>は「\(\theta\) がこの幅に入る確率が95%」と素直に読める。頻度論の信頼区間とは意味が違う。</li>
+          <li>同じ95%でも<strong>等裾区間</strong>（左右の裾を均等に捨てる）と<strong>HDI</strong>（最も濃い最小幅）があり、非対称な分布でズレる。</li>
+          <li>1つの数に潰しすぎない。実務では「点推定 ＋ 区間」をセットで報告するのが基本。</li>
+        </ul>
+        <p>これでLevel 3「ベイズ推定の基礎」は一区切りです。分布を更新し、共役で楽に計算し、最後にこうして要約する。この一連の流れが、ベイズ推定の骨格そのものです。次のレベルでは、手で解けない複雑な分布をコンピュータでサンプリングする道具に進みます。</p>
+
+      </div>
+      <!-- ▲▲▲ レッスン本文ここまで ▲▲▲ -->
+
+      <div class="complete-area">
+        <button class="btn btn-level" id="complete-btn">このレッスンを完了にする</button>
+        <p class="complete-note">進捗はこのブラウザに保存されます</p>
+      </div>
+
+      <!-- 前後ナビ: main.js がカリキュラムから自動生成 -->
+      <nav class="lesson-nav" id="lesson-nav" aria-label="前後のレッスン"></nav>
+
+    </main>
+
+    <!-- ページ内目次: main.js が本文の h2 から自動生成 -->
+    <aside class="toc">
+      <div class="toc-title">このページの内容</div>
+      <nav id="toc"></nav>
+    </aside>
+
+  </div>
+
+  <footer class="site-footer">
+    <p>ベイズの階段 — 中学数学から最前線まで、一段ずつ。</p>
+  </footer>
+
+  <!-- レッスン固有スクリプト: 事後分布と95%区間のシミュレーション -->
+  <script>
+  (function () {
+    var canvas = document.getElementById("sim-canvas");
+    if (!canvas) return;
+    var ctx = canvas.getContext("2d");
+    var slider = document.getElementById("sim-n");
+    var nLabel = document.getElementById("sim-n-label");
+
+    var W = canvas.width, H = canvas.height;
+    var padL = 40, padR = 20, padT = 16, padB = 36;
+
+    // レベル色を取得(CSS変数)。取れなければフォールバック。
+    function levelColor() {
+      var c = getComputedStyle(document.body).getPropertyValue("--level-color").trim();
+      return c || "#6c53e0";
+    }
+    function muted() {
+      var c = getComputedStyle(document.body).getPropertyValue("--text-muted").trim();
+      return c || "#888";
+    }
+    function borderCol() {
+      var c = getComputedStyle(document.body).getPropertyValue("--border").trim();
+      return c || "#ccc";
+    }
+
+    // log gamma (Lanczos近似) — ベータ密度の正規化に使う
+    function logGamma(x) {
+      var g = 7;
+      var c = [
+        0.99999999999980993, 676.5203681218851, -1259.1392167224028,
+        771.32342877765313, -176.61502916214059, 12.507343278686905,
+        -0.13857109526572012, 9.9843695780195716e-6, 1.5056327351493116e-7
+      ];
+      if (x < 0.5) {
+        return Math.log(Math.PI / Math.sin(Math.PI * x)) - logGamma(1 - x);
+      }
+      x -= 1;
+      var a = c[0];
+      var t = x + g + 0.5;
+      for (var i = 1; i < g + 2; i++) a += c[i] / (x + i);
+      return 0.5 * Math.log(2 * Math.PI) + (x + 0.5) * Math.log(t) - t + Math.log(a);
+    }
+    // 非正規化のベータ密度(対数)。最大値で割って 0..1 に直して描く
+    function betaLogPdf(theta, a, b) {
+      if (theta <= 0 || theta >= 1) return -Infinity;
+      return (a - 1) * Math.log(theta) + (b - 1) * Math.log(1 - theta);
+    }
+
+    function draw() {
+      var n = parseInt(slider.value, 10);
+      var k = Math.round(n * 0.3);          // 表は約30%
+      var a = 1 + k, b = 1 + (n - k);       // Beta(α,β) 事後分布
+      nLabel.textContent = n;
+
+      ctx.clearRect(0, 0, W, H);
+
+      var N = 400;
+      var xs = [], ys = [], maxLog = -Infinity;
+      for (var i = 0; i <= N; i++) {
+        var th = (i + 0.5) / (N + 1);       // 0,1を避ける
+        var lp = betaLogPdf(th, a, b);
+        xs.push(th); ys.push(lp);
+        if (lp > maxLog) maxLog = lp;
+      }
+      // 描画用に正規化(最大=1)
+      var dens = ys.map(function (lp) { return Math.exp(lp - maxLog); });
+
+      // 95%等裾区間を数値積分で求める(実スケールの密度で)
+      var mode = (a - 1) / (a + b - 2);
+      var logNorm = logGamma(a + b) - logGamma(a) - logGamma(b);
+      var total = 0, cdf = [];
+      var dx = 1 / (N + 1);
+      for (var j = 0; j <= N; j++) {
+        var d = Math.exp(logNorm + ys[j]);  // 正規化済み密度
+        total += d * dx;
+        cdf.push(total);
+      }
+      for (var j2 = 0; j2 <= N; j2++) cdf[j2] /= total;
+      function quantile(p) {
+        for (var j = 0; j <= N; j++) if (cdf[j] >= p) return xs[j];
+        return xs[N];
+      }
+      var lo = quantile(0.025), hi = quantile(0.975);
+
+      function X(th) { return padL + th * (W - padL - padR); }
+      function Y(d) { return H - padB - d * (H - padT - padB); }
+
+      var lvl = levelColor();
+
+      // 95%区間の帯
+      ctx.fillStyle = lvl;
+      ctx.globalAlpha = 0.16;
+      ctx.fillRect(X(lo), padT, X(hi) - X(lo), H - padT - padB);
+      ctx.globalAlpha = 1;
+
+      // 軸
+      ctx.strokeStyle = borderCol();
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(padL, H - padB); ctx.lineTo(W - padR, H - padB);
+      ctx.moveTo(padL, padT); ctx.lineTo(padL, H - padB);
+      ctx.stroke();
+
+      // 分布の曲線
+      ctx.strokeStyle = lvl;
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      for (var p = 0; p <= N; p++) {
+        var px = X(xs[p]), py = Y(dens[p]);
+        if (p === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+      }
+      ctx.stroke();
+      // 塗り
+      ctx.lineTo(X(xs[N]), H - padB);
+      ctx.lineTo(X(xs[0]), H - padB);
+      ctx.closePath();
+      ctx.globalAlpha = 0.12;
+      ctx.fillStyle = lvl;
+      ctx.fill();
+      ctx.globalAlpha = 1;
+
+      // 区間の境界線
+      ctx.strokeStyle = lvl;
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([4, 3]);
+      ctx.beginPath();
+      ctx.moveTo(X(lo), padT); ctx.lineTo(X(lo), H - padB);
+      ctx.moveTo(X(hi), padT); ctx.lineTo(X(hi), H - padB);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // 目盛りラベル
+      ctx.fillStyle = muted();
+      ctx.font = "11px sans-serif";
+      ctx.textAlign = "center";
+      [0, 0.25, 0.5, 0.75, 1].forEach(function (t) {
+        ctx.fillText(t.toFixed(2), X(t), H - padB + 16);
+      });
+      ctx.fillText("θ（表が出る確率）", (padL + W - padR) / 2, H - 4);
+
+      // 区間の数値表示
+      ctx.textAlign = "left";
+      ctx.fillStyle = lvl;
+      ctx.font = "12px sans-serif";
+      ctx.fillText("95%区間: [" + lo.toFixed(2) + ", " + hi.toFixed(2) + "]  幅=" + (hi - lo).toFixed(2), padL + 4, padT + 12);
+    }
+
+    slider.addEventListener("input", draw);
+    // テーマ切替後にも色を追従させる
+    var mo = new MutationObserver(draw);
+    mo.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+    // 初回描画(フォント・レイアウト確定後)
+    if (document.readyState === "complete") draw();
+    else window.addEventListener("load", draw);
+  })();
+  </script>
+
+  <script src="../../assets/js/curriculum.js"></script>
+  <script src="../../assets/js/main.js"></script>
+</body>
+</html>

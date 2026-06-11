@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>5-5 状態空間モデルと時系列 | ベイズの階段</title>
+  <meta name="description" content="時間とともに変化するパラメータを追跡する">
+  <script>
+    document.documentElement.dataset.theme =
+      localStorage.getItem("bayes-stairs-theme") ||
+      (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Noto+Serif+JP:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../assets/css/main.css">
+
+  <!-- KaTeX: 数式を使うページでは必ずこの3行を入れる -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+          onload="renderMathInElement(document.body, {delimiters: [
+            {left: '$$', right: '$$', display: true},
+            {left: '\\(', right: '\\)', display: false}
+          ]});"></script>
+</head>
+<body data-root="../../" data-level="5" data-lesson-id="5-5">
+
+  <header class="site-header">
+    <button class="sidebar-toggle" id="sidebar-toggle" aria-label="メニュー">☰</button>
+    <a class="brand" href="../../index.html">
+      <span class="brand-mark">階</span>
+      <span>ベイズの階段</span>
+    </a>
+    <div class="header-spacer"></div>
+    <div class="header-progress" id="header-progress"></div>
+    <button class="theme-toggle" id="theme-toggle" aria-label="テーマ切替">🌙</button>
+  </header>
+
+  <div class="layout">
+
+    <!-- サイドバー: main.js がカリキュラムから自動生成 -->
+    <aside class="sidebar"><nav id="sidebar-nav" aria-label="カリキュラム"></nav></aside>
+
+    <main class="lesson">
+
+      <nav class="breadcrumbs" aria-label="パンくず">
+        <a href="../../index.html">ホーム</a><span class="sep">›</span>
+        <a href="index.html">Level 5 実践ベイズモデリング</a><span class="sep">›</span>
+        <span>5-5 状態空間モデルと時系列</span>
+      </nav>
+
+      <header class="lesson-header">
+        <div class="lesson-meta">
+          <span class="level-badge">Level 5</span>
+          <span class="small">レッスン 5-5</span>
+        </div>
+        <h1>状態空間モデルと時系列</h1>
+
+        <div class="lesson-goals">
+          <h2>このレッスンでできるようになること</h2>
+          <ul>
+            <li>時間とともに変化するパラメータを「状態」としてモデル化する考え方を説明できる</li>
+            <li>ランダムウォーク事前とローカルレベルモデルのしくみを式で書ける</li>
+            <li>ローカルレベルモデルのPyMCコードの骨組みを読める</li>
+          </ul>
+          <p class="prereq">前提: <a href="5-2.html">5-2 ベイズ線形回帰</a> と <a href="../level3/3-4.html">3-4 正規分布のベイズ推定</a> を読んでいること</p>
+        </div>
+      </header>
+
+      <!-- ▼▼▼ ここからレッスン本文 ▼▼▼ -->
+      <div class="lesson-body">
+
+        <h2>「平均」が動いていく世界</h2>
+        <p>
+          これまでのレッスンでは、推定したいパラメータは1つの固定値でした。
+          コインの表が出る確率 \(\theta\)、回帰の傾き、グループの平均。
+          どれも「真の値はずっと変わらない」という前提で考えてきました。
+        </p>
+        <p>
+          でも、現実のデータはそうとは限りません。
+          毎日のアプリの利用者数、ある店の月間売上、ウェブサイトの会員登録数。
+          こういう<span class="term">時系列（じけいれつ）データ</span>、つまり時間順に並んだ観測値では、
+          背後の「平均」そのものがゆっくり動いていきます。
+        </p>
+        <p>
+          先月の平均利用者数と今月の平均利用者数は、たぶん違います。
+          でも、まったく無関係でもありません。今月は先月の近くにいるはずです。
+          この「時間とともに変わるけれど、急には飛ばない」量をうまく追いかけるのが、
+          このレッスンで学ぶ<span class="term">状態空間モデル（じょうたいくうかんモデル）</span>です。
+        </p>
+
+        <div class="box box-intuition">
+          <div class="box-title">直感でつかむ</div>
+          <p>
+            暗い部屋の中を、人がゆっくり歩いていると思ってください。
+            私たちはその人を直接は見られません。見えるのは、ノイズだらけのセンサーが返す「だいたいこのへん」という値だけです。
+          </p>
+          <p>
+            ここで2つの知識を使えます。1つは「人は急にワープしない」こと（1歩は前の位置の近く）。
+            もう1つは「センサーは多少ずれる」こと。この2つを組み合わせると、
+            ガタガタした観測値から、なめらかな本当の道すじを推定できます。
+            状態空間モデルがやっているのは、まさにこれです。
+          </p>
+        </div>
+
+        <h2>状態と観測を分けて考える</h2>
+        <p>
+          状態空間モデルの肝は、世界を2つの層に分けることです。
+          目に見えない<span class="term">状態（state、ステート）</span>と、実際に手に入る<span class="term">観測（observation）</span>です。
+        </p>
+
+        <div class="box box-def">
+          <div class="box-title">定義 — 状態空間モデル</div>
+          <p>
+            時刻 \(t = 1, 2, \dots, T\) について、観測値 \(y_t\) の背後に、見えない状態 \(\mu_t\) があると考えます。
+            状態空間モデルは、次の2つの式の組で表されます。
+          </p>
+          <p><strong>状態方程式（じょうたいほうていしき）</strong> — 状態が時間とともにどう変わるか:</p>
+          $$ \mu_t = \mu_{t-1} + w_t $$
+          <p><strong>観測方程式（かんそくほうていしき）</strong> — 状態から観測値がどう生まれるか:</p>
+          $$ y_t = \mu_t + v_t $$
+          <p>
+            ここで \(w_t\) と \(v_t\) はそれぞれノイズです。\(\mu_t\) は読み方を添えると「時刻 \(t\) の状態」、
+            \(y_t\) は「時刻 \(t\) の観測値」と読みます。
+          </p>
+        </div>
+
+        <p>
+          状態方程式の \(\mu_t = \mu_{t-1} + w_t\) を見てください。
+          今の状態は、1つ前の状態に、小さなゆらぎ \(w_t\) を足したものです。
+          この「前の値に小さなノイズを足して次へ進む」という動きには名前があります。
+        </p>
+
+        <div class="box box-def">
+          <div class="box-title">定義 — ランダムウォーク事前</div>
+          <p>
+            状態 \(\mu_t\) が、1つ前の \(\mu_{t-1}\) を中心とした正規分布から生まれるとする事前分布を、
+            <span class="term">ランダムウォーク事前（じぜん）</span>と呼びます。式で書くと次のとおりです。
+          </p>
+          $$ \mu_t \mid \mu_{t-1} \sim \mathcal{N}(\mu_{t-1},\; \sigma_w^2) $$
+          <p>
+            \(\mathcal{N}(\mu_{t-1}, \sigma_w^2)\) は「平均 \(\mu_{t-1}\)、分散 \(\sigma_w^2\) の正規分布」と読みます。
+            \(\sigma_w\)（シグマ・ダブリュー）は状態がどれくらい大きく動くかを決める量で、
+            <span class="term">プロセスノイズ</span>と呼ばれます。
+          </p>
+        </div>
+
+        <div class="box box-intuition">
+          <div class="box-title">直感でつかむ — ランダムウォークは「ゆるい鎖」</div>
+          <p>
+            ランダムウォーク事前は、隣り合う時刻の状態を「ゆるい鎖」でつないでいるイメージです。
+            \(\sigma_w\) が小さいと鎖が短く、\(\mu_t\) は前の値からほとんど動けません（とてもなめらかな線）。
+            \(\sigma_w\) が大きいと鎖が長く、\(\mu_t\) は自由に動けます（ガタガタな線）。
+            この \(\sigma_w\) もデータから推定できます。
+          </p>
+        </div>
+
+        <h2>ローカルレベルモデル</h2>
+        <p>
+          いま定義した、いちばんシンプルな状態空間モデルには名前がついています。
+          <span class="term">ローカルレベルモデル</span>です。
+          「ローカルレベル」とは「その時その時の平均の高さ（レベル）」という意味で、
+          時系列の背後にある「いまの水準」を追いかけるモデルだと思ってください。
+        </p>
+
+        <div class="box box-thm">
+          <div class="box-title">公式 — ローカルレベルモデル</div>
+          <p>状態（レベル）の時間変化:</p>
+          $$ \mu_t \sim \mathcal{N}(\mu_{t-1},\; \sigma_w^2) $$
+          <p>観測値の生成:</p>
+          $$ y_t \sim \mathcal{N}(\mu_t,\; \sigma_v^2) $$
+          <p>
+            初期の状態 \(\mu_1\) には、広めの事前分布（たとえば \(\mathcal{N}(0, 100)\)）を置きます。
+            未知のパラメータは、各時刻の状態 \(\mu_1, \dots, \mu_T\) と、2つのノイズの大きさ \(\sigma_w,\ \sigma_v\) です。
+          </p>
+        </div>
+
+        <div class="formula">
+          <span class="formula-label">2つのノイズの役割</span>
+          $$ \underbrace{\sigma_w}_{\text{プロセスノイズ}} \;\;\text{vs}\;\; \underbrace{\sigma_v}_{\text{観測ノイズ}} $$
+          <div class="formula-parts">
+            <span class="part"><b>プロセスノイズ \(\sigma_w\)</b>: 本当の水準がどれだけ動くか</span>
+            <span class="part"><b>観測ノイズ \(\sigma_v\)</b>: 測定がどれだけブレるか</span>
+            <span class="part"><b>2つの比</b>: 線をなめらかにするか、データに食いつかせるか</span>
+          </div>
+        </div>
+
+        <div class="box box-warn">
+          <div class="box-title">つまずき注意 — 2つのノイズは別物</div>
+          <p>
+            \(\sigma_w\) と \(\sigma_v\) を混同しないでください。
+            \(\sigma_w\) は「真の水準そのものの変化」、\(\sigma_v\) は「測定のばらつき」です。
+            観測値が上下していても、その原因が水準の移動（\(\sigma_w\)）なのか測定のノイズ（\(\sigma_v\)）なのかは違います。
+            ベイズ推定は、この2つを同時に切り分けてくれます。
+          </p>
+        </div>
+
+        <p>
+          下の図は、見えない状態 \(\mu_t\)（なめらかな線）と、それにノイズが乗った観測値 \(y_t\)（点）の関係を表したものです。
+        </p>
+
+        <figure class="figure">
+          <svg viewBox="0 0 480 220" width="480" aria-label="状態の真の道すじと、ノイズの乗った観測点">
+            <!-- 軸 -->
+            <line x1="40" y1="190" x2="460" y2="190" stroke="var(--border)" stroke-width="2"/>
+            <line x1="40" y1="20" x2="40" y2="190" stroke="var(--border)" stroke-width="2"/>
+            <!-- 真の状態 μ_t: なめらかに上昇してから少し下る -->
+            <path d="M40,160 C120,150 150,90 230,80 C300,72 340,100 460,70"
+                  fill="none" stroke="var(--level-color)" stroke-width="3"/>
+            <!-- 観測点 y_t: 線の周りに散らばる -->
+            <circle cx="60" cy="170" r="4" fill="var(--text-muted)"/>
+            <circle cx="95" cy="138" r="4" fill="var(--text-muted)"/>
+            <circle cx="130" cy="150" r="4" fill="var(--text-muted)"/>
+            <circle cx="165" cy="100" r="4" fill="var(--text-muted)"/>
+            <circle cx="200" cy="95" r="4" fill="var(--text-muted)"/>
+            <circle cx="235" cy="68" r="4" fill="var(--text-muted)"/>
+            <circle cx="270" cy="92" r="4" fill="var(--text-muted)"/>
+            <circle cx="305" cy="78" r="4" fill="var(--text-muted)"/>
+            <circle cx="345" cy="108" r="4" fill="var(--text-muted)"/>
+            <circle cx="385" cy="82" r="4" fill="var(--text-muted)"/>
+            <circle cx="425" cy="90" r="4" fill="var(--text-muted)"/>
+            <circle cx="455" cy="62" r="4" fill="var(--text-muted)"/>
+            <!-- ラベル -->
+            <text x="250" y="205" font-size="13" fill="var(--text-muted)" text-anchor="middle">時刻 t →</text>
+          </svg>
+          <figcaption>図1: なめらかな線が見えない状態 \(\mu_t\)、点がノイズの乗った観測値 \(y_t\)。状態空間モデルは点から線を復元する。</figcaption>
+        </figure>
+
+        <h2>時系列データの例で考える</h2>
+        <p>
+          具体例を1つ持ちましょう。あるカフェの「1日の来客数」を12日間記録したとします。
+          数字は日ごとにバラつきますが、全体としては少しずつ増えている感じがあります。
+        </p>
+
+        <table>
+          <thead>
+            <tr><th>日 \(t\)</th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>7</th><th>8</th><th>9</th><th>10</th><th>11</th><th>12</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>来客数 \(y_t\)</td><td>52</td><td>48</td><td>55</td><td>53</td><td>60</td><td>58</td><td>63</td><td>61</td><td>67</td><td>64</td><td>70</td><td>69</td></tr>
+          </tbody>
+        </table>
+
+        <p>
+          このデータに、平均を1つだけ当てはめるのはもったいないです。
+          「ずっと58人」と言うより、「最初は50人台、最後は70人近く」と水準の動きを捉えたいですよね。
+          ローカルレベルモデルなら、各日の背後にある水準 \(\mu_t\) を1日ぶんずつ推定できます。
+        </p>
+
+        <div class="box box-ex">
+          <div class="box-title">例題 — なぜ平均1つではダメか</div>
+          <p>
+            上のカフェのデータに対して、「全期間の平均は約 \(60\) 人」と要約しました。
+            この要約だけで「12日目の来客の水準」を答えると、何がまずいでしょうか。
+          </p>
+          <p><strong>解答</strong></p>
+          <p>
+            全期間の平均 \(60\) は、増え続ける水準の「まんなか」をとった値です。
+            初日付近では水準を高く見積もりすぎ、12日目付近では低く見積もりすぎます。
+            実際、12日目の観測は \(69\) 人で、平均 \(60\) より大きく上にあります。
+          </p>
+          <p>
+            ローカルレベルモデルは、状態方程式 \(\mu_t \sim \mathcal{N}(\mu_{t-1}, \sigma_w^2)\) によって
+            「水準が時間とともにずれてよい」ことを許します。
+            その結果、12日目の水準 \(\mu_{12}\) は \(69\) 付近として推定され、平均1つの要約よりずっと実態に合います。
+            つまり、状態空間モデルは「いま」の水準を「いま」のデータに寄せて答えてくれるのです。
+          </p>
+        </div>
+
+        <h2>PyMCで書くとどうなるか</h2>
+        <p>
+          ここからは、ローカルレベルモデルをPyMC（パイエムシー）でどう表現するかの概略を見ます。
+          細かい文法より、「状態の鎖」と「観測」がコードのどこに現れるかをつかんでください。
+        </p>
+
+        <p>
+          PyMCには、ランダムウォーク事前をそのまま書ける <code>pm.GaussianRandomWalk</code> という分布があります。
+          これが状態方程式 \(\mu_t \sim \mathcal{N}(\mu_{t-1}, \sigma_w^2)\) を一気に表してくれます。
+        </p>
+
+        <pre><code>import pymc as pm
+
+# y は観測した来客数の配列 (長さ T)
+y = [52, 48, 55, 53, 60, 58, 63, 61, 67, 64, 70, 69]
+T = len(y)
+
+with pm.Model() as local_level:
+    # 2つのノイズの大きさ (どちらも未知。広めの事前分布)
+    sigma_w = pm.HalfNormal("sigma_w", sigma=5)   # プロセスノイズ
+    sigma_v = pm.HalfNormal("sigma_v", sigma=5)   # 観測ノイズ
+
+    # 状態方程式: ランダムウォーク事前で μ_1..μ_T をまとめて定義
+    mu = pm.GaussianRandomWalk("mu", sigma=sigma_w, shape=T)
+
+    # 観測方程式: y_t ~ Normal(μ_t, σ_v)
+    y_obs = pm.Normal("y_obs", mu=mu, sigma=sigma_v, observed=y)
+
+    # 事後分布を MCMC でサンプリング
+    idata = pm.sample()</code></pre>
+
+        <p>
+          ポイントは3行です。<code>sigma_w</code> と <code>sigma_v</code> が2つのノイズ、
+          <code>GaussianRandomWalk</code> が状態の鎖、<code>pm.Normal(..., observed=y)</code> が観測です。
+          実行すると、各日の水準 \(\mu_1, \dots, \mu_{12}\) の事後分布が得られます。
+          そこから事後平均をつなげば、図1のようななめらかな線（推定された水準）が描けます。
+          各時刻で<span class="term">信用区間（しんようくかん）</span>も取れるので、
+          「12日目の水準は \(67\) 〜 \(71\) 人くらい」といった幅つきの答えが言えます。
+        </p>
+
+        <div class="box box-warn">
+          <div class="box-title">つまずき注意 — 状態は1つではなく T 個</div>
+          <p>
+            ふつうの回帰では推定するパラメータの数は数個でした。
+            ローカルレベルモデルでは、状態 \(\mu_t\) が時刻の数だけあります。データが \(T\) 点なら状態も \(T\) 個です。
+            「観測点と同じ数の未知数を推定して大丈夫?」と不安になりますが、大丈夫です。
+            ランダムウォーク事前が「隣どうし近い」という強い制約を入れるので、線は暴れず、なめらかに決まります。
+          </p>
+        </div>
+
+        <div class="quiz" data-answer="b">
+          <p class="quiz-q">問: ローカルレベルモデルで、プロセスノイズ \(\sigma_w\) をとても小さくすると、推定される水準の線はどうなりますか?</p>
+          <button class="quiz-option" data-key="a">観測点1つ1つにぴったり張りついた、ガタガタの線になる</button>
+          <button class="quiz-option" data-key="b">ほとんど動かない、ほぼ直線に近いなめらかな線になる</button>
+          <button class="quiz-option" data-key="c">状態が定義できなくなり、推定が止まる</button>
+          <div class="quiz-explain">
+            <p>
+              \(\sigma_w\) は状態方程式 \(\mu_t \sim \mathcal{N}(\mu_{t-1}, \sigma_w^2)\) のばらつきです。
+              これが小さいほど「隣の時刻からほとんど動けない」ので、線はなめらかで平らになります。
+              反対に、観測へ食いつくガタガタの線は \(\sigma_w\) を大きくしたときの姿です。
+            </p>
+          </div>
+        </div>
+
+        <div class="quiz" data-answer="c">
+          <p class="quiz-q">問: 状態空間モデルの「観測方程式」が表しているのは、次のどれですか?</p>
+          <button class="quiz-option" data-key="a">いまの状態が、1つ前の状態からどれだけ動くか</button>
+          <button class="quiz-option" data-key="b">パラメータの数を時刻の数だけ増やす規則</button>
+          <button class="quiz-option" data-key="c">見えない状態から、実際の観測値がどう生まれるか</button>
+          <div class="quiz-explain">
+            <p>
+              観測方程式は \(y_t \sim \mathcal{N}(\mu_t, \sigma_v^2)\)、つまり「状態 \(\mu_t\) に観測ノイズを足して \(y_t\) ができる」という関係です。
+              一方、状態が時間でどう動くか（選択肢A）を表すのは状態方程式 \(\mu_t \sim \mathcal{N}(\mu_{t-1}, \sigma_w^2)\) のほうです。
+            </p>
+          </div>
+        </div>
+
+        <div class="box box-practice">
+          <div class="box-title">演習1</div>
+          <p>
+            ローカルレベルモデルの状態方程式と観測方程式を、それぞれ正規分布の形 \(\sim \mathcal{N}(\cdot, \cdot)\) で書きなさい。
+            また、それぞれに登場するノイズの名前を答えなさい。
+          </p>
+          <details class="answer">
+            <summary>解答を見る</summary>
+            <p>
+              状態方程式: \(\mu_t \sim \mathcal{N}(\mu_{t-1}, \sigma_w^2)\)。ここで \(\sigma_w\) は<strong>プロセスノイズ</strong>です。
+            </p>
+            <p>
+              観測方程式: \(y_t \sim \mathcal{N}(\mu_t, \sigma_v^2)\)。ここで \(\sigma_v\) は<strong>観測ノイズ</strong>です。
+            </p>
+            <p>
+              状態方程式は「水準が時間とともにどう動くか」、観測方程式は「水準からデータがどう生まれるか」を表します。
+            </p>
+          </details>
+        </div>
+
+        <div class="box box-practice">
+          <div class="box-title">演習2</div>
+          <p>
+            あるセンサーの測定値が、毎時ほぼ一定の本当の温度のまわりで、大きくバタついていました。
+            ローカルレベルモデルを当てはめたところ、推定された \(\sigma_w\) はとても小さく、\(\sigma_v\) はとても大きくなりました。
+            この結果は何を意味しますか。
+          </p>
+          <details class="answer">
+            <summary>解答を見る</summary>
+            <p>
+              \(\sigma_w\) が小さい = 本当の温度（状態）はほとんど動いていない、と推定されたことを意味します。
+              \(\sigma_v\) が大きい = 観測のバタつきは、温度の変化ではなく測定のノイズだと判断されたことを意味します。
+            </p>
+            <p>
+              つまりモデルは、「上下しているのは測定誤差であって、真の温度はほぼ一定」と切り分けたわけです。
+              この場合、推定された水準の線はなめらかで、ほぼ水平になります。
+            </p>
+          </details>
+        </div>
+
+        <div class="box box-practice">
+          <div class="box-title">演習3</div>
+          <p>
+            本文のPyMCコードで、未知のパラメータ（事後分布を推定する対象）は全部でいくつありますか。
+            来客数データは \(T = 12\) 日分とします。
+          </p>
+          <details class="answer">
+            <summary>解答を見る</summary>
+            <p>
+              状態 \(\mu_1, \dots, \mu_{12}\) が \(12\) 個、それにノイズの大きさ \(\sigma_w\) と \(\sigma_v\) が \(2\) 個。
+              合わせて <strong>\(12 + 2 = 14\) 個</strong>です。
+            </p>
+            <p>
+              観測点の数（12）より未知数の数（14）のほうが多いですが、推定できます。
+              ランダムウォーク事前が「隣の状態どうしは近い」という制約を入れているおかげで、
+              情報が足りずに発散することなく、なめらかな解に落ち着きます。
+            </p>
+          </details>
+        </div>
+
+        <h2>まとめ</h2>
+        <ul>
+          <li><span class="term">状態空間モデル</span>は、見えない<strong>状態</strong> \(\mu_t\) と、手に入る<strong>観測</strong> \(y_t\) を分けて考える枠組みです。</li>
+          <li><strong>状態方程式</strong> \(\mu_t \sim \mathcal{N}(\mu_{t-1}, \sigma_w^2)\) は<span class="term">ランダムウォーク事前</span>。状態は前の値の近くにとどまります。</li>
+          <li><strong>観測方程式</strong> \(y_t \sim \mathcal{N}(\mu_t, \sigma_v^2)\) は、状態に観測ノイズが乗ってデータが生まれる関係です。</li>
+          <li>このいちばんシンプルな形が<span class="term">ローカルレベルモデル</span>。時系列の「いまの水準」を1時刻ずつ追いかけます。</li>
+          <li>PyMCでは <code>pm.GaussianRandomWalk</code> で状態の鎖を、<code>pm.Normal(..., observed=y)</code> で観測を書きます。各時刻で信用区間つきの水準が得られます。</li>
+        </ul>
+        <p>
+          これでLevel 5の実践ベイズモデリングは一区切りです。
+          回帰、ロジスティック回帰、階層モデル、そして時系列。
+          道具がそろうと、あとは「目の前のデータをどの形に当てはめるか」を選ぶだけです。
+          ここから先は、自分のデータでモデルを組み立てて、ベイズの階段をさらに上っていきましょう。
+        </p>
+
+      </div>
+      <!-- ▲▲▲ レッスン本文ここまで ▲▲▲ -->
+
+      <div class="complete-area">
+        <button class="btn btn-level" id="complete-btn">このレッスンを完了にする</button>
+        <p class="complete-note">進捗はこのブラウザに保存されます</p>
+      </div>
+
+      <!-- 前後ナビ: main.js がカリキュラムから自動生成 -->
+      <nav class="lesson-nav" id="lesson-nav" aria-label="前後のレッスン"></nav>
+
+    </main>
+
+    <!-- ページ内目次: main.js が本文の h2 から自動生成 -->
+    <aside class="toc">
+      <div class="toc-title">このページの内容</div>
+      <nav id="toc"></nav>
+    </aside>
+
+  </div>
+
+  <footer class="site-footer">
+    <p>ベイズの階段 — 中学数学から最前線まで、一段ずつ。</p>
+  </footer>
+
+  <script src="../../assets/js/curriculum.js"></script>
+  <script src="../../assets/js/main.js"></script>
+</body>
+</html>

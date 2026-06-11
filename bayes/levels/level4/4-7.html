@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>4-7 変分推論入門 | ベイズの階段</title>
+  <meta name="description" content="サンプリングせず最適化で事後分布を近似する">
+  <script>
+    document.documentElement.dataset.theme =
+      localStorage.getItem("bayes-stairs-theme") ||
+      (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Noto+Serif+JP:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../assets/css/main.css">
+
+  <!-- KaTeX: 数式を使うページでは必ずこの3行を入れる -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+          onload="renderMathInElement(document.body, {delimiters: [
+            {left: '$$', right: '$$', display: true},
+            {left: '\\(', right: '\\)', display: false}
+          ]});"></script>
+</head>
+<body data-root="../../" data-level="4" data-lesson-id="4-7">
+
+  <header class="site-header">
+    <button class="sidebar-toggle" id="sidebar-toggle" aria-label="メニュー">☰</button>
+    <a class="brand" href="../../index.html">
+      <span class="brand-mark">階</span>
+      <span>ベイズの階段</span>
+    </a>
+    <div class="header-spacer"></div>
+    <div class="header-progress" id="header-progress"></div>
+    <button class="theme-toggle" id="theme-toggle" aria-label="テーマ切替">🌙</button>
+  </header>
+
+  <div class="layout">
+
+    <!-- サイドバー: main.js がカリキュラムから自動生成 -->
+    <aside class="sidebar"><nav id="sidebar-nav" aria-label="カリキュラム"></nav></aside>
+
+    <main class="lesson">
+
+      <nav class="breadcrumbs" aria-label="パンくず">
+        <a href="../../index.html">ホーム</a><span class="sep">›</span>
+        <a href="index.html">Level 4 計算ベイズ — MCMCと近似推論</a><span class="sep">›</span>
+        <span>4-7 変分推論入門</span>
+      </nav>
+
+      <header class="lesson-header">
+        <div class="lesson-meta">
+          <span class="level-badge">Level 4</span>
+          <span class="small">レッスン 4-7</span>
+        </div>
+        <h1>変分推論入門</h1>
+
+        <div class="lesson-goals">
+          <h2>このレッスンでできるようになること</h2>
+          <ul>
+            <li><span class="term">変分推論</span>が「事後分布をサンプリングではなく最適化で近似する方法」だと説明できる</li>
+            <li>KLダイバージェンスの最小化が<span class="term">ELBO</span>の最大化と同じことを説明できる</li>
+            <li>サンプリングと変分推論の長所・短所を比べて使い分けられる</li>
+          </ul>
+          <p class="prereq">前提: <a href="4-1.html">4-1 解析的に解けない事後分布</a> と <a href="4-2.html">4-2 モンテカルロ法の考え方</a> を読んでいること</p>
+        </div>
+      </header>
+
+      <div class="lesson-body">
+
+        <h2>「サンプルを集める」以外の道はないの?</h2>
+        <p>ここまでの Level 4 では、事後分布を<strong>サンプルの集まり</strong>で表してきました。メトロポリス法やギブスサンプリング、HMCは、どれも事後分布から点をたくさん拾ってくる道具です。</p>
+        <p>でもサンプリングには弱点があります。サンプルが十分たまるまで時間がかかります。データが何百万件もあると、1回1回の計算が重くて待ちきれません。収束したかどうかの見きわめも必要でした（<a href="4-6.html">4-6 収束診断とサンプリングの実務</a>）。</p>
+        <p>そこで発想を変えます。「真の事後分布は複雑で扱えない。なら、<strong>扱いやすい形の分布で似せてしまおう</strong>」。この考え方が<span class="term">変分推論</span>（へんぶんすいろん、Variational Inference、略してVI）です。今回はその入り口を学びます。</p>
+
+        <div class="box box-intuition">
+          <div class="box-title">直感でつかむ</div>
+          <p>複雑な海岸線の形を、紙に手書きで写すのは大変です。そこで「いちばん近い<strong>楕円</strong>」で代用すると決めてしまいます。あとは楕円の中心と大きさを動かして、海岸線にぴったり重なる位置を探すだけ。これなら作業はぐっと楽になります。</p>
+          <p>変分推論も同じです。真の事後分布（複雑な海岸線）をそのまま扱うのをあきらめ、正規分布のような<strong>扱いやすい分布の家族</strong>（楕円の仲間）から、いちばん似ているものを選びます。</p>
+          <p>サンプリングが「形をなぞって点を打つ」作業なら、変分推論は「いちばん近い形を探す」作業です。点を集めるのではなく、<strong>分布のつまみを調整する</strong>のです。</p>
+        </div>
+
+        <h2>近似する分布 q を用意する</h2>
+        <p>真の事後分布を \(p(\theta \mid D)\) と書きます。「データ \(D\) のもとでのパラメータ \(\theta\)（シータ）の分布」と読みます。これが複雑で直接扱えないのでした（<a href="4-1.html">4-1</a>）。</p>
+        <p>そこで、扱いやすい分布 \(q(\theta)\) を用意します。たとえば「平均と分散だけで決まる正規分布」のように、形があらかじめ決まっていて、いくつかの数（パラメータ）で自由に動かせる分布です。この \(q\) を <span class="term">変分分布</span>（へんぶんぶんぷ）と呼びます。</p>
+        <p>目標は、\(q(\theta)\) を真の \(p(\theta \mid D)\) に<strong>できるだけ近づける</strong>ことです。では「近い／遠い」をどう測るのでしょうか。</p>
+
+        <h2>道具を1つ用意する — 対数（log）</h2>
+        <p>近さを測る式や、このあとの分解式には、<strong>対数</strong>（たいすう、\(\log\)）という関数が出てきます。これまで本書では使っていない道具なので、ここで意味だけ押さえておきましょう。むずかしく考える必要はありません。</p>
+
+        <div class="box box-intuition">
+          <div class="box-title">直感でつかむ — 対数は「かけ算を足し算に変える」道具</div>
+          <p>確率はたびたび<strong>かけ算</strong>で組み合わさります（独立な事象の同時確率など）。小さな確率を何百個もかけ合わせると、数はあっという間に\(0.000\dots\)と極端に小さくなり、計算しづらくなります。</p>
+          <p>そこで「対数」をとります。対数の最大の便利さは、<strong>かけ算が足し算に化ける</strong>ことです:
+          $$ \log(a \times b) = \log a + \log b $$
+          かけ算より足し算のほうが扱いやすく、極端に小さい数も穏やかな値に直せます。確率を相手にする計算で対数が好まれるのは、おもにこの性質のためです。</p>
+        </div>
+
+        <div class="box box-def">
+          <div class="box-title">定義 — 対数（自然対数 \(\log\)）</div>
+          <p>ある決まった数 \(e\)（イー、約 \(2.718\) の定数。「自然対数の底」と呼びます）を「何乗すれば \(x\) になるか」、その<strong>指数</strong>を \(x\) の対数といい、\(\log x\) と書きます。式で書くと、
+          $$ \log x = y \quad\Longleftrightarrow\quad e^{y} = x $$
+          という関係です。本書では \(\log\) はつねにこの自然対数（底が \(e\)）を指します。覚えておきたい性質は次の3つだけです:</p>
+          <ul>
+            <li>かけ算 → 足し算: \(\log(a\,b) = \log a + \log b\)</li>
+            <li>割り算 → 引き算: \(\log\dfrac{a}{b} = \log a - \log b\)</li>
+            <li>\(x\) が大きくなると \(\log x\) もゆっくり大きくなる（増加する）。\(\log 1 = 0\)</li>
+          </ul>
+        </div>
+
+        <div class="box box-warn">
+          <div class="box-title">つまずき注意</div>
+          <p>対数は<strong>正の数にだけ</strong>使えます（\(x>0\)）。このレッスンで \(\log\) をとる相手はすべて確率や確率密度＝正の値なので、心配は要りません。「\(\log\) は確率のかけ算を足し算に直す便利な変換」とだけ思っておけば、以下の式は問題なく読めます。</p>
+        </div>
+
+        <div class="box box-def">
+          <div class="box-title">定義 — KLダイバージェンス</div>
+          <p>2つの分布 \(q\) と \(p\) の「ずれ」を測る量を <span class="term">KLダイバージェンス</span>（ケーエル情報量、Kullback–Leibler divergence）と呼び、\(\mathrm{KL}(q \,\|\, p)\) と書きます。次で定義します:
+          $$ \mathrm{KL}\!\left(q(\theta)\,\big\|\,p(\theta \mid D)\right) = \int q(\theta)\, \log \frac{q(\theta)}{p(\theta \mid D)}\, d\theta $$
+          \(q\) と \(p\) がぴったり一致すると \(0\) になり、ずれが大きいほど大きな正の値になります。</p>
+        </div>
+
+        <p>これで「近さ」を数で測れます。変分推論のやることは一言で言えます。<strong>「KLダイバージェンスを最小にする \(q\) を探す」</strong>。これは点を集める問題ではなく、つまみを調整して値を最小化する<strong>最適化問題</strong>です。だから速く解けることがあります。</p>
+
+        <div class="box box-warn">
+          <div class="box-title">つまずき注意</div>
+          <p>KLダイバージェンスは<strong>左右を入れかえると値が変わります</strong>。\(\mathrm{KL}(q\|p)\) と \(\mathrm{KL}(p\|q)\) は別物です。ふつうの「距離」のように対称ではありません。変分推論では \(\mathrm{KL}(q\|p)\)（\(q\) が左）を使う、と覚えておきましょう。</p>
+        </div>
+
+        <h2>困った: KLは直接計算できない</h2>
+        <p>ところが、いざ \(\mathrm{KL}(q\|p)\) を計算しようとすると壁にぶつかります。定義式の中の \(p(\theta \mid D)\) は、ベイズの定理で書くと分母に周辺尤度 \(p(D)\) が入ります。</p>
+        <p>$$ p(\theta \mid D) = \frac{p(D \mid \theta)\, p(\theta)}{p(D)} $$</p>
+        <p>この \(p(D)\) こそ、<a href="4-1.html">4-1</a>で「解析的に解けない積分」として悩んだ相手でした。つまり KL をそのまま最小化しようにも、計算できない量が居座っているのです。ここで一工夫します。</p>
+
+        <h2>ELBO — 最大化すべき相棒</h2>
+        <p>KLの定義式を、ベイズの定理を使って書きかえると、次のきれいな関係が現れます。導出には先ほどの対数の性質（かけ算→足し算）と、積分の知識（<a href="../../appendix/a-2.html">付録 a-2 微分積分の最小限</a>）を使いますが、細かい式変形は付録にゆずります。結果はこうです。</p>
+
+        <div class="formula">
+          <span class="formula-label">対数周辺尤度の分解</span>
+          $$ \underbrace{\log p(D)}_{\text{定数}} = \underbrace{\mathcal{L}(q)}_{\text{ELBO}} + \underbrace{\mathrm{KL}\!\left(q \,\|\, p(\theta \mid D)\right)}_{\ge 0} $$
+          <div class="formula-parts">
+            <span class="part"><b>\(\log p(D)\)</b>: データだけで決まる定数。\(q\) を動かしても変わらない</span>
+            <span class="part"><b>ELBO \(\mathcal{L}(q)\)</b>: 計算できる量。これを最大化したい</span>
+            <span class="part"><b>KL</b>: 必ず \(0\) 以上。これを最小化したい</span>
+          </div>
+        </div>
+
+        <p>左辺の \(\log p(D)\) は \(q\) によらない<strong>定数</strong>です。右辺はその定数を2つに分けたものです。和が一定なのですから、<strong>片方を大きくすれば、もう片方は同じだけ小さくなります</strong>。</p>
+        <p>つまり、計算できない KL を直接小さくする代わりに、<strong>計算できる \(\mathcal{L}(q)\) を大きくすればよい</strong>のです。この \(\mathcal{L}(q)\) を <span class="term">ELBO</span>（エルボー、Evidence Lower BOund、証拠下限）と呼びます。「証拠（=\(\log p(D)\)）の下限」という名前のとおり、KLが \(0\) 以上なので ELBO は必ず \(\log p(D)\) 以下に収まります。</p>
+
+        <div class="box box-def">
+          <div class="box-title">定義 — ELBO（証拠下限）</div>
+          <p>ELBO は、計算できる量だけで書ける次の式です:
+          $$ \mathcal{L}(q) = \mathbb{E}_{q}\!\left[\log p(D, \theta)\right] - \mathbb{E}_{q}\!\left[\log q(\theta)\right] $$
+          ここで \(\mathbb{E}_{q}[\cdot]\) は「\(q\) のもとでの期待値（平均）」を表します。\(p(D, \theta) = p(D\mid\theta)\,p(\theta)\) は<strong>尤度と事前分布の積</strong>で、どちらも自分で書き下せます。やっかいな \(p(D)\) は入っていません。だから ELBO は計算できます。</p>
+        </div>
+
+        <figure class="figure">
+          <svg viewBox="0 0 360 200" width="360" aria-label="対数周辺尤度がELBOとKLに分かれる様子">
+            <!-- 全体の高さを表すバー -->
+            <line x1="40" y1="30" x2="40" y2="170" stroke="var(--border)" stroke-width="2"/>
+            <line x1="34" y1="30" x2="46" y2="30" stroke="var(--border)" stroke-width="2"/>
+            <line x1="34" y1="170" x2="46" y2="170" stroke="var(--border)" stroke-width="2"/>
+            <text x="22" y="105" font-size="11" fill="var(--text-muted)" text-anchor="middle" transform="rotate(-90 22 105)">log p(D)（一定）</text>
+            <!-- ELBO 部分（下側、レベル色） -->
+            <rect x="70" y="90" width="120" height="80" fill="var(--level-color)" opacity="0.7"/>
+            <text x="130" y="135" font-size="13" fill="#fff" text-anchor="middle" font-weight="700">ELBO</text>
+            <!-- KL 部分（上側） -->
+            <rect x="70" y="30" width="120" height="60" fill="var(--text-muted)" opacity="0.4"/>
+            <text x="130" y="65" font-size="12" fill="var(--text-muted)" text-anchor="middle">KL</text>
+            <!-- 矢印: ELBOを上げるとKLが縮む -->
+            <line x1="230" y1="60" x2="230" y2="35" stroke="var(--level-color)" stroke-width="2" marker-end="url(#arrUp)"/>
+            <line x1="230" y1="140" x2="230" y2="165" stroke="var(--level-color)" stroke-width="2" marker-end="url(#arrDn)"/>
+            <text x="300" y="50" font-size="11" fill="var(--text-muted)" text-anchor="middle">KLが縮む</text>
+            <text x="300" y="160" font-size="11" fill="var(--text-muted)" text-anchor="middle">ELBOを上げる</text>
+            <defs>
+              <marker id="arrUp" markerWidth="8" markerHeight="8" refX="4" refY="2" orient="auto"><path d="M0,6 L4,0 L8,6" fill="var(--level-color)"/></marker>
+              <marker id="arrDn" markerWidth="8" markerHeight="8" refX="4" refY="6" orient="auto"><path d="M0,2 L4,8 L8,2" fill="var(--level-color)"/></marker>
+            </defs>
+          </svg>
+          <figcaption>図1: 全体の高さ \(\log p(D)\) は一定。ELBO（色つき）を押し上げるほど、上にのる KL は同じだけ縮む。だから ELBO 最大化 = KL 最小化。</figcaption>
+        </figure>
+
+        <div class="box box-thm">
+          <div class="box-title">変分推論の核心</div>
+          <p>$$ \text{KL}\!\left(q \,\|\, p\right)\ \text{を最小化する} \quad\Longleftrightarrow\quad \mathcal{L}(q)\ \text{を最大化する} $$
+          和 \(\log p(D)\) が一定なので、ELBO を最大にした \(q\) が、KLを最小にした \(q\)、すなわち<strong>真の事後分布にいちばん近い近似</strong>になります。</p>
+        </div>
+
+        <h2>平均場近似 — 変数をばらばらに扱う</h2>
+        <p>では \(q\) をどんな形に選べばよいでしょう。パラメータが \(\theta_1, \theta_2, \dots\) と複数あるとき、真の事後分布ではそれらが<strong>からみ合って</strong>います。これをそのまま近似するのは大変です。</p>
+        <p>そこでよく使う割り切りが <span class="term">平均場近似</span>（へいきんばきんじ、mean-field approximation）です。「各パラメータは<strong>たがいに独立</strong>だと思って、別々の分布の積で近似する」という考え方です。</p>
+
+        <div class="box box-def">
+          <div class="box-title">定義 — 平均場近似</div>
+          <p>変分分布を、各パラメータごとの分布の積に分解します:
+          $$ q(\theta_1, \theta_2, \dots, \theta_n) = q_1(\theta_1)\, q_2(\theta_2)\cdots q_n(\theta_n) $$
+          こうすると各 \(q_i\) を1つずつ更新でき、計算がぐっと楽になります。</p>
+        </div>
+
+        <div class="box box-intuition">
+          <div class="box-title">直感でつかむ — 「ばらばらにする」代償</div>
+          <p>2つのパラメータが本当は連動しているのに、独立だと決めつけると、近似の楕円は<strong>軸に沿ったまっすぐな楕円</strong>になります。斜めに傾いた本物の相関は写しとれません。</p>
+          <p>そのため平均場近似は、計算は速い反面、<strong>パラメータどうしの相関を捨て、ばらつきを小さく見積もりがち</strong>です。これは変分推論の典型的な「クセ」として覚えておくとよいです。</p>
+        </div>
+
+        <figure class="figure">
+          <svg viewBox="0 0 360 180" width="360" aria-label="真の事後分布と平均場近似の等高線">
+            <!-- 軸 -->
+            <line x1="30" y1="150" x2="340" y2="150" stroke="var(--border)" stroke-width="1.5"/>
+            <line x1="30" y1="20" x2="30" y2="150" stroke="var(--border)" stroke-width="1.5"/>
+            <!-- 真の事後: 斜めの楕円 -->
+            <ellipse cx="120" cy="90" rx="55" ry="26" fill="none" stroke="var(--level-color)" stroke-width="3" transform="rotate(-32 120 90)"/>
+            <text x="120" y="160" font-size="11" fill="var(--text-muted)" text-anchor="middle">真の事後（斜め）</text>
+            <!-- 平均場近似: 軸沿いの楕円 -->
+            <ellipse cx="265" cy="85" rx="48" ry="30" fill="none" stroke="var(--text-muted)" stroke-width="3" stroke-dasharray="6 4"/>
+            <text x="265" y="160" font-size="11" fill="var(--text-muted)" text-anchor="middle">平均場近似（軸沿い）</text>
+          </svg>
+          <figcaption>図2: 真の事後分布（実線）は斜めに相関しているが、平均場近似（破線）は軸に沿った楕円しか作れず、相関を写しとれない。</figcaption>
+        </figure>
+
+        <h2>サンプリングとの対比</h2>
+        <p>同じ「事後分布を知る」目標でも、サンプリングと変分推論はやり方も性格も違います。表で並べてみましょう。</p>
+
+        <table>
+          <thead>
+            <tr><th></th><th>MCMC（サンプリング）</th><th>変分推論</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>やること</td><td>事後分布から点を集める</td><td>近い分布 \(q\) を探す</td></tr>
+            <tr><td>問題の種類</td><td>サンプリング</td><td>最適化（ELBO最大化）</td></tr>
+            <tr><td>結果の正確さ</td><td>十分回せば真の事後に収束</td><td>あくまで近似（\(q\) の家族の中で最良）</td></tr>
+            <tr><td>速さ</td><td>遅いことが多い</td><td>速いことが多い</td></tr>
+            <tr><td>大規模データ</td><td>苦手なことがある</td><td>得意（拡張しやすい）</td></tr>
+            <tr><td>終わりの判定</td><td>収束診断が必要</td><td>ELBOが頭打ちになれば終了</td></tr>
+          </tbody>
+        </table>
+
+        <p>ひとことで言えば、<strong>MCMCは「遅いが正確」、変分推論は「速いが近似」</strong>です。「とにかく正しい答えがほしい」ならサンプリング、「多少ざっくりでも素早く答えがほしい」なら変分推論、という使い分けになります。</p>
+
+        <div class="box box-warn">
+          <div class="box-title">つまずき注意</div>
+          <p>変分推論の答えは、<strong>選んだ \(q\) の家族の中での「いちばんマシ」</strong>でしかありません。家族が真の事後をうまく表せない形なら、いくらELBOを最大化しても近似はそこそこ止まりです。とくに平均場近似はばらつき（不確かさ）を<strong>小さく見積もりがち</strong>なので、信用区間（ベイズ）が実際より狭く出ることに注意してください。</p>
+        </div>
+
+        <div class="box box-ex">
+          <div class="box-title">例題</div>
+          <p>あるパラメータ \(\theta\) の真の事後分布は、平均 \(0\)・標準偏差 \(2\) の正規分布だとします。変分分布 \(q\) として「正規分布の家族」を選び、ELBOを最大化しました。理屈のうえで、得られる \(q\) はどんな分布になるでしょうか。</p>
+          <p><strong>解</strong>: 真の事後そのものが正規分布で、\(q\) の家族も正規分布です。つまり<strong>真の事後が \(q\) の家族にちょうど含まれています</strong>。このときELBOを最大化すると、KLを \(0\) にできる \(q\)、すなわち真の事後と<strong>完全に一致する分布</strong>（平均 \(0\)・標準偏差 \(2\) の正規分布）が選ばれます。</p>
+          <p>ポイントは、<strong>近似がうまくいくかは「\(q\) の家族に真の事後が入っているか」で決まる</strong>ことです。今回は運よく一致しましたが、真の事後が歪んだ形なら、正規分布の \(q\) ではここまで近づけません。</p>
+        </div>
+
+        <h2>理解度チェック</h2>
+
+        <div class="quiz" data-answer="b">
+          <p class="quiz-q">問: 変分推論が「最適化問題」と呼ばれるのはなぜですか?</p>
+          <button class="quiz-option" data-key="a">事後分布から大量の点をサンプリングして平均をとるから</button>
+          <button class="quiz-option" data-key="b">扱いやすい分布 \(q\) のつまみを調整して、ELBOを最大化（KLを最小化）するから</button>
+          <button class="quiz-option" data-key="c">尤度がいちばん大きくなる \(\theta\) を1点だけ探すから</button>
+          <div class="quiz-explain"><p>変分推論は、近似分布 \(q\) のパラメータを動かして ELBO を最大化する最適化問題です。aはサンプリング（MCMC）の説明、cはMAP推定など点推定の話で、どちらも変分推論ではありません。</p></div>
+        </div>
+
+        <div class="quiz" data-answer="c">
+          <p class="quiz-q">問: 「ELBOを最大化する」ことが「KLダイバージェンスを最小化する」ことと同じになるのは、なぜですか?</p>
+          <button class="quiz-option" data-key="a">ELBOとKLはいつも等しい値だから</button>
+          <button class="quiz-option" data-key="b">ELBOを上げるとKLも一緒に上がるから</button>
+          <button class="quiz-option" data-key="c">ELBO + KL が定数 \(\log p(D)\) で一定なので、片方を上げると他方が同じだけ下がるから</button>
+          <div class="quiz-explain"><p>\(\log p(D) = \mathcal{L}(q) + \mathrm{KL}(q\|p)\) で、左辺は \(q\) によらない定数です。和が一定なら、ELBOを大きくした分だけKLは小さくなります。だからELBO最大化とKL最小化は同じことです。</p></div>
+        </div>
+
+        <div class="quiz" data-answer="a">
+          <p class="quiz-q">問: 平均場近似の代表的な「クセ」として正しいものはどれですか?</p>
+          <button class="quiz-option" data-key="a">パラメータ間の相関を捨て、ばらつき（不確かさ）を小さく見積もりがち</button>
+          <button class="quiz-option" data-key="b">必ず真の事後分布と完全に一致する</button>
+          <button class="quiz-option" data-key="c">サンプリングより必ず遅くなる</button>
+          <div class="quiz-explain"><p>平均場近似は各パラメータを独立だと仮定するため、軸沿いの楕円しか作れず相関を写せません。その結果、ばらつきを過小に見積もりがちです。真の事後と一致するのは家族に事後が含まれる幸運な場合だけで、速さはむしろ変分推論の長所です。</p></div>
+        </div>
+
+        <h2>演習</h2>
+
+        <div class="box box-practice">
+          <div class="box-title">演習1</div>
+          <p>「変分推論ではやっかいな周辺尤度 \(p(D)\) を計算せずに済む」と言われます。なぜ計算せずに済むのか、ELBOの式に着目して説明しなさい。</p>
+          <details class="answer">
+            <summary>解答を見る</summary>
+            <p>ELBOは \(\mathcal{L}(q) = \mathbb{E}_{q}[\log p(D,\theta)] - \mathbb{E}_{q}[\log q(\theta)]\) と書けます。中に出てくるのは \(p(D,\theta)=p(D\mid\theta)\,p(\theta)\)、つまり<strong>尤度と事前分布の積</strong>と、自分で決めた \(q(\theta)\) だけです。これらはすべて自分で書き下せます。</p>
+            <p>計算できない \(p(D)\) は、\(\log p(D) = \mathcal{L}(q) + \mathrm{KL}\) という関係の中で「\(q\) によらない定数」として外に出ています。最大化するのはELBOだけなので、定数 \(p(D)\) は最適化に関係せず、計算する必要がありません。</p>
+          </details>
+        </div>
+
+        <div class="box box-practice">
+          <div class="box-title">演習2</div>
+          <p>次の状況では、MCMC（サンプリング）と変分推論のどちらを選ぶのが自然でしょうか。理由も添えて答えなさい。<br>
+          (1) データが1億件あり、数分で「だいたいの」事後分布がほしい。<br>
+          (2) 論文用に、不確かさ（信用区間）まで正確に報告したい。少々時間がかかってもよい。</p>
+          <details class="answer">
+            <summary>解答を見る</summary>
+            <p>(1) <strong>変分推論</strong>。大規模データでも速く動き、最適化として素早く近似が得られます。「だいたいの」答えでよいなら、近似であることは大きな問題になりません。</p>
+            <p>(2) <strong>MCMC</strong>。十分に回せば真の事後分布に収束し、ばらつきも正しく評価できます。平均場近似はばらつきを小さく見積もりがちなので、信用区間を正確に報告したい場面には向きません。時間に余裕があるならサンプリングが安心です。</p>
+          </details>
+        </div>
+
+        <div class="box box-practice">
+          <div class="box-title">演習3</div>
+          <p>真の事後分布が、2つのパラメータ \(\theta_1, \theta_2\) について<strong>強く相関した</strong>細長い楕円の形をしているとします。平均場近似（\(q(\theta_1,\theta_2)=q_1(\theta_1)\,q_2(\theta_2)\)）でこれを近似すると、どんな限界が出ますか。図2を思い出して説明しなさい。</p>
+          <details class="answer">
+            <summary>解答を見る</summary>
+            <p>平均場近似は \(\theta_1\) と \(\theta_2\) を独立だと仮定するので、変分分布は<strong>軸に沿ったまっすぐな楕円</strong>しか作れません。斜めに傾いた相関のある楕円は表現できません。</p>
+            <p>そのため、本当は強く連動している2つのパラメータの関係を写しとれず、相関は失われます。また近似は真の細長い楕円より<strong>幅の狭い領域</strong>に収まりやすく、不確かさを小さく見積もる傾向が出ます。相関が大事な問題では、この限界が無視できなくなります。</p>
+          </details>
+        </div>
+
+        <h2>まとめ</h2>
+        <ul>
+          <li><span class="term">変分推論</span>は、複雑な事後分布をサンプリングせず、扱いやすい分布 \(q\) で近似する方法。点を集めるのではなく、分布のつまみを調整する<strong>最適化</strong>として解く。</li>
+          <li>近さは <span class="term">KLダイバージェンス</span> \(\mathrm{KL}(q\|p)\) で測る。\(0\) なら一致、大きいほどずれが大きい。左右は非対称。</li>
+          <li>KLには計算できない \(p(D)\) が入るが、\(\log p(D) = \mathcal{L}(q) + \mathrm{KL}\) と分解できる。\(\log p(D)\) は定数なので、計算できる <span class="term">ELBO</span> \(\mathcal{L}(q)\) を最大化すれば、KLが最小になる。</li>
+          <li><span class="term">平均場近似</span>はパラメータを独立な分布の積で近似する割り切り。速い反面、相関を捨て、ばらつきを小さく見積もりがち。</li>
+          <li>MCMCは「遅いが正確」、変分推論は「速いが近似」。求める正確さと使える時間で使い分ける。</li>
+        </ul>
+        <p>これで Level 4「計算ベイズ」はひとまず一周しました。サンプリングと変分推論、2つの大きな道具がそろいましたね。次の Level では、これらを土台にした実践的なモデリングへ進みます。お疲れさまでした。</p>
+
+      </div>
+
+      <div class="complete-area">
+        <button class="btn btn-level" id="complete-btn">このレッスンを完了にする</button>
+        <p class="complete-note">進捗はこのブラウザに保存されます</p>
+      </div>
+
+      <!-- 前後ナビ: main.js がカリキュラムから自動生成 -->
+      <nav class="lesson-nav" id="lesson-nav" aria-label="前後のレッスン"></nav>
+
+    </main>
+
+    <!-- ページ内目次: main.js が本文の h2 から自動生成 -->
+    <aside class="toc">
+      <div class="toc-title">このページの内容</div>
+      <nav id="toc"></nav>
+    </aside>
+
+  </div>
+
+  <footer class="site-footer">
+    <p>ベイズの階段 — 中学数学から最前線まで、一段ずつ。</p>
+  </footer>
+
+  <script src="../../assets/js/curriculum.js"></script>
+  <script src="../../assets/js/main.js"></script>
+</body>
+</html>

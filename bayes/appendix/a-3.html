@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>a-3 用語集 | ベイズの階段</title>
+  <meta name="description" content="ベイズ統計の主要用語を五十音順に短く定義した用語集。事前分布・尤度・共役事前分布・MCMC・信用区間・ベイズファクターなどを、該当レッスンへのリンクつきで引けます。">
+  <script>
+    document.documentElement.dataset.theme =
+      localStorage.getItem("bayes-stairs-theme") ||
+      (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Noto+Serif+JP:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/css/main.css">
+
+  <!-- KaTeX: 数式を使うページでは必ずこの3行を入れる -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+          onload="renderMathInElement(document.body, {delimiters: [
+            {left: '$$', right: '$$', display: true},
+            {left: '\\(', right: '\\)', display: false}
+          ]});"></script>
+
+  <style>
+    /* このページ専用: 用語集のレイアウト。色はすべてCSS変数でダークモード対応 */
+    .glossary-nav {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 1.5rem 0 2rem;
+      padding-bottom: 1.2rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .glossary-nav a {
+      display: inline-block;
+      min-width: 2.2em;
+      text-align: center;
+      padding: 4px 10px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      font-weight: 700;
+      text-decoration: none;
+      color: var(--text);
+      background: var(--surface);
+    }
+    .glossary-nav a:hover {
+      border-color: var(--level-color);
+      color: var(--level-color);
+    }
+
+    .gloss-group {
+      scroll-margin-top: calc(var(--header-h) + 16px);
+      margin-top: 2.4rem;
+    }
+    .gloss-group > h2 {
+      margin-bottom: 0.4rem;
+    }
+
+    dl.glossary {
+      margin: 0.8rem 0 0;
+    }
+    dl.glossary dt {
+      font-weight: 700;
+      font-size: 1.05rem;
+      margin-top: 1.4rem;
+      padding-top: 0.9rem;
+      border-top: 1px solid var(--border);
+      scroll-margin-top: calc(var(--header-h) + 16px);
+    }
+    dl.glossary dt .reading {
+      font-weight: 400;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-left: 0.3em;
+    }
+    dl.glossary dt .ref {
+      float: right;
+      font-weight: 400;
+      font-size: 0.82rem;
+      white-space: nowrap;
+    }
+    dl.glossary dd {
+      margin: 0.45rem 0 0;
+      line-height: 1.85;
+    }
+    dl.glossary dd .see {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+    dl.glossary dd .see a { font-weight: 500; }
+
+    @media (max-width: 560px) {
+      dl.glossary dt .ref { float: none; display: block; margin-top: 4px; }
+    }
+  </style>
+</head>
+<body data-root="../" data-level="appendix" data-lesson-id="a-3">
+
+  <header class="site-header">
+    <button class="sidebar-toggle" id="sidebar-toggle" aria-label="メニュー">☰</button>
+    <a class="brand" href="../index.html">
+      <span class="brand-mark">階</span>
+      <span>ベイズの階段</span>
+    </a>
+    <div class="header-spacer"></div>
+    <div class="header-progress" id="header-progress"></div>
+    <button class="theme-toggle" id="theme-toggle" aria-label="テーマ切替">🌙</button>
+  </header>
+
+  <div class="layout">
+
+    <!-- サイドバー: main.js がカリキュラムから自動生成 -->
+    <aside class="sidebar"><nav id="sidebar-nav" aria-label="カリキュラム"></nav></aside>
+
+    <main class="lesson">
+
+      <nav class="breadcrumbs" aria-label="パンくず">
+        <a href="../index.html">ホーム</a><span class="sep">›</span>
+        <a href="index.html">付録</a><span class="sep">›</span>
+        <span>a-3 用語集</span>
+      </nav>
+
+      <header class="lesson-header">
+        <div class="lesson-meta">
+          <span class="level-badge">付録</span>
+          <span class="small">付録 a-3</span>
+        </div>
+        <h1>用語集</h1>
+        <p class="lead">
+          このサイトに出てくるベイズ統計の用語を、五十音順に短くまとめました。
+          本文を読んでいて「あれ、この言葉なんだっけ?」となったら、ここを辞書のように引いてください。
+          各用語には、くわしく学べるレッスンへのリンクを付けてあります。
+        </p>
+      </header>
+
+      <div class="lesson-body">
+
+        <p>
+          読み方は<span style="font-weight:400;color:var(--text-muted)">(かっこ)</span>の中に書いています。
+          まずは太字の用語と一行の説明だけ読めば十分です。もっと知りたくなったら、右側の
+          <strong>該当レッスン</strong>のリンクへ進みましょう。記号(\(P(A\mid B)\)、\(\propto\) など)の読み方は
+          <a href="a-4.html">付録 a-4 記号表</a>にまとめてあります。
+        </p>
+
+        <!-- 行頭ジャンプ -->
+        <nav class="glossary-nav" aria-label="行から探す">
+          <a href="#row-a">あ</a>
+          <a href="#row-ka">か</a>
+          <a href="#row-sa">さ</a>
+          <a href="#row-ta">た</a>
+          <a href="#row-na">な</a>
+          <a href="#row-ha">は</a>
+          <a href="#row-ma">ま</a>
+          <a href="#row-ya">や</a>
+          <a href="#row-ra">ら</a>
+        </nav>
+
+        <!-- ============ あ行 ============ -->
+        <section class="gloss-group" id="row-a">
+          <h2>あ行</h2>
+          <dl class="glossary">
+
+            <dt id="t-mcmc">MCMC<span class="reading">(エムシーエムシー / マルコフ連鎖モンテカルロ)</span>
+              <span class="ref"><a href="../levels/level4/4-2.html">→ 4-2</a></span></dt>
+            <dd>
+              事後分布から直接サンプルを取り出せないとき、<b>少しずつ動く乱数の散歩</b>で分布を近似する手法群です。
+              散歩の足あと(サンプル)を集めると、その分布が事後分布の形になります。代表例がメトロポリス・ヘイスティングス法やHMCです。
+              <span class="see">くわしく: <a href="../levels/level4/4-3.html">4-3 メトロポリス・ヘイスティングス法</a> / <a href="../levels/level4/4-5.html">4-5 HMCとNUTS</a></span>
+            </dd>
+
+            <dt id="t-map">MAP推定<span class="reading">(マップすいてい / 最大事後確率推定)</span>
+              <span class="ref"><a href="../levels/level3/3-5.html">→ 3-5</a></span></dt>
+            <dd>
+              事後分布が<b>いちばん高くなる点</b>(山のてっぺん)を、推定値として一つ選ぶやり方です。
+              分布全体ではなく代表値が一つほしいときに使います。事前分布が平らなときは最尤推定と一致します。
+            </dd>
+
+            <dt id="t-jiko-bunpu">事後分布<span class="reading">(じご ぶんぷ)</span>
+              <span class="ref"><a href="../levels/level1/1-4.html">→ 1-4</a></span></dt>
+            <dd>
+              データを見た<b>後</b>のパラメータについての信念を表す分布です。事前分布に尤度を掛けて更新した結果がこれにあたります。
+              「結局このパラメータはどのあたりらしいか」を分布の形で答えてくれます。
+              <span class="see">分布としての扱い: <a href="../levels/level3/3-2.html">3-2 ベータ・二項モデル</a></span>
+            </dd>
+
+            <dt id="t-jiko-kakuritsu">事後確率<span class="reading">(じご かくりつ)</span>
+              <span class="ref"><a href="../levels/level1/1-4.html">→ 1-4</a></span></dt>
+            <dd>
+              データを見た後の、ある仮説が正しい確率 \(P(H \mid D)\) です。ベイズの定理の左辺にあたります。
+              \(P(H \mid D)\) は「\(D\)(データ)が分かったときの \(H\)(仮説)の確率」と読みます。
+            </dd>
+
+            <dt id="t-jisho-koshin">事後予測分布<span class="reading">(じご よそく ぶんぷ)</span>
+              <span class="ref"><a href="../levels/level5/5-7.html">→ 5-7</a></span></dt>
+            <dd>
+              推定し終えたモデルが「<b>次のデータはこう出るだろう</b>」と予言する分布です。
+              パラメータの不確かさも込みで予測するのが特徴で、モデルが妥当かを点検する事後予測チェックに使います。
+            </dd>
+
+            <dt id="t-jizen-bunpu">事前分布<span class="reading">(じぜん ぶんぷ)</span>
+              <span class="ref"><a href="../levels/level1/1-4.html">→ 1-4</a></span></dt>
+            <dd>
+              データを見る<b>前</b>に持っているパラメータについての信念を表す分布です。
+              「コインの表が出る確率はだいたい0.5あたりだろう」のような最初の見立てを、分布の形で書いたものです。
+              <span class="see">分布で表す例: <a href="../levels/level2/2-6.html">2-6 ベータ分布</a></span>
+            </dd>
+
+            <dt id="t-jizen-kakuritsu">事前確率<span class="reading">(じぜん かくりつ)</span>
+              <span class="ref"><a href="../levels/level1/1-4.html">→ 1-4</a></span></dt>
+            <dd>
+              データを見る前の、ある仮説が正しい確率 \(P(H)\) です。ベイズの定理では尤度と掛け合わせる相手になります。
+            </dd>
+
+          </dl>
+        </section>
+
+        <!-- ============ か行 ============ -->
+        <section class="gloss-group" id="row-ka">
+          <h2>か行</h2>
+          <dl class="glossary">
+
+            <dt id="t-kaikyu">階層ベイズモデル<span class="reading">(かいそう ベイズ モデル)</span>
+              <span class="ref"><a href="../levels/level5/5-4.html">→ 5-4</a></span></dt>
+            <dd>
+              グループごとのパラメータが、<b>さらに上位の分布から生まれる</b>と考えるモデルです。
+              「全体の傾向」と「各グループの個性」を同時に推定でき、データの少ないグループを全体の情報で支える部分プーリングが働きます。
+            </dd>
+
+            <dt id="t-kitaichi">期待値<span class="reading">(きたいち)</span>
+              <span class="ref"><a href="../levels/level2/2-4.html">→ 2-4</a></span></dt>
+            <dd>
+              確率変数が<b>平均してとる値</b>です。とりうる値に、その確率という重みを掛けて足し合わせて求めます。
+              分布を一つの代表値で要約するときの基本量で、事後分布の点推定にも使われます。
+            </dd>
+
+            <dt id="t-kyoyaku">共役事前分布<span class="reading">(きょうやく じぜん ぶんぷ)</span>
+              <span class="ref"><a href="../levels/level3/3-3.html">→ 3-3</a></span></dt>
+            <dd>
+              ある尤度と組み合わせたとき、事後分布が事前分布と<b>同じ種類の分布になる</b>ような事前分布です。
+              たとえば二項分布の尤度にはベータ分布が共役で、更新後もベータ分布のまま。計算が手で閉じるのが利点です。
+              <span class="see">例で体験: <a href="../levels/level3/3-2.html">3-2 ベータ・二項モデル</a></span>
+            </dd>
+
+            <dt id="t-gibbs">ギブスサンプリング<span class="reading">(ギブス サンプリング)</span>
+              <span class="ref"><a href="../levels/level4/4-4.html">→ 4-4</a></span></dt>
+            <dd>
+              MCMCの一種で、パラメータを一つずつ「<b>他を固定したときの条件付き分布</b>」からサンプルし、順番に回していく方法です。
+              条件付き分布がきれいに書ける問題で力を発揮します。
+            </dd>
+
+          </dl>
+        </section>
+
+        <!-- ============ さ行 ============ -->
+        <section class="gloss-group" id="row-sa">
+          <h2>さ行</h2>
+          <dl class="glossary">
+
+            <dt id="t-saiyu">最尤推定<span class="reading">(さいゆう すいてい)</span>
+              <span class="ref"><a href="../levels/level2/2-5.html">→ 2-5</a></span></dt>
+            <dd>
+              尤度を<b>いちばん大きくする</b>パラメータを推定値として選ぶ方法です。ベイズではなく頻度論側の代表的な推定法ですが、
+              事前分布を平らにしたMAP推定と一致するので、ベイズとのつながりを知る入口になります。
+            </dd>
+
+            <dt id="t-jukan">収束診断<span class="reading">(しゅうそく しんだん)</span>
+              <span class="ref"><a href="../levels/level4/4-6.html">→ 4-6</a></span></dt>
+            <dd>
+              MCMCのサンプルが<b>本当に事後分布に行き着いたか</b>を確かめる点検です。
+              trace plot(足あとの様子)・\(\hat{R}\)(複数の鎖のばらつき)・有効サンプルサイズなどを見て判断します。
+            </dd>
+
+            <dt id="t-shuhen-kakuritsu">周辺確率<span class="reading">(しゅうへん かくりつ)</span>
+              <span class="ref"><a href="../levels/level1/1-2.html">→ 1-2</a></span></dt>
+            <dd>
+              片方の事象だけに注目した確率 \(P(A)\) です。分割表の<b>端(マージン)の合計</b>から得られることが名前の由来です。
+              同時確率を、もう一方の事象についてすべて足し上げると周辺確率になります。
+            </dd>
+
+            <dt id="t-shuhen-yudo">周辺尤度<span class="reading">(しゅうへん ゆうど / エビデンス)</span>
+              <span class="ref"><a href="../levels/level1/1-4.html">→ 1-4</a></span></dt>
+            <dd>
+              ベイズの定理の<b>分母</b> \(P(D)\) で、考えられるすべての仮説を平均したデータの出やすさです。
+              事後分布の合計を1に整える役目があり、モデル比較ではベイズファクターの材料にもなります。
+              <span class="see">計算の壁: <a href="../levels/level4/4-1.html">4-1 解析的に解けない事後分布</a></span>
+            </dd>
+
+            <dt id="t-joken">条件付き確率<span class="reading">(じょうけんつき かくりつ)</span>
+              <span class="ref"><a href="../levels/level1/1-1.html">→ 1-1</a></span></dt>
+            <dd>
+              ある事象 \(B\) が起きたと<b>分かったとき</b>の事象 \(A\) の確率 \(P(A \mid B)\) です。
+              「\(B\) のもとでの \(A\) の確率」と読みます。ベイズの定理の土台となる、もっとも大事な道具です。
+              <span class="see">定義: \(P(A \mid B) = \dfrac{P(A \cap B)}{P(B)}\)</span>
+            </dd>
+
+            <dt id="t-shinraikukan">信頼区間<span class="reading">(しんらい くかん)</span>
+              <span class="ref"><a href="../levels/level3/3-6.html">→ 3-6</a></span></dt>
+            <dd>
+              <b>頻度論</b>の区間推定で、「同じやり方で区間を作りつづければ、その95%が真の値を含む」という意味を持ちます。
+              一本の区間そのものに「95%の確率で真の値が入る」とは言えない点が、信用区間とのいちばんの違いです。
+            </dd>
+
+            <dt id="t-shinyokukan">信用区間<span class="reading">(しんよう くかん)</span>
+              <span class="ref"><a href="../levels/level3/3-5.html">→ 3-5</a></span></dt>
+            <dd>
+              <b>ベイズ</b>の区間で、事後分布のうち確率が95%(など)集まる範囲です。
+              「真の値がこの区間に入る確率が95%」とそのまま言えるのが特徴。頻度論の信頼区間とは意味が違います。
+              <span class="see">比較: <a href="../levels/level3/3-6.html">3-6 信頼区間と信用区間</a></span>
+            </dd>
+
+            <dt id="t-seiki">正規分布<span class="reading">(せいき ぶんぷ)</span>
+              <span class="ref"><a href="../levels/level2/2-3.html">→ 2-3</a></span></dt>
+            <dd>
+              左右対称の<b>つりがね型</b>をした連続分布です。平均 \(\mu\) で中心が、標準偏差 \(\sigma\) で広がりが決まります。
+              自然界やデータに広く現れ、ベイズ推定でもよく登場します。
+              <span class="see">ベイズでの推定: <a href="../levels/level3/3-4.html">3-4 正規分布のベイズ推定</a></span>
+            </dd>
+
+          </dl>
+        </section>
+
+        <!-- ============ た行 ============ -->
+        <section class="gloss-group" id="row-ta">
+          <h2>た行</h2>
+          <dl class="glossary">
+
+            <dt id="t-tan">単純ベイズ<span class="reading">(たんじゅん ベイズ / ナイーブベイズ)</span>
+              <span class="ref"><a href="../levels/level5/5-6.html">→ 5-6</a></span></dt>
+            <dd>
+              「各特徴は<b>互いに独立</b>」と思いきって仮定して分類する、ベイズ的な機械学習の手法です。
+              仮定は乱暴でも実用ではよく当たり、迷惑メール判定などで使われます。
+              <span class="see">入口の例: <a href="../levels/level1/1-6.html">1-6 迷惑メールフィルタ</a></span>
+            </dd>
+
+            <dt id="t-chikuji">逐次更新<span class="reading">(ちくじ こうしん)</span>
+              <span class="ref"><a href="../levels/level3/3-1.html">→ 3-1</a></span></dt>
+            <dd>
+              データを一つずつ取り込み、そのつど信念を更新していくやり方です。
+              「<b>今回の事後分布が、次回の事前分布になる</b>」のがポイントで、ベイズが学習する仕組みそのものです。
+            </dd>
+
+            <dt id="t-doji">同時確率<span class="reading">(どうじ かくりつ)</span>
+              <span class="ref"><a href="../levels/level1/1-2.html">→ 1-2</a></span></dt>
+            <dd>
+              2つの事象が<b>両方とも起きる</b>確率 \(P(A, B)\) です。分割表のマス目一つ分の確率にあたります。
+              これを片方の事象についてまとめ上げると周辺確率になります。
+            </dd>
+
+            <dt id="t-doku">独立<span class="reading">(どくりつ)</span>
+              <span class="ref"><a href="../levels/level1/1-2.html">→ 1-2</a></span></dt>
+            <dd>
+              一方が起きても、もう一方の確率が<b>変わらない</b>関係です。式では \(P(A \cap B) = P(A)\,P(B)\) が成り立ちます。
+              コインの1投目と2投目のような、互いに影響しない出来事の関係をいいます。
+            </dd>
+
+          </dl>
+        </section>
+
+        <!-- ============ な行 ============ -->
+        <section class="gloss-group" id="row-na">
+          <h2>な行</h2>
+          <dl class="glossary">
+
+            <dt id="t-binom">二項分布<span class="reading">(にこう ぶんぷ)</span>
+              <span class="ref"><a href="../levels/level2/2-2.html">→ 2-2</a></span></dt>
+            <dd>
+              成功確率が一定の試行を \(n\) 回くり返したとき、<b>成功回数</b>がしたがう離散分布です。
+              コインの表の回数や、アンケートの賛成人数などを表すのに使います。ベイズではベータ分布と組んで活躍します。
+            </dd>
+
+            <dt id="t-nuts">NUTS<span class="reading">(ナッツ / No-U-Turn Sampler)</span>
+              <span class="ref"><a href="../levels/level4/4-5.html">→ 4-5</a></span></dt>
+            <dd>
+              HMC(ハミルトニアンモンテカルロ)を<b>自動でうまく調整する</b>改良版です。
+              どこまで進むかを賢く打ち切るので、細かな設定なしに高次元の事後分布を効率よく探索できます。PyMCの標準サンプラーです。
+            </dd>
+
+          </dl>
+        </section>
+
+        <!-- ============ は行 ============ -->
+        <section class="gloss-group" id="row-ha">
+          <h2>は行</h2>
+          <dl class="glossary">
+
+            <dt id="t-hmc">ハミルトニアンモンテカルロ<span class="reading">(HMC)</span>
+              <span class="ref"><a href="../levels/level4/4-5.html">→ 4-5</a></span></dt>
+            <dd>
+              事後分布を<b>なめらかな地形</b>に見立て、物理の運動のアナロジーでサンプルを進めるMCMCです。
+              でたらめに動くより遠くまで効率よく動けるため、高次元でも素早く探索できます。
+            </dd>
+
+            <dt id="t-hindo">頻度論<span class="reading">(ひんどろん)</span>
+              <span class="ref"><a href="../levels/level3/3-6.html">→ 3-6</a></span></dt>
+            <dd>
+              確率を「同じ試行をくり返したときの<b>長い目で見た割合</b>」と考える立場です。
+              パラメータは固定された未知の定数とみなし、信頼区間や \(p\) 値を使います。ベイズと対比される考え方です。
+              <span class="see">比較: <a href="../levels/level3/3-6.html">3-6 頻度論 vs ベイズ</a></span>
+            </dd>
+
+            <dt id="t-beta">ベータ分布<span class="reading">(ベータ ぶんぷ)</span>
+              <span class="ref"><a href="../levels/level2/2-6.html">→ 2-6</a></span></dt>
+            <dd>
+              0から1までの値をとる連続分布で、「<b>確率そのものの確率</b>」を表すのにぴったりです。
+              2つの形パラメータ \(\alpha, \beta\) で形が変わります。二項分布の共役事前分布として中心的な役割を果たします。
+              <span class="see">活用: <a href="../levels/level3/3-2.html">3-2 ベータ・二項モデル</a></span>
+            </dd>
+
+            <dt id="t-bayes-teiri">ベイズの定理<span class="reading">(ベイズ の ていり)</span>
+              <span class="ref"><a href="../levels/level1/1-3.html">→ 1-3</a></span></dt>
+            <dd>
+              事前確率と尤度から事後確率を求める公式
+              \( P(H \mid D) = \dfrac{P(D \mid H)\,P(H)}{P(D)} \) です。
+              「<b>結果から原因をさかのぼる</b>」というベイズ統計の心臓部にあたります。
+              <span class="see">入り口: <a href="../levels/level0/0-5.html">0-5 「逆向き」の確率</a></span>
+            </dd>
+
+            <dt id="t-bayes-koshin">ベイズ更新<span class="reading">(ベイズ こうしん)</span>
+              <span class="ref"><a href="../levels/level3/3-1.html">→ 3-1</a></span></dt>
+            <dd>
+              データを見て、事前分布を事後分布へと<b>書き換える</b>操作のことです。
+              ベイズの定理を分布全体に当てはめたもので、くり返せば逐次更新になります。
+            </dd>
+
+            <dt id="t-bayes-factor">ベイズファクター<span class="reading">(ベイズ ファクター)</span>
+              <span class="ref"><a href="../levels/level3/3-7.html">→ 3-7</a></span></dt>
+            <dd>
+              2つのモデルの周辺尤度の<b>比</b>で、「どちらのモデルがデータをうまく説明したか」を測るものさしです。
+              値が大きいほど、分子のモデルがデータに支持されたことを意味します。
+              <span class="see">材料: 周辺尤度 \(P(D)\)</span>
+            </dd>
+
+            <dt id="t-henbun">変分推論<span class="reading">(へんぶん すいろん)</span>
+              <span class="ref"><a href="../levels/level4/4-7.html">→ 4-7</a></span></dt>
+            <dd>
+              サンプリングを使わず、<b>扱いやすい分布で事後分布を近づける</b>最適化として推定する方法です。
+              MCMCより速い一方、近似の精度には注意が必要です。大規模なデータで重宝します。
+            </dd>
+
+          </dl>
+        </section>
+
+        <!-- ============ ま行 ============ -->
+        <section class="gloss-group" id="row-ma">
+          <h2>ま行</h2>
+          <dl class="glossary">
+
+            <dt id="t-mh">メトロポリス・ヘイスティングス法<span class="reading">(メトロポリス・ヘイスティングス ほう)</span>
+              <span class="ref"><a href="../levels/level4/4-3.html">→ 4-3</a></span></dt>
+            <dd>
+              もっとも基本的なMCMCです。次の候補をランダムに提案し、<b>あるルールで受理か棄却かを決め</b>ながら歩きます。
+              正規化定数(周辺尤度)を計算しなくてよいのが大きな利点です。
+            </dd>
+
+            <dt id="t-montecarlo">モンテカルロ法<span class="reading">(モンテカルロ ほう)</span>
+              <span class="ref"><a href="../levels/level4/4-2.html">→ 4-2</a></span></dt>
+            <dd>
+              <b>たくさんの乱数</b>を使って、面積や平均などの計算を近似する方法の総称です。
+              事後分布からサンプルを集めて、その平均や区間を読み取る——というベイズ計算の土台になります。
+            </dd>
+
+            <dt id="t-model-hikaku">モデル比較<span class="reading">(モデル ひかく)</span>
+              <span class="ref"><a href="../levels/level3/3-7.html">→ 3-7</a></span></dt>
+            <dd>
+              候補となる複数のモデルのうち、<b>どれがデータをよく説明するか</b>を比べることです。
+              ベイズではベイズファクターや周辺尤度を使って評価します。
+            </dd>
+
+          </dl>
+        </section>
+
+        <!-- ============ や行 ============ -->
+        <section class="gloss-group" id="row-ya">
+          <h2>や行</h2>
+          <dl class="glossary">
+
+            <dt id="t-yudo">尤度<span class="reading">(ゆうど)</span>
+              <span class="ref"><a href="../levels/level2/2-5.html">→ 2-5</a></span></dt>
+            <dd>
+              あるパラメータ(仮説)を仮定したときの、<b>手元のデータの出やすさ</b> \(P(D \mid H)\) です。
+              データを固定してパラメータの関数として見るのがポイント。「確率」と向きが逆である点に注意します。
+              <span class="see">部品としての役割: <a href="../levels/level1/1-4.html">1-4 事前確率・尤度・事後確率</a></span>
+            </dd>
+
+            <dt id="t-likelihood-fn">尤度関数<span class="reading">(ゆうど かんすう)</span>
+              <span class="ref"><a href="../levels/level2/2-5.html">→ 2-5</a></span></dt>
+            <dd>
+              尤度を、<b>パラメータを変数とみなした関数</b>として書いたものです。
+              この関数が高いパラメータほど、データをよく説明します。最尤推定はこの関数の山のてっぺんを探します。
+            </dd>
+
+          </dl>
+        </section>
+
+        <!-- ============ ら行 ============ -->
+        <section class="gloss-group" id="row-ra">
+          <h2>ら行</h2>
+          <dl class="glossary">
+
+            <dt id="t-renzoku">連続型分布<span class="reading">(れんぞくがた ぶんぷ)</span>
+              <span class="ref"><a href="../levels/level2/2-3.html">→ 2-3</a></span></dt>
+            <dd>
+              身長や時間のように、<b>切れ目なく</b>値をとる確率変数の分布です。
+              点の確率ではなく確率密度で表し、「確率 = 面積」として面積で確率を読み取ります。正規分布やベータ分布が代表例です。
+            </dd>
+
+            <dt id="t-logistic">ロジスティック回帰<span class="reading">(ロジスティック かいき)</span>
+              <span class="ref"><a href="../levels/level5/5-3.html">→ 5-3</a></span></dt>
+            <dd>
+              結果が「はい/いいえ」のような<b>2択</b>のときに、その確率を予測する回帰です。
+              ベイズで扱うと、回帰係数を分布として推定でき、予測の不確かさまで語れます。
+            </dd>
+
+          </dl>
+        </section>
+
+        <p style="margin-top:2.6rem">
+          載っていない記号がある、読み方だけ確認したい——そんなときは
+          <a href="a-4.html">付録 a-4 記号表</a>もあわせて開いてみてください。
+          用語をひととおり押さえたら、本編に戻って続きを読み進めましょう。一段ずつで大丈夫です。
+        </p>
+
+      </div>
+
+      <!-- 前後ナビ: main.js がカリキュラムから自動生成 -->
+      <nav class="lesson-nav" id="lesson-nav" aria-label="前後のレッスン"></nav>
+
+    </main>
+
+    <!-- ページ内目次: main.js が本文の h2 から自動生成 -->
+    <aside class="toc">
+      <div class="toc-title">このページの内容</div>
+      <nav id="toc"></nav>
+    </aside>
+
+  </div>
+
+  <footer class="site-footer">
+    <p>ベイズの階段 — 中学数学から最前線まで、一段ずつ。</p>
+  </footer>
+
+  <script src="../assets/js/curriculum.js"></script>
+  <script src="../assets/js/main.js"></script>
+</body>
+</html>

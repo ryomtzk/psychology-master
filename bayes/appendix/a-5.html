@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>a-5 参考文献と次に読む本 | ベイズの階段</title>
+  <meta name="description" content="ベイズ統計を学ぶためのおすすめ書籍とオンライン教材を、入門・実践・専門のレベル別に紹介します。日本語の本を中心に、一言コメントつきでまとめました。">
+  <script>
+    document.documentElement.dataset.theme =
+      localStorage.getItem("bayes-stairs-theme") ||
+      (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Noto+Serif+JP:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/css/main.css">
+
+  <!-- KaTeX -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+          onload="renderMathInElement(document.body, {delimiters: [
+            {left: '$$', right: '$$', display: true},
+            {left: '\\(', right: '\\)', display: false}
+          ]});"></script>
+</head>
+<body data-root="../" data-level="appendix" data-lesson-id="a-5">
+
+  <header class="site-header">
+    <button class="sidebar-toggle" id="sidebar-toggle" aria-label="メニュー">☰</button>
+    <a class="brand" href="../index.html">
+      <span class="brand-mark">階</span>
+      <span>ベイズの階段</span>
+    </a>
+    <div class="header-spacer"></div>
+    <div class="header-progress" id="header-progress"></div>
+    <button class="theme-toggle" id="theme-toggle" aria-label="テーマ切替">🌙</button>
+  </header>
+
+  <div class="layout">
+
+    <aside class="sidebar"><nav id="sidebar-nav" aria-label="カリキュラム"></nav></aside>
+
+    <main class="lesson">
+
+      <nav class="breadcrumbs" aria-label="パンくず">
+        <a href="../index.html">ホーム</a><span class="sep">›</span>
+        <a href="index.html">付録</a><span class="sep">›</span>
+        <span>a-5 参考文献と次に読む本</span>
+      </nav>
+
+      <header class="lesson-header">
+        <div class="lesson-meta">
+          <span class="level-badge">付録</span>
+          <span class="small">付録 a-5</span>
+        </div>
+        <h1>参考文献と次に読む本</h1>
+        <p class="lead">
+          このサイトを一通り読み終えたら、次はどの本に進めばいいのでしょうか。ここでは
+          ベイズ統計のおすすめ書籍と教材を、<strong>入門 → 実践 → 専門</strong>のレベル別に並べました。
+          日本語の本を中心に、それぞれ一言コメントを添えています。背伸びせず、いま自分が
+          つかえずに読めそうな1冊から始めるのがおすすめです。
+        </p>
+      </header>
+
+      <div class="lesson-body">
+
+        <h2>この付録の使い方</h2>
+        <p>
+          本は「難しいほど偉い」わけではありません。<span class="term">独習（どくしゅう）</span>、
+          つまり一人で読み進めることでは、<strong>つかえずに読める1冊</strong>が
+          いちばん力になります。下のリストは上から下へ難易度が上がる順に並べています。
+          まずは「入門」から、いま手が届きそうな本を選んでください。
+        </p>
+        <p>
+          各項目には、本サイトのどのあたりまで読んでいれば気持ちよく入れるか、という
+          目安レベルも書いておきました。あくまで目安なので、興味が勝ったら飛び込んでも構いません。
+        </p>
+
+        <div class="box box-intuition">
+          <div class="box-title">直感でつかむ — 本選びは「階段の段差」</div>
+          <p>
+            いまの自分の知識と本の難易度の差が、階段の段差だと思ってください。
+            段差が小さいとスイスイ上れます。差が大きすぎると、1ページ目で
+            足が止まってしまいます。
+          </p>
+          <p>
+            背伸びした名著を1冊買うより、<strong>少しだけ上の本</strong>を順に踏むほうが、
+            結局は速く高いところまで行けます。これは独学全般に効くコツです。
+          </p>
+        </div>
+
+        <h2>入門レベル（Level 0〜2 と並走できる）</h2>
+        <p>
+          数式よりも「ベイズの考え方」をつかむための本です。本サイトの
+          <a href="../levels/level0/0-1.html">Level 0</a> 〜
+          <a href="../levels/level2/2-1.html">Level 2</a> あたりと並べて読むと、
+          理解が立体的になります。
+        </p>
+
+        <ul class="lesson-list">
+          <li>
+            <strong>『完全独習 ベイズ統計学入門』（小島寛之）</strong><br>
+            中学数学レベルから、面積図と分割表だけでベイズの定理を体に入れる本です。
+            数式アレルギーがある人の最初の1冊にちょうどよいです。
+            本サイトの <a href="../levels/level1/1-1.html">Level 1</a> と相性ばっちりです。
+          </li>
+          <li>
+            <strong>『マンガでわかる統計学 ベイズ統計編』（高橋信ほか）</strong><br>
+            物語とイラストで、事前確率・尤度（ゆうど）・事後確率の流れを追えます。
+            通学・通勤の合間に「雰囲気からつかむ」のに向いています。
+          </li>
+          <li>
+            <strong>『図解・ベイズ統計「超」入門』（涌井貞美）</strong><br>
+            図を多めに、具体例から定理へ橋渡しする入門書です。
+            ことばの定義を一つずつ確認したい人に合います。
+          </li>
+        </ul>
+
+        <div class="box box-warn">
+          <div class="box-title">つまずき注意</div>
+          <p>
+            入門書のなかには「ベイズ vs 頻度論（ひんどろん）、どちらが正しいか」を
+            熱く語るものもあります。最初のうちは論争に深入りせず、
+            <strong>計算のやり方と解釈</strong>に集中したほうが前に進めます。
+          </p>
+          <p>
+            なお用語は、ベイズ側の区間を<span class="term">信用区間（しんようくかん）</span>、
+            頻度論側の区間を<span class="term">信頼区間（しんらいくかん）</span>と呼び分けます。
+            本によって訳語が揺れるので、出てきたら読み替えてください。
+          </p>
+        </div>
+
+        <h2>実践レベル（Level 3〜4 と並走できる）</h2>
+        <p>
+          確率分布を式で扱い、実際に手を動かして推定する段階の本です。
+          本サイトの <a href="../levels/level3/3-1.html">Level 3</a> 〜
+          <a href="../levels/level4/4-1.html">Level 4</a> と並べて読むのがおすすめです。
+          ここからは <span class="term">事前分布（じぜんぶんぷ）</span> と
+          <span class="term">事後分布（じごぶんぷ）</span> を分布として扱います。
+        </p>
+
+        <ul class="lesson-list">
+          <li>
+            <strong>『StanとRでベイズ統計モデリング』（松浦健太郎）</strong><br>
+            通称「アヒル本」。データに合わせてモデルを少しずつ組み上げる感覚が身につきます。
+            実データで分析を回したくなったときの定番です。
+          </li>
+          <li>
+            <strong>『ベイズ統計モデリング』（J. クラシュケ著／前田和寛ほか訳）</strong><br>
+            原題は通称「パピー本」。図と丁寧な説明で、
+            <span class="term">MCMC（マルコフ連鎖モンテカルロ法）</span> の直感まで
+            ゆっくり連れて行ってくれます。厚いぶん、辞書的にも使えます。
+          </li>
+          <li>
+            <strong>『Pythonではじめるベイズ機械学習入門』（須山敦志ほか）</strong><br>
+            PyMC を使ってコードを動かしながら学べます。
+            本サイトの <a href="../levels/level4/4-1.html">Level 4</a> のコードと
+            並べると、写経から自分の改造へ進みやすいです。
+          </li>
+          <li>
+            <strong>『データ解析のための統計モデリング入門』（久保拓弥）</strong><br>
+            通称「緑本」。厳密にはベイズ専門書ではありませんが、
+            <span class="term">一般化線形モデル（GLM）</span> から
+            <span class="term">階層モデル（かいそうモデル）</span> への道が
+            一本につながり、ベイズへの足場になります。
+          </li>
+        </ul>
+
+        <div class="box box-sim">
+          <div class="box-title">やってみよう</div>
+          <p>
+            実践レベルの本は「読む」より「動かす」が効きます。
+            手元にPython環境があれば、まず次の最小コードを写経してみてください。
+            コインを100回投げて62回表が出たデータから、表の出る確率
+            \( \theta \)（シータ）の事後分布を推定します。
+          </p>
+          <pre><code>import pymc as pm
+
+with pm.Model() as model:
+    theta = pm.Beta("theta", alpha=1, beta=1)   # 事前分布
+    y = pm.Binomial("y", n=100, p=theta, observed=62)
+    idata = pm.sample()                          # MCMC実行</code></pre>
+          <p>
+            このコードの意味が「だいたい分かる」と感じたら、実践レベルの本に
+            気持ちよく入れるサインです。
+          </p>
+        </div>
+
+        <h2>専門レベル（Level 5 のその先へ）</h2>
+        <p>
+          理論をきっちり積み上げたい人、研究や仕事で本格的に使う人のための本です。
+          本サイトの <a href="../levels/level5/5-1.html">Level 5</a> を読み終えてから
+          手に取ると、土台があるぶん迷子になりにくいです。英語が混ざりますが、
+          この分野の定番なので挑戦する価値があります。
+        </p>
+
+        <ul class="lesson-list">
+          <li>
+            <strong>『標準ベイズ統計学』（P. ホフ著／入江薫ほか訳）</strong><br>
+            理論と実装のバランスがよい教科書です。
+            分布の式と推定の仕組みを、ごまかさず追いたい人に向きます。
+          </li>
+          <li>
+            <strong>『ベイズ深層学習』（須山敦志）</strong><br>
+            ベイズの考え方を機械学習・深層学習へつなげる橋渡しの1冊です。
+            数式は多めですが、現代的な応用の見取り図が手に入ります。
+          </li>
+          <li>
+            <strong>『Bayesian Data Analysis』（A. ゲルマンほか、英語）</strong><br>
+            通称「BDA3」。この分野の世界標準のひとつです。
+            困ったときに引く一生モノの参照書として、本棚にあると心強いです。
+          </li>
+          <li>
+            <strong>『Pattern Recognition and Machine Learning』（C. ビショップ、英語）</strong><br>
+            通称「PRML」。機械学習の名著で、ベイズの視点が全体を貫いています。
+            ベイズと機械学習をひとつながりで理解したい人の定番です。
+          </li>
+        </ul>
+
+        <h2>オンライン資料（無料で読める）</h2>
+        <p>
+          手を動かす段階では、公式ドキュメントとチュートリアルが最強の教材になります。
+          下のサイトはどれも無料で、しかも最新です。本と並べて使ってください。
+        </p>
+
+        <ul class="lesson-list">
+          <li>
+            <strong>PyMC 公式サイト（pymc.io）</strong><br>
+            Python のベイズモデリングライブラリ。
+            「Example Gallery」に実例が大量にあり、自分の課題に近いものを真似るのが近道です。
+          </li>
+          <li>
+            <strong>Stan 公式サイト（mc-stan.org）</strong><br>
+            高速なMCMCで定評のある言語。
+            「User's Guide」はモデリングの考え方そのものを学べる良質な読み物です。
+          </li>
+          <li>
+            <strong>ArviZ 公式サイト（python.arviz.org）</strong><br>
+            推定結果を診断・可視化するライブラリ。
+            <span class="term">トレースプロット</span>（サンプルの動きを描いた図）など、
+            「結果が信用できるか」の確認に欠かせません。
+          </li>
+          <li>
+            <strong>『Bayesian Methods for Hackers』（オンライン版・英語）</strong><br>
+            数式より先にコードでベイズに触れる無料の電子書籍です。
+            手を動かしながら直感をつかみたい人に向いています。
+          </li>
+        </ul>
+
+        <div class="box box-warn">
+          <div class="box-title">つまずき注意 — バージョン違い</div>
+          <p>
+            オンラインのコードは、ライブラリの<strong>バージョン</strong>が違うと
+            そのままでは動かないことがあります。とくに PyMC は版による書き方の差が
+            大きいです。エラーが出たら、まず「どの版向けの記事か」を確認しましょう。
+          </p>
+        </div>
+
+        <h2>理解度チェック</h2>
+
+        <div class="quiz" data-answer="a">
+          <p class="quiz-q">問: 独学を始める人に、最初の1冊として最もおすすめなのはどれでしょう?</p>
+          <button class="quiz-option" data-key="a">いま背伸びせず読めそうな入門書</button>
+          <button class="quiz-option" data-key="b">分野で一番分厚い専門書</button>
+          <button class="quiz-option" data-key="c">英語で書かれた世界標準の教科書</button>
+          <div class="quiz-explain">
+            <p>
+              正解はaです。独学では「つかえずに読める本」がいちばん力になります。
+              いまの知識との段差が小さい本を選ぶと、止まらずに上れます。
+              分厚い専門書や英語の名著は、土台ができてからのほうが効きます。
+            </p>
+          </div>
+        </div>
+
+        <div class="quiz" data-answer="c">
+          <p class="quiz-q">問: PyMC で実際にモデルを動かす段階で、最も頼りになる教材はどれでしょう?</p>
+          <button class="quiz-option" data-key="a">紙の入門書を1冊だけ</button>
+          <button class="quiz-option" data-key="b">SNSの短い投稿だけ</button>
+          <button class="quiz-option" data-key="c">PyMC公式の例とドキュメント</button>
+          <div class="quiz-explain">
+            <p>
+              正解はcです。手を動かす段階では、公式ドキュメントと例（Example Gallery）が
+              最新かつ正確で、自分の課題に近い実例を真似られます。
+              ただしバージョン違いには注意してください。
+            </p>
+          </div>
+        </div>
+
+        <h2>演習</h2>
+
+        <div class="box box-practice">
+          <div class="box-title">演習1</div>
+          <p>
+            あなたは本サイトの <a href="../levels/level2/2-1.html">Level 2</a> まで読み終えたところです。
+            次に読む本を1冊選ぶとしたら、上のリストのどのレベルから探すのがよいでしょうか。
+            理由も一言で答えてください。
+          </p>
+          <details class="answer">
+            <summary>解答を見る</summary>
+            <p>
+              <strong>入門レベル</strong>から探すのがおすすめです。
+              入門の本は Level 0〜2 と並走できる難易度に揃えてあるからです。
+              段差を小さく保てるので、止まらずに読み進められます。
+              実践レベルは Level 3〜4 を読んでからのほうが気持ちよく入れます。
+            </p>
+          </details>
+        </div>
+
+        <div class="box box-practice">
+          <div class="box-title">演習2</div>
+          <p>
+            「実践レベルの本に進む準備ができたか」を、自分でどう確かめればよいでしょうか。
+            この付録に出てきた目安を1つ挙げてください。
+          </p>
+          <details class="answer">
+            <summary>解答を見る</summary>
+            <p>
+              「やってみよう」の最小コード（PyMC でコインの事後分布を推定するコード）が
+              <strong>だいたい意味が分かる</strong>かどうかが目安です。
+              \( \theta \) の事前分布・尤度・MCMC実行という流れが読めれば、
+              実践レベルの本に入れるサインです。読めなければ、入門レベルで
+              もう少し土台を固めてから進みましょう。
+            </p>
+          </details>
+        </div>
+
+        <div class="box box-practice">
+          <div class="box-title">演習3</div>
+          <p>
+            あるブログ記事の PyMC コードを写したのに、エラーが出て動きませんでした。
+            まず最初に確認すべきことは何でしょうか。
+          </p>
+          <details class="answer">
+            <summary>解答を見る</summary>
+            <p>
+              その記事が<strong>どのバージョンの PyMC 向けか</strong>を確認します。
+              PyMC は版によって書き方が変わるため、古い記事のコードは
+              そのままでは動かないことがあります。公式ドキュメントで
+              いまの版の書き方を照らし合わせるのが近道です。
+            </p>
+          </details>
+        </div>
+
+        <h2>まとめ</h2>
+        <ul>
+          <li>本は入門 → 実践 → 専門の順に、段差を小さく踏むのがコツです。</li>
+          <li>入門は Level 0〜2、実践は Level 3〜4、専門は Level 5 のあとが目安です。</li>
+          <li>手を動かす段階では PyMC・Stan などの公式ドキュメントが最強の教材です。</li>
+          <li>オンライン資料はバージョン違いに注意し、「どの版向けか」を必ず確認します。</li>
+          <li>いま自分がつかえずに読める1冊を選ぶことが、独学では何より効きます。</li>
+        </ul>
+
+        <p>
+          困ったら、用語は <a href="a-3.html">用語集</a>、記号は
+          <a href="a-4.html">記号表</a> に戻れます。さあ、次の1冊で
+          階段をもう一段、上がっていきましょう。
+        </p>
+
+      </div>
+
+      <nav class="lesson-nav" id="lesson-nav" aria-label="前後のレッスン"></nav>
+
+    </main>
+
+    <aside class="toc">
+      <div class="toc-title">このページの内容</div>
+      <nav id="toc"></nav>
+    </aside>
+
+  </div>
+
+  <footer class="site-footer">
+    <p>ベイズの階段 — 中学数学から最前線まで、一段ずつ。</p>
+  </footer>
+
+  <script src="../assets/js/curriculum.js"></script>
+  <script src="../assets/js/main.js"></script>
+</body>
+</html>

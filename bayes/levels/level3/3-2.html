@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>3-2 ベータ・二項モデル | ベイズの階段</title>
+  <meta name="description" content="最も基本的なベイズモデルを手計算で完走する">
+  <script>
+    document.documentElement.dataset.theme =
+      localStorage.getItem("bayes-stairs-theme") ||
+      (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Noto+Serif+JP:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../assets/css/main.css">
+
+  <!-- KaTeX: 数式を使うページでは必ずこの3行を入れる -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+          onload="renderMathInElement(document.body, {delimiters: [
+            {left: '$$', right: '$$', display: true},
+            {left: '\\(', right: '\\)', display: false}
+          ]});"></script>
+</head>
+<body data-root="../../" data-level="3" data-lesson-id="3-2">
+
+  <header class="site-header">
+    <button class="sidebar-toggle" id="sidebar-toggle" aria-label="メニュー">☰</button>
+    <a class="brand" href="../../index.html">
+      <span class="brand-mark">階</span>
+      <span>ベイズの階段</span>
+    </a>
+    <div class="header-spacer"></div>
+    <div class="header-progress" id="header-progress"></div>
+    <button class="theme-toggle" id="theme-toggle" aria-label="テーマ切替">🌙</button>
+  </header>
+
+  <div class="layout">
+
+    <!-- サイドバー: main.js がカリキュラムから自動生成 -->
+    <aside class="sidebar"><nav id="sidebar-nav" aria-label="カリキュラム"></nav></aside>
+
+    <main class="lesson">
+
+      <nav class="breadcrumbs" aria-label="パンくず">
+        <a href="../../index.html">ホーム</a><span class="sep">›</span>
+        <a href="index.html">Level 3 ベイズ推定の基礎</a><span class="sep">›</span>
+        <span>3-2 ベータ・二項モデル</span>
+      </nav>
+
+      <header class="lesson-header">
+        <div class="lesson-meta">
+          <span class="level-badge">Level 3</span>
+          <span class="small">レッスン 3-2</span>
+        </div>
+        <h1>ベータ・二項モデル</h1>
+
+        <div class="lesson-goals">
+          <h2>このレッスンでできるようになること</h2>
+          <ul>
+            <li>事前分布 \( \mathrm{Beta}(\alpha, \beta) \) と二項データから、事後分布を手計算で求められる</li>
+            <li>「事後 = \( \mathrm{Beta}(\alpha+k,\ \beta+n-k) \)」という更新ルールを、その意味とともに説明できる</li>
+            <li>事前分布が事後分布へ変わる様子を、グラフのイメージで思い描ける</li>
+          </ul>
+          <p class="prereq">前提: <a href="../level2/2-6.html">2-6 ベータ分布</a> と <a href="3-1.html">3-1 ベイズ更新</a> を読んでいること</p>
+        </div>
+      </header>
+
+      <div class="lesson-body">
+
+        <h2>「表が出る確率」を当てにいく</h2>
+        <p>あなたの手元に、見たことのないコインがあるとします。表が出る確率は、ちょうど半分とはかぎりません。少しゆがんでいて、表が出やすいかもしれません。</p>
+        <p>このコインを何回か投げて、出た結果から「表が出る確率はだいたいこれくらい」と当てにいきたい。これがこのレッスンの主役です。当てたい数を \( \theta \)（シータ）と書きます。\( \theta \) は \(0\) から \(1\) のあいだのどこかにある、いまはわからない値です。</p>
+        <p><a href="3-1.html">3-1</a> では、データを見るたびに信念を更新する考え方を学びました。今回はそれを、いちばん基本のかたちで最後まで手計算します。使う材料は、<a href="../level2/2-6.html">2-6</a> のベータ分布と、<a href="../level2/2-2.html">2-2</a> の二項分布。この2つを組み合わせるだけで、ベイズ推定がまるごと一周します。</p>
+
+        <div class="box box-intuition">
+          <div class="box-title">直感でつかむ</div>
+          <p>\( \theta \) は「コインの表の出やすさ」です。投げる前から、私たちはなんとなくの予想を持っています。「ふつうのコインなら半々くらいかな」という感覚です。これを<strong>事前分布</strong>として、\(0\) から \(1\) の上の山のかたちで表します。</p>
+          <p>そして実際に何回か投げて、表と裏の回数を数える。すると山のかたちが動きます。表がたくさん出れば山は右へ、裏が多ければ左へ寄ります。動かしたあとの山が<strong>事後分布</strong>です。ベイズ推定とは、この「山を動かす」操作のことだと思ってください。</p>
+        </div>
+
+        <h2>材料その1 — 事前分布はベータ分布</h2>
+        <p>当てたい \( \theta \) は、\(0\) と \(1\) のあいだの数でした。この範囲の「確率の確率」をうまく表せるのが、<a href="../level2/2-6.html">2-6</a> で学んだ<span class="term">ベータ分布</span>です。形を決めるパラメータが2つあり、\( \mathrm{Beta}(\alpha, \beta) \) と書きました。\( \alpha \)（アルファ）と \( \beta \)（ベータ）です。</p>
+
+        <div class="box box-def">
+          <div class="box-title">定義 — 事前分布としてのベータ分布</div>
+          <p>\( \theta \) についての事前分布をベータ分布で表します。その確率密度は、定数倍を別にすれば次の形でした。</p>
+          $$ p(\theta) \propto \theta^{\,\alpha - 1}\, (1-\theta)^{\,\beta - 1} $$
+          <p>記号 \( \propto \) は『比例する』と読みます。全体を1にするための定数を省いて、\( \theta \) に関わる部分だけを書いた、という意味です。\( \alpha \) を大きくすると山は右（表寄り）に、\( \beta \) を大きくすると左（裏寄り）に寄ります。</p>
+        </div>
+
+        <p>イメージとしては、\( \alpha \) が「これまで心の中で数えた表の回数+1」、\( \beta \) が「裏の回数+1」のようなものです。何も情報がないときは \( \alpha = \beta = 1 \) を選びます。これは \(0\) から \(1\) まで平らな分布、つまり「どの値も同じくらいありそう」という事前分布になります。</p>
+
+        <h2>材料その2 — データは二項分布</h2>
+        <p>つぎに、実際のデータです。コインを \( n \) 回投げて、そのうち \( k \) 回が表だったとします。表が出る確率を \( \theta \) とすると、この結果が出る尤度（ゆうど）は、<a href="../level2/2-2.html">2-2</a> の<span class="term">二項分布</span>で書けます。</p>
+
+        <div class="box box-def">
+          <div class="box-title">定義 — データの尤度（二項分布）</div>
+          <p><span class="term">尤度（ゆうど）</span>とは、\( \theta \) をある値だと仮定したときに、手元のデータが出る「もっともらしさ」のことでした（<a href="../level2/2-5.html">2-5</a>）。\( n \) 回中 \( k \) 回が表という結果の尤度は</p>
+          $$ p(k \mid \theta) = \binom{n}{k}\, \theta^{\,k}\, (1-\theta)^{\,n-k} $$
+          <p>です。\( \binom{n}{k} \) は『\( n \) 個から \( k \) 個を選ぶ場合の数』で、\( \theta \) を含まない、ただの定数です。</p>
+        </div>
+
+        <p>ここで注目してほしいのは、\( \theta \) に関わる部分が \( \theta^{k}(1-\theta)^{n-k} \) だということです。先ほどの事前分布 \( \theta^{\alpha-1}(1-\theta)^{\beta-1} \) と、形がそっくりですね。この「形がそろっている」ことが、これから起きる気持ちのよい計算のカギになります。</p>
+
+        <h2>かけ合わせる — ベイズの定理を当てはめる</h2>
+        <p>道具はそろいました。<a href="../level1/1-4.html">1-4</a> で学んだベイズの定理を思い出しましょう。事後分布は「事前分布 × 尤度」に比例します。分母（周辺尤度）は \( \theta \) を含まない定数なので、形を追いかけるあいだは脇に置いておけます。</p>
+
+        <div class="box box-thm">
+          <div class="box-title">公式 — 事後分布は「事前 × 尤度」に比例</div>
+          <p>$$ \underbrace{p(\theta \mid k)}_{\text{事後分布}} \propto \underbrace{p(k \mid \theta)}_{\text{尤度}} \times \underbrace{p(\theta)}_{\text{事前分布}} $$</p>
+          <p>記号 \( p(\theta \mid k) \) は『\( k \) 回表というデータを見たあとの \( \theta \) の分布』と読みます。</p>
+        </div>
+
+        <p>では、実際に2つの形をかけ合わせます。定数（\( \binom{n}{k} \) など）はすべて比例 \( \propto \) の中に吸い込ませて、\( \theta \) を含む部分だけを追います。</p>
+
+        <div class="formula">
+          <span class="formula-label">事後分布の導出</span>
+          $$ p(\theta \mid k) \;\propto\; \underbrace{\theta^{\,k}(1-\theta)^{\,n-k}}_{\text{尤度}} \times \underbrace{\theta^{\,\alpha-1}(1-\theta)^{\,\beta-1}}_{\text{事前分布}} $$
+        </div>
+
+        <p>同じ底どうしの累乗は、指数を足せばまとめられます（\( \theta^{a}\cdot\theta^{b} = \theta^{a+b} \)）。\( \theta \) の指数は \( k + (\alpha - 1) \)、\( (1-\theta) \) の指数は \( (n-k) + (\beta - 1) \) です。整理すると、</p>
+
+        <div class="formula">
+          <span class="formula-label">まとめた結果</span>
+          $$ p(\theta \mid k) \;\propto\; \theta^{\,(\alpha + k) - 1}\,(1-\theta)^{\,(\beta + n - k) - 1} $$
+        </div>
+
+        <p>右辺をよく見てください。これは \( \theta^{\,A-1}(1-\theta)^{\,B-1} \) という、ベータ分布そのものの形です。指数の中身を読み取ると、新しいパラメータは \( A = \alpha + k \)、\( B = \beta + n - k \)。つまり事後分布もまた、ベータ分布になったのです。</p>
+
+        <div class="box box-thm">
+          <div class="box-title">公式 — ベータ・二項モデルの更新ルール</div>
+          <p>事前分布 \( \mathrm{Beta}(\alpha, \beta) \) に、「\( n \) 回中 \( k \) 回が表」という二項データを加えると、事後分布は</p>
+          $$ \mathrm{Beta}(\alpha, \beta) \;\xrightarrow{\;n\,\text{回中}\,k\,\text{回表}\;}\; \mathrm{Beta}(\alpha + k,\; \beta + n - k) $$
+          <p>になります。表の回数 \( k \) を \( \alpha \) に足し、裏の回数 \( n-k \) を \( \beta \) に足すだけ。これがこのレッスンのいちばん大事な式です。</p>
+        </div>
+
+        <div class="box box-intuition">
+          <div class="box-title">直感でつかむ</div>
+          <p>更新ルールは、おどろくほど素朴です。\( \alpha \) は「表のカウンター」、\( \beta \) は「裏のカウンター」だと思ってください。データで表が \( k \) 回出たら表のカウンターに \( k \) を足し、裏が \( n-k \) 回出たら裏のカウンターに \( n-k \) を足す。それだけで事後分布のできあがりです。</p>
+          <p>だから \( \alpha, \beta \) は「これまでに見た（と思っている）表・裏の回数」のように振る舞います。事前分布の \( \alpha=\beta=1 \) は「まだ表も裏も見ていない、まっさらな状態」というわけです。</p>
+        </div>
+
+        <div class="box box-warn">
+          <div class="box-title">つまずき注意</div>
+          <p>足すのは <strong>\( k \) と \( n-k \)</strong> であって、\( n \) ではありません。\( \beta \) に足すのは「裏の回数 \( n-k \)」です。\( n \)（投げた総回数）をそのまま足してしまう間違いがとても多いので、気をつけましょう。表は \( \alpha \) へ、裏は \( \beta \) へ。投げた回数 \( n \) は、表と裏に分けて配ると覚えてください。</p>
+        </div>
+
+        <h2>例題 — 手計算で最後まで</h2>
+
+        <div class="box box-ex">
+          <div class="box-title">例題</div>
+          <p>新しいコインの表の出やすさ \( \theta \) を推定します。投げる前は何も情報がないので、事前分布を \( \mathrm{Beta}(1, 1) \)（\(0\)〜\(1\) で平ら）としました。このコインを <strong>10回投げたところ、表が7回</strong> 出ました。事後分布を求めましょう。</p>
+
+          <p><strong>解</strong>: まず材料を確認します。</p>
+          <ul>
+            <li>事前分布: \( \mathrm{Beta}(\alpha, \beta) = \mathrm{Beta}(1, 1) \)、つまり \( \alpha = 1,\ \beta = 1 \)</li>
+            <li>データ: 投げた回数 \( n = 10 \)、表の回数 \( k = 7 \)、よって裏の回数 \( n - k = 3 \)</li>
+          </ul>
+
+          <p>更新ルールにそのまま当てはめます。表の \(7\) を \( \alpha \) に、裏の \(3\) を \( \beta \) に足すだけです。</p>
+          $$ \alpha + k = 1 + 7 = 8, \qquad \beta + (n-k) = 1 + 3 = 4 $$
+          <p>したがって事後分布は</p>
+          $$ p(\theta \mid \text{データ}) = \mathrm{Beta}(8,\ 4) $$
+          <p>です。これで「10回中7回表だった」という情報を取り込んだ、新しい信念ができあがりました。</p>
+
+          <p><strong>おまけ — 山の頂上はどこ?</strong> ベータ分布 \( \mathrm{Beta}(\alpha, \beta) \) で密度がいちばん高くなる \( \theta \)（最頻値）は、\( \alpha, \beta \) がどちらも \(1\) より大きいとき</p>
+          $$ \frac{\alpha - 1}{\alpha + \beta - 2} = \frac{8 - 1}{8 + 4 - 2} = \frac{7}{10} = 0.7 $$
+          <p>です。ぴったり「10回中7回」の割合 \(0.7\) と一致しました。事前分布が平らだったので、いちばんありそうな \( \theta \) はデータの割合そのものになる、というわかりやすい結果です。</p>
+        </div>
+
+        <h2>事前から事後へ — 山が動くようす</h2>
+        <p>数式だけだと手応えがつかみにくいので、グラフで見ておきましょう。下の図は、例題の事前分布 \( \mathrm{Beta}(1,1) \) が、データを受けて事後分布 \( \mathrm{Beta}(8,4) \) へ変わるようすです。</p>
+
+        <figure class="figure">
+          <svg viewBox="0 0 420 240" width="420" aria-label="事前分布から事後分布への変化">
+            <!-- 軸 -->
+            <line x1="40" y1="200" x2="400" y2="200" stroke="var(--border)" stroke-width="2"/>
+            <line x1="40" y1="20" x2="40" y2="200" stroke="var(--border)" stroke-width="2"/>
+            <!-- x目盛り 0, 0.5, 1 -->
+            <line x1="220" y1="200" x2="220" y2="205" stroke="var(--border)" stroke-width="1"/>
+            <line x1="400" y1="200" x2="400" y2="205" stroke="var(--border)" stroke-width="1"/>
+            <text x="40"  y="220" text-anchor="middle" font-size="11" fill="var(--text-muted)">0</text>
+            <text x="220" y="220" text-anchor="middle" font-size="11" fill="var(--text-muted)">0.5</text>
+            <text x="400" y="220" text-anchor="middle" font-size="11" fill="var(--text-muted)">1</text>
+            <text x="220" y="236" text-anchor="middle" font-size="11" fill="var(--text-muted)">θ（表の出やすさ）</text>
+            <!-- 事前分布 Beta(1,1): 平らな線 -->
+            <path d="M40,170 L400,170" fill="none" stroke="var(--text-muted)" stroke-width="2.5" stroke-dasharray="6 5"/>
+            <text x="120" y="162" font-size="11" fill="var(--text-muted)">事前 Beta(1,1)</text>
+            <!-- 事後分布 Beta(8,4): 0.7あたりに山。なめらかな曲線（近似） -->
+            <path d="M40,200 C150,200 210,175 270,60 C300,30 320,40 340,90 C360,140 380,195 400,200"
+                  fill="none" stroke="var(--level-color)" stroke-width="3"/>
+            <!-- ピーク位置 0.7 の目印 -->
+            <line x1="292" y1="200" x2="292" y2="44" stroke="var(--level-color)" stroke-width="1" stroke-dasharray="3 3" opacity="0.6"/>
+            <text x="292" y="220" text-anchor="middle" font-size="11" fill="var(--level-color)">0.7</text>
+            <text x="300" y="40" font-size="11" fill="var(--level-color)">事後 Beta(8,4)</text>
+          </svg>
+          <figcaption>図1: 平らな事前分布 \( \mathrm{Beta}(1,1) \)（破線）が、「10回中7回表」というデータを受けて、\( \theta = 0.7 \) あたりに山をもつ事後分布 \( \mathrm{Beta}(8,4) \)（実線）へ変わります。データを見て「\( \theta \) はこのへんだろう」という確信が、山の高さとして表れます。</figcaption>
+        </figure>
+
+        <p>投げる前は「どの値も同じくらいありそう」という平らな状態でした。10回投げて結果を見たことで、\( \theta = 0.7 \) のあたりがいちばんありそうだ、と山ができます。データが多ければ多いほど、この山はやせて高く、とがっていきます。「だいたいこのへん」という確信が強まるからです。</p>
+
+        <div class="box box-intuition">
+          <div class="box-title">直感でつかむ — 1個ずつでも、まとめてでも同じ</div>
+          <p><a href="3-1.html">3-1</a> では、データを1個ずつ取り込む逐次更新を学びました。じつはベータ・二項モデルでは、10回分をまとめて入れても、1回ずつ10回入れても、たどり着く事後分布は同じ \( \mathrm{Beta}(8,4) \) です。表が出るたびに \( \alpha \) に \(1\) を足し、裏が出るたびに \( \beta \) に \(1\) を足す——それを10回くり返せば、合計で \( \alpha \) に \(7\)、\( \beta \) に \(3\) 足したことになるからです。順番も、まとめ方も、結果を変えません。</p>
+        </div>
+
+        <h2>理解度チェック</h2>
+
+        <div class="quiz" data-answer="b">
+          <p class="quiz-q">問1: 事前分布が \( \mathrm{Beta}(2, 2) \) のとき、「8回投げて表が5回」というデータを取り込むと、事後分布はどれになりますか?</p>
+          <button class="quiz-option" data-key="a">\( \mathrm{Beta}(5, 3) \)</button>
+          <button class="quiz-option" data-key="b">\( \mathrm{Beta}(7, 5) \)</button>
+          <button class="quiz-option" data-key="c">\( \mathrm{Beta}(7, 10) \)</button>
+          <div class="quiz-explain"><p>表は \( k = 5 \)、裏は \( n - k = 8 - 5 = 3 \) です。\( \alpha \) に表の \(5\) を足して \( 2 + 5 = 7 \)、\( \beta \) に裏の \(3\) を足して \( 2 + 3 = 5 \)。よって事後分布は \( \mathrm{Beta}(7, 5) \) です。\( \beta \) に \( n = 8 \) を足して \(10\) としてしまうのが、よくある間違いです。足すのは裏の回数 \(3\) です。</p></div>
+        </div>
+
+        <div class="quiz" data-answer="c">
+          <p class="quiz-q">問2: 事後分布がきれいにベータ分布になったのは、なぜでしょう?</p>
+          <button class="quiz-option" data-key="a">分母（周辺尤度）を必ず計算したから</button>
+          <button class="quiz-option" data-key="b">二項分布の \( \binom{n}{k} \) を残したまま計算したから</button>
+          <button class="quiz-option" data-key="c">尤度と事前分布が、どちらも \( \theta^{\bullet}(1-\theta)^{\bullet} \) という同じ形をしていて、かけると指数が足されるだけだったから</button>
+          <div class="quiz-explain"><p>尤度は \( \theta^{k}(1-\theta)^{n-k} \)、事前分布は \( \theta^{\alpha-1}(1-\theta)^{\beta-1} \)。底が同じ累乗どうしなので、かけると指数が足し合わさり、またベータ分布の形に戻ります。\( \binom{n}{k} \) は \( \theta \) を含まない定数で、比例 \( \propto \) の中に吸収されるため形には影響しません。この「形が閉じる」性質は、次の <a href="3-3.html">3-3</a> で共役事前分布として一般化します。</p></div>
+        </div>
+
+        <div class="quiz" data-answer="a">
+          <p class="quiz-q">問3: 「まだ何も情報がない」状態を表す事前分布として、このレッスンで使ったのはどれですか?</p>
+          <button class="quiz-option" data-key="a">\( \mathrm{Beta}(1, 1) \)（\(0\)〜\(1\) で平らな分布）</button>
+          <button class="quiz-option" data-key="b">\( \mathrm{Beta}(0, 0) \)</button>
+          <button class="quiz-option" data-key="c">\( \mathrm{Beta}(100, 100) \)</button>
+          <div class="quiz-explain"><p>\( \mathrm{Beta}(1, 1) \) は \(0\) から \(1\) まで高さが一定の、平らな分布です。「どの \( \theta \) も同じくらいありそう」を表し、表も裏もまだ1回も見ていない状態に対応します。\( \mathrm{Beta}(100, 100) \) は逆に \(0.5\) を強く信じる、情報のたっぷり入った事前分布です。</p></div>
+        </div>
+
+        <h2>演習</h2>
+
+        <div class="box box-practice">
+          <div class="box-title">演習1</div>
+          <p>事前分布 \( \mathrm{Beta}(1, 1) \) からスタートします。あるWebサイトの「申し込みボタン」を押す確率 \( \theta \) を推定したいとします。<strong>20人が訪れて、3人が申し込みました</strong>。事後分布を求めなさい。</p>
+          <details class="answer">
+            <summary>解答を見る</summary>
+            <p>「申し込んだ」を表（成功）、「申し込まなかった」を裏とみなします。\( n = 20 \)、成功 \( k = 3 \)、失敗 \( n - k = 17 \) です。更新ルールから、\( \alpha + k = 1 + 3 = 4 \)、\( \beta + (n-k) = 1 + 17 = 18 \)。よって事後分布は \( \mathrm{Beta}(4, 18) \) です。山の頂上（最頻値）は \( \dfrac{4-1}{4+18-2} = \dfrac{3}{20} = 0.15 \) で、データの割合 \( 3/20 \) と一致します。</p>
+          </details>
+        </div>
+
+        <div class="box box-practice">
+          <div class="box-title">演習2</div>
+          <p>演習1の続きです。後日さらにデータが集まり、<strong>新たに30人が訪れて、6人が申し込みました</strong>。演習1で求めた事後分布 \( \mathrm{Beta}(4, 18) \) を今度の事前分布として、もう一度更新しなさい。</p>
+          <details class="answer">
+            <summary>解答を見る</summary>
+            <p>いまの事前分布は \( \mathrm{Beta}(4, 18) \)、新しいデータは \( n = 30 \)、成功 \( k = 6 \)、失敗 \( n - k = 24 \) です。\( \alpha + k = 4 + 6 = 10 \)、\( \beta + (n-k) = 18 + 24 = 42 \)。よって事後分布は \( \mathrm{Beta}(10, 42) \) です。<br>これは <a href="3-1.html">3-1</a> のベイズ更新そのもの。「前回の事後分布が、今回の事前分布になる」という流れを、ベータ分布のパラメータを足していくだけで実行できました。ちなみに最初から「全50人中9人成功」とまとめて \( \mathrm{Beta}(1,1) \) に入れても、\( \mathrm{Beta}(1+9,\ 1+41) = \mathrm{Beta}(10, 42) \) で同じ答えになります。</p>
+          </details>
+        </div>
+
+        <div class="box box-practice">
+          <div class="box-title">演習3</div>
+          <p>事前分布 \( \mathrm{Beta}(2, 5) \) に、「\( n = 12 \) 回中、表が \( k = 9 \) 回」というデータを取り込みます。事後分布を求め、その山の頂上（最頻値）も計算しなさい。</p>
+          <details class="answer">
+            <summary>解答を見る</summary>
+            <p>裏は \( n - k = 12 - 9 = 3 \) 回です。\( \alpha + k = 2 + 9 = 11 \)、\( \beta + (n-k) = 5 + 3 = 8 \)。よって事後分布は \( \mathrm{Beta}(11, 8) \)。<br>最頻値は \( \dfrac{\alpha - 1}{\alpha + \beta - 2} = \dfrac{11 - 1}{11 + 8 - 2} = \dfrac{10}{17} \approx 0.59 \) です。データだけ見れば割合は \( 9/12 = 0.75 \) ですが、事前分布が \( \mathrm{Beta}(2,5) \)（やや裏寄り）だったため、頂上は \(0.75\) より少し左の \(0.59\) に引き戻されています。事前の信念とデータが、混ざり合った結果です。</p>
+          </details>
+        </div>
+
+        <div class="box box-practice">
+          <div class="box-title">演習4</div>
+          <p>事前分布 \( \mathrm{Beta}(1, 1) \) から、「\( n = 4 \) 回投げて、表が \( 2 \) 回」というデータで更新しました。事後分布を答えなさい。また、同じ事前分布から「\( n = 400 \) 回で表が \( 200 \) 回」とした場合の事後分布も答え、2つを比べて気づくことを書きなさい。</p>
+          <details class="answer">
+            <summary>解答を見る</summary>
+            <p>1つ目: \( \alpha + 2 = 3 \)、\( \beta + 2 = 3 \) なので \( \mathrm{Beta}(3, 3) \)。<br>2つ目: \( \alpha + 200 = 201 \)、\( \beta + 200 = 201 \) なので \( \mathrm{Beta}(201, 201) \)。<br>どちらも表の割合は \(0.5\) で、山の頂上はともに \( \theta = 0.5 \) です。ちがいは<strong>山のするどさ</strong>。\( \mathrm{Beta}(3,3) \) はゆるい山ですが、\( \mathrm{Beta}(201,201) \) は \(0.5\) のまわりに細く高くとがります。データが多いほど「\( \theta \) は \(0.5\) のあたりだ」という確信が強まり、分布の幅（不確かさ）が小さくなる、ということです。</p>
+          </details>
+        </div>
+
+        <h2>まとめ</h2>
+        <ul>
+          <li><span class="term">ベータ・二項モデル</span>は、\(0\)〜\(1\) の割合 \( \theta \) を推定する、いちばん基本のベイズモデルです。事前分布にベータ分布、データに二項分布を使います。</li>
+          <li>更新ルールは \( \mathrm{Beta}(\alpha, \beta) \to \mathrm{Beta}(\alpha + k,\ \beta + n - k) \)。<strong>表の回数 \( k \) を \( \alpha \) に、裏の回数 \( n-k \) を \( \beta \) に足す</strong>だけです。</li>
+          <li>事前分布も事後分布も同じベータ分布の形になるのは、尤度と事前分布がどちらも \( \theta^{\bullet}(1-\theta)^{\bullet} \) の形で、かけると指数が足されるからです。</li>
+          <li>事前分布が情報のない \( \mathrm{Beta}(1,1) \) のとき、事後分布の山の頂上はデータの割合 \( k/n \) と一致します。事前分布に偏りがあると、頂上はその分だけ引き戻されます。</li>
+          <li>データが増えるほど、事後分布は細く高くとがり、推定の不確かさが小さくなります。1回ずつ更新しても、まとめて更新しても、結果は同じです。</li>
+        </ul>
+        <p>たった1本の足し算で、ベイズ推定をまるごと一周できました。なぜこんなにきれいに計算が閉じたのか——その秘密は、つぎの <a href="3-3.html">3-3 共役事前分布</a> で明かします。ベータと二項の「相性のよさ」には、ちゃんと名前がついています。</p>
+
+      </div>
+
+      <div class="complete-area">
+        <button class="btn btn-level" id="complete-btn">このレッスンを完了にする</button>
+        <p class="complete-note">進捗はこのブラウザに保存されます</p>
+      </div>
+
+      <!-- 前後ナビ: main.js がカリキュラムから自動生成 -->
+      <nav class="lesson-nav" id="lesson-nav" aria-label="前後のレッスン"></nav>
+
+    </main>
+
+    <!-- ページ内目次: main.js が本文の h2 から自動生成 -->
+    <aside class="toc">
+      <div class="toc-title">このページの内容</div>
+      <nav id="toc"></nav>
+    </aside>
+
+  </div>
+
+  <footer class="site-footer">
+    <p>ベイズの階段 — 中学数学から最前線まで、一段ずつ。</p>
+  </footer>
+
+  <script src="../../assets/js/curriculum.js"></script>
+  <script src="../../assets/js/main.js"></script>
+</body>
+</html>

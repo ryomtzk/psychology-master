@@ -187,6 +187,32 @@ small{font-weight:400}
 .mini-bar span{display:block;height:100%;border-radius:999px;transition:width .7s cubic-bezier(.22,1,.36,1);
   background:linear-gradient(90deg,var(--cat,var(--brand)),var(--brand-2))}
 
+/* ---------- 特別コースバナー（ベイズの階段） ---------- */
+.course-banner{--cat:#2f6fde;--cat-soft:#e8eefb;
+  display:flex;align-items:center;gap:22px;background:var(--bg-card);border:1px solid var(--line);
+  border-radius:var(--radius);padding:24px 28px;box-shadow:var(--shadow);color:var(--ink);
+  position:relative;overflow:hidden;
+  transition:transform .22s cubic-bezier(.22,1,.36,1),box-shadow .22s,border-color .22s}
+.course-banner::before{content:"";position:absolute;inset:0 0 auto 0;height:3px;
+  background:linear-gradient(90deg,#1f9d63,#1187a8,#2f6fde,#6c53e0,#a845c8,#d23369);opacity:.85}
+.course-banner:hover{transform:translateY(-4px);border-color:color-mix(in srgb,var(--cat) 50%,transparent);
+  box-shadow:0 4px 10px color-mix(in srgb,var(--cat) 10%,rgba(18,24,48,.05)),
+             0 22px 48px color-mix(in srgb,var(--cat) 20%,rgba(18,24,48,.1))}
+.course-banner-icon{font-size:38px;width:68px;height:68px;display:grid;place-items:center;border-radius:19px;
+  background:var(--cat-soft);flex-shrink:0;transition:transform .25s}
+.course-banner:hover .course-banner-icon{transform:scale(1.08) rotate(-4deg)}
+.course-banner-body{flex:1;min-width:240px}
+.course-banner-body h3{margin:0 0 6px;font-size:17px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.course-banner-tag{font-size:11px;font-weight:800;letter-spacing:.06em;color:var(--cat);
+  background:var(--cat-soft);padding:3px 11px;border-radius:999px}
+.course-banner-body p{margin:0 0 12px;font-size:13px;color:var(--ink-soft);line-height:1.8;max-width:640px}
+.course-banner-cta{flex-shrink:0;align-self:center}
+[data-theme="dark"] .course-banner{--cat:#7aa0ec;--cat-soft:color-mix(in srgb,#7aa0ec 14%,#161b27)}
+@media(max-width:680px){
+  .course-banner{flex-direction:column;align-items:flex-start;gap:14px;padding:22px 20px}
+  .course-banner-cta{align-self:stretch;justify-content:center}
+}
+
 /* ---------- ボタン ---------- */
 .btn{display:inline-flex;align-items:center;gap:8px;border:none;cursor:pointer;font-family:inherit;
   font-weight:700;font-size:14.5px;padding:11px 21px;border-radius:13px;text-decoration:none;

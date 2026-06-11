@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- ============================================================
+       レッスンページ テンプレート
+       使い方:
+         1. このファイルを levels/level{N}/{id}.html にコピー
+         2. {{...}} プレースホルダをすべて置換
+         3. body の data-level / data-lesson-id を設定
+         4. 本文を <div class="lesson-body"> 内に書く
+       プレースホルダ一覧:
+         {{LESSON_ID}}     例: 3-2
+         {{LESSON_TITLE}}  例: ベータ・二項モデル
+         {{LEVEL_NUM}}     例: 3
+         {{LEVEL_TITLE}}   例: ベイズ推定の基礎
+         {{DESCRIPTION}}   検索向け1文説明
+       ============================================================ -->
+
+  <title>{{LESSON_ID}} {{LESSON_TITLE}} | ベイズの階段</title>
+  <meta name="description" content="{{DESCRIPTION}}">
+  <script>
+    document.documentElement.dataset.theme =
+      localStorage.getItem("bayes-stairs-theme") ||
+      (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Noto+Serif+JP:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../assets/css/main.css">
+
+  <!-- KaTeX: 数式を使うページでは必ずこの3行を入れる -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+          onload="renderMathInElement(document.body, {delimiters: [
+            {left: '$$', right: '$$', display: true},
+            {left: '\\(', right: '\\)', display: false}
+          ]});"></script>
+</head>
+<body data-root="../../" data-level="{{LEVEL_NUM}}" data-lesson-id="{{LESSON_ID}}">
+
+  <header class="site-header">
+    <button class="sidebar-toggle" id="sidebar-toggle" aria-label="メニュー">☰</button>
+    <a class="brand" href="../../index.html">
+      <span class="brand-mark">階</span>
+      <span>ベイズの階段</span>
+    </a>
+    <div class="header-spacer"></div>
+    <div class="header-progress" id="header-progress"></div>
+    <button class="theme-toggle" id="theme-toggle" aria-label="テーマ切替">🌙</button>
+  </header>
+
+  <div class="layout">
+
+    <!-- サイドバー: main.js がカリキュラムから自動生成 -->
+    <aside class="sidebar"><nav id="sidebar-nav" aria-label="カリキュラム"></nav></aside>
+
+    <main class="lesson">
+
+      <nav class="breadcrumbs" aria-label="パンくず">
+        <a href="../../index.html">ホーム</a><span class="sep">›</span>
+        <a href="index.html">Level {{LEVEL_NUM}} {{LEVEL_TITLE}}</a><span class="sep">›</span>
+        <span>{{LESSON_ID}} {{LESSON_TITLE}}</span>
+      </nav>
+
+      <header class="lesson-header">
+        <div class="lesson-meta">
+          <span class="level-badge">Level {{LEVEL_NUM}}</span>
+          <span class="small">レッスン {{LESSON_ID}}</span>
+        </div>
+        <h1>{{LESSON_TITLE}}</h1>
+
+        <div class="lesson-goals">
+          <h2>このレッスンでできるようになること</h2>
+          <ul>
+            <li><!-- 学習目標1 (行動動詞で: 〜を計算できる / 〜を説明できる) --></li>
+            <li><!-- 学習目標2 --></li>
+          </ul>
+          <p class="prereq">前提: <a href="#"><!-- 前提レッスンへのリンク --></a> を読んでいること</p>
+        </div>
+      </header>
+
+      <!-- ▼▼▼ ここからレッスン本文 ▼▼▼
+           推奨構成: 導入(身近な問い) → 直感 → 定義/定理 → 例題 → 理解度チェック → 演習 → まとめ
+           使えるコンポーネントの実例は design-guide.html を参照 -->
+      <div class="lesson-body">
+
+        <h2><!-- セクション見出し --></h2>
+        <p><!-- 本文。重要用語の初出は <span class="term">用語</span> で強調 --></p>
+
+        <div class="box box-intuition">
+          <div class="box-title">直感でつかむ</div>
+          <p><!-- 数式の前に、日常の言葉とイメージで本質を説明 --></p>
+        </div>
+
+        <div class="box box-def">
+          <div class="box-title">定義 — <!-- 用語名 --></div>
+          <p><!-- 定義文。数式は $$ ... $$ (別行) または \( ... \) (行内) --></p>
+        </div>
+
+        <div class="formula">
+          <span class="formula-label"><!-- 式の名前 (例: ベイズの定理) --></span>
+          $$ P(H \mid D) = \frac{P(D \mid H)\, P(H)}{P(D)} $$
+        </div>
+
+        <div class="box box-ex">
+          <div class="box-title">例題</div>
+          <p><!-- 問題文と丁寧な解答 --></p>
+        </div>
+
+        <div class="quiz" data-answer="b">
+          <p class="quiz-q"><!-- 確認問題 --></p>
+          <button class="quiz-option" data-key="a"><!-- 選択肢A --></button>
+          <button class="quiz-option" data-key="b"><!-- 選択肢B (正解) --></button>
+          <button class="quiz-option" data-key="c"><!-- 選択肢C --></button>
+          <div class="quiz-explain"><p><!-- 解説 --></p></div>
+        </div>
+
+        <div class="box box-practice">
+          <div class="box-title">演習</div>
+          <p><!-- 演習問題 --></p>
+          <details class="answer">
+            <summary>解答を見る</summary>
+            <p><!-- 解答と解説 --></p>
+          </details>
+        </div>
+
+        <h2>まとめ</h2>
+        <ul>
+          <li><!-- このレッスンの要点を3〜5個 --></li>
+        </ul>
+
+      </div>
+      <!-- ▲▲▲ レッスン本文ここまで ▲▲▲ -->
+
+      <div class="complete-area">
+        <button class="btn btn-level" id="complete-btn">このレッスンを完了にする</button>
+        <p class="complete-note">進捗はこのブラウザに保存されます</p>
+      </div>
+
+      <!-- 前後ナビ: main.js がカリキュラムから自動生成 -->
+      <nav class="lesson-nav" id="lesson-nav" aria-label="前後のレッスン"></nav>
+
+    </main>
+
+    <!-- ページ内目次: main.js が本文の h2 から自動生成 -->
+    <aside class="toc">
+      <div class="toc-title">このページの内容</div>
+      <nav id="toc"></nav>
+    </aside>
+
+  </div>
+
+  <footer class="site-footer">
+    <p>ベイズの階段 — 中学数学から最前線まで、一段ずつ。</p>
+  </footer>
+
+  <script src="../../assets/js/curriculum.js"></script>
+  <script src="../../assets/js/main.js"></script>
+</body>
+</html>

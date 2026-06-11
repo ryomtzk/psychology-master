@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>5-6 ベイズ機械学習 — ナイーブベイズとガウス過程 | ベイズの階段</title>
+  <meta name="description" content="機械学習の中のベイズ的アイデアを概観する">
+  <script>
+    document.documentElement.dataset.theme =
+      localStorage.getItem("bayes-stairs-theme") ||
+      (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Noto+Serif+JP:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../assets/css/main.css">
+
+  <!-- KaTeX: 数式を使うページでは必ずこの3行を入れる -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+          onload="renderMathInElement(document.body, {delimiters: [
+            {left: '$$', right: '$$', display: true},
+            {left: '\\(', right: '\\)', display: false}
+          ]});"></script>
+</head>
+<body data-root="../../" data-level="5" data-lesson-id="5-6">
+
+  <header class="site-header">
+    <button class="sidebar-toggle" id="sidebar-toggle" aria-label="メニュー">☰</button>
+    <a class="brand" href="../../index.html">
+      <span class="brand-mark">階</span>
+      <span>ベイズの階段</span>
+    </a>
+    <div class="header-spacer"></div>
+    <div class="header-progress" id="header-progress"></div>
+    <button class="theme-toggle" id="theme-toggle" aria-label="テーマ切替">🌙</button>
+  </header>
+
+  <div class="layout">
+
+    <!-- サイドバー: main.js がカリキュラムから自動生成 -->
+    <aside class="sidebar"><nav id="sidebar-nav" aria-label="カリキュラム"></nav></aside>
+
+    <main class="lesson">
+
+      <nav class="breadcrumbs" aria-label="パンくず">
+        <a href="../../index.html">ホーム</a><span class="sep">›</span>
+        <a href="index.html">Level 5 実践ベイズモデリング</a><span class="sep">›</span>
+        <span>5-6 ベイズ機械学習 — ナイーブベイズとガウス過程</span>
+      </nav>
+
+      <header class="lesson-header">
+        <div class="lesson-meta">
+          <span class="level-badge">Level 5</span>
+          <span class="small">レッスン 5-6</span>
+        </div>
+        <h1>ベイズ機械学習 — ナイーブベイズとガウス過程</h1>
+
+        <div class="lesson-goals">
+          <h2>このレッスンでできるようになること</h2>
+          <ul>
+            <li>ナイーブベイズ分類器が「条件付き独立」の仮定でどう計算を簡単にしているか説明できる</li>
+            <li>ガウス過程が「関数そのものの事前分布」であることをイメージで説明できる</li>
+            <li>機械学習の道具立ての中に、ベイズの考え方がどう生きているかを俯瞰できる</li>
+          </ul>
+          <p class="prereq">前提: <a href="../level1/1-6.html">1-6 モンティ・ホール問題と迷惑メールフィルタ</a>・<a href="../level3/3-4.html">3-4 正規分布のベイズ推定</a>・<a href="5-2.html">5-2 ベイズ線形回帰</a> を読んでいること</p>
+        </div>
+      </header>
+
+      <!-- ▼▼▼ ここからレッスン本文 ▼▼▼ -->
+      <div class="lesson-body">
+
+        <h2>機械学習とベイズは、別の国の話？</h2>
+        <p>「機械学習」と聞くと、ニューラルネットワークや大量のデータを思い浮かべるかもしれません。一方この講座でやってきたのはベイズの定理。なんだか別の世界の話に見えますよね。</p>
+        <p>でも実は、機械学習のあちこちにベイズの考え方が埋まっています。今回は、その中でも分かりやすい2つを取り上げます。<span class="term">ナイーブベイズ</span>（素朴ベイズ）分類器と、<span class="term">ガウス過程</span>（がうすかてい）です。</p>
+        <p>このレッスンはLevel 5の総まとめでもあります。新しい難しい計算は出しません。これまでの道具が機械学習の中でどう生きるかを、ゆったり眺めていきましょう。</p>
+
+        <h2>ナイーブベイズ — 迷惑メールフィルタを式にする</h2>
+        <p><a href="../level1/1-6.html">1-6</a>で、迷惑メールフィルタが単語の尤度（ゆうど。仮説のもとでデータが出る確率）から事後確率を計算する話をしました。あのとき「単語を独立とみなしてかけ算する」割り切った方法をナイーブベイズと呼ぶ、と紹介しましたね。今回はそれをきちんと式にします。</p>
+
+        <div class="box box-intuition">
+          <div class="box-title">直感でつかむ</div>
+          <p>メールに「無料」「当選」「クリック」の3単語が入っていたとします。これが迷惑メールである証拠はどれくらい強いでしょう。</p>
+          <p>本当は単語どうしに関係があります。「無料」が出ると「クリック」も出やすい、というように。でもナイーブベイズは、そこを思い切って「単語どうしは無関係」と割り切ります。すると各単語の尤度をただかけ算するだけで全体の尤度が出ます。乱暴なようでいて、これがおどろくほどよく効くのです。</p>
+        </div>
+
+        <p>この「思い切った割り切り」に名前がついています。<span class="term">条件付き独立</span>（じょうけんつきどくりつ）の仮定です。</p>
+
+        <div class="box box-def">
+          <div class="box-title">定義 — 条件付き独立の仮定</div>
+          <p>クラス（迷惑メールかどうか）を \(C\)、特徴（単語が入っているかどうか）を \(x_1, x_2, \dots, x_n\) とします。\(x_i\) は『\(i\)番目の特徴』と読みます。ナイーブベイズは、クラスが決まれば各特徴は互いに独立だと仮定します。</p>
+          <p>$$ P(x_1, x_2, \dots, x_n \mid C) = P(x_1 \mid C)\, P(x_2 \mid C) \cdots P(x_n \mid C) $$</p>
+          <p>つまり「クラス \(C\) が決まったあとは、各単語が出るかどうかはバラバラに決まる」とみなすわけです。</p>
+        </div>
+
+        <p>この仮定を使うと、ベイズの定理がとても軽くなります。求めたいのは「特徴を全部見たうえで、クラスが \(C\) である確率」 \(P(C \mid x_1, \dots, x_n)\) です。</p>
+
+        <div class="box box-thm">
+          <div class="box-title">公式 — ナイーブベイズ分類器</div>
+          <p>$$ P(C \mid x_1, \dots, x_n) = \frac{P(C)\, \prod_{i=1}^{n} P(x_i \mid C)}{P(x_1, \dots, x_n)} $$</p>
+          <p>ここで \(\prod\)（パイ。総乗の記号）はかけ算をまとめて書く記号です。\(\prod_{i=1}^{n} a_i = a_1 \times a_2 \times \cdots \times a_n\) を意味します。分母はどのクラスでも同じ値なので、クラスを選ぶだけなら無視できます。</p>
+        </div>
+
+        <p>分母 \(P(x_1, \dots, x_n)\) は、迷惑メールでもふつうのメールでも同じ「そのメールが届く確率」です。2つのクラスを比べて大きいほうを選ぶだけなら、共通の分母は約分されて消えます。だから実際の計算では分子だけ見ればよいのです。</p>
+
+        <div class="formula">
+          <span class="formula-label">クラスを選ぶときの比較（分母は共通なので省略）</span>
+          $$ P(C \mid x_1, \dots, x_n) \;\propto\; \underbrace{P(C)}_{\text{事前確率}} \times \underbrace{\prod_{i=1}^{n} P(x_i \mid C)}_{\text{各特徴の尤度の積}} $$
+          <div class="formula-parts">
+            <span class="part"><b>\(\propto\)</b>: 「比例する」の記号。共通の分母を省いた形</span>
+            <span class="part"><b>事前確率</b>: そのクラスのメールがそもそも届く割合</span>
+            <span class="part"><b>尤度の積</b>: 条件付き独立だから、ただのかけ算になる</span>
+          </div>
+        </div>
+
+        <div class="box box-ex">
+          <div class="box-title">例題 — 2単語で迷惑メールを判定する</div>
+          <p>迷惑メールは全体の \(P(S)=0.3\)、ふつうのメール（ham）は \(P(H)=0.7\) とします。単語ごとの尤度は次の通り。</p>
+          <table>
+            <thead>
+              <tr><th></th><th>「無料」を含む</th><th>「会議」を含む</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>迷惑メール \(S\)</td><td>\(0.8\)</td><td>\(0.05\)</td></tr>
+              <tr><td>ふつう \(H\)</td><td>\(0.1\)</td><td>\(0.6\)</td></tr>
+            </tbody>
+          </table>
+          <p>「無料」と「会議」の両方を含むメールが届きました。迷惑メールとふつう、どちらに分類すべきでしょう。</p>
+          <p><strong>解</strong>: 条件付き独立を仮定し、分子だけ比べます。まず迷惑メール側。</p>
+          <p>$$ P(S) \times P(\text{無料} \mid S) \times P(\text{会議} \mid S) = 0.3 \times 0.8 \times 0.05 = 0.012 $$</p>
+          <p>次にふつうのメール側。</p>
+          <p>$$ P(H) \times P(\text{無料} \mid H) \times P(\text{会議} \mid H) = 0.7 \times 0.1 \times 0.6 = 0.042 $$</p>
+          <p>分子は \(0.012\) 対 \(0.042\)。ふつうのメール側が大きいので、<strong>このメールはふつうのメールに分類</strong>されます。事後確率まで出すなら、合計 \(0.012+0.042=0.054\) で割って \(P(S \mid \dots) = 0.012/0.054 \approx 0.22\) です。</p>
+          <p><strong>ポイント</strong>: 「無料」は迷惑寄りの単語ですが、「会議」がふつうのメールに強く出る単語（\(0.6\)）なので、合わせると引き戻されました。証拠をかけ算で積み上げる、これがナイーブベイズです。</p>
+        </div>
+
+        <div class="box box-warn">
+          <div class="box-title">つまずき注意 — ゼロをかけてはいけない</div>
+          <p>もし「会議」が迷惑メールに一度も現れなかったら、データ上は \(P(\text{会議} \mid S)=0\) です。でもこれをそのままかけると、積全体が \(0\) になってしまう。たった1単語で迷惑メールの可能性がゼロに消えるのは乱暴ですね。</p>
+          <p>そこで実務では、すべての数え上げに小さな下駄をはかせます。たとえば各単語の出現回数に \(+1\) してから割合を出す。これを<span class="term">ラプラススムージング</span>（加算スムージング）と呼びます。<a href="../level2/2-6.html">2-6</a>のベータ分布で出てきた「事前に少しだけ観測があったことにする」発想と、根っこは同じです。</p>
+        </div>
+
+        <p>なぜ「ナイーブ（素朴）」なのか、もう一度確認しましょう。本当は単語どうしに関係があるのに「ない」とみなすからです。仮定はウソなのに、分類の精度は高い。「正しいクラスの分子がいちばん大きくなりさえすればよい」ので、多少いいかげんでも順位さえ合えば勝てる、というわけです。</p>
+
+        <div class="quiz" data-answer="b">
+          <p class="quiz-q">問: ナイーブベイズの「ナイーブ（素朴）」とは、何を割り切った仮定を指す？</p>
+          <button class="quiz-option" data-key="a">事前確率はすべて等しいという仮定</button>
+          <button class="quiz-option" data-key="b">クラスが決まれば各特徴は互いに独立だという仮定</button>
+          <button class="quiz-option" data-key="c">データは必ず正規分布に従うという仮定</button>
+          <div class="quiz-explain">
+            <p>正解はBです。ナイーブベイズは「クラスが決まれば、各特徴（単語など）は互いに独立」という条件付き独立を仮定します。これにより尤度がただのかけ算 \(\prod_i P(x_i \mid C)\) になり、計算が一気に軽くなります。実際には特徴どうしに関係があることが多いので「素朴」な仮定ですが、分類精度は高いことが知られています。</p>
+          </div>
+        </div>
+
+        <h2>ガウス過程 — 関数そのものに事前分布を置く</h2>
+        <p>ここからは見方をガラッと変えます。ナイーブベイズは「分類」の話でした。次は「回帰」、つまり点をなめらかな曲線でつなぐ話です。</p>
+        <p><a href="5-2.html">5-2</a>のベイズ線形回帰では、直線 \(y = a x + b\) の傾き \(a\) と切片 \(b\) に事前分布を置きました。でも世の中、直線で表せないものだらけです。では、もっと自由なグニャグニャした曲線をベイズで扱うにはどうすればいいでしょう。</p>
+
+        <div class="box box-intuition">
+          <div class="box-title">直感でつかむ</div>
+          <p>発想を逆転させます。「式の係数」に事前分布を置くのをやめて、<strong>関数そのもの</strong>に事前分布を置くのです。</p>
+          <p>イメージは「曲線のくじ引き袋」です。袋の中には、なめらかな曲線が無数に入っています。直線も、波打つ曲線も、ゆるやかな山も。最初はどれも平等に引かれうる（＝事前分布）。そこにデータ点が与えられると、「その点を通らない曲線」がくじから消えていきます。残った曲線たちが事後分布です。たくさんの曲線が残った場所は不確かさが大きく、1本に絞られた場所は確からしい。これがガウス過程です。</p>
+        </div>
+
+        <p>「無数の曲線に分布を置く」なんて、どうやって扱うのでしょう。鍵は<a href="../level3/3-4.html">3-4</a>で学んだ正規分布です。ガウス過程は、関数を「無限個の点の値をまとめた巨大な正規分布」として扱います。</p>
+
+        <div class="box box-def">
+          <div class="box-title">定義 — ガウス過程（イメージ）</div>
+          <p><span class="term">ガウス過程</span>とは、関数 \(f(x)\) に置く事前分布の一種です。「どの有限個の点 \(x_1, \dots, x_n\) を選んでも、その点での値 \(f(x_1), \dots, f(x_n)\) がまとめて多変量正規分布に従う」という性質で定義されます。</p>
+          <p>正規分布が平均と分散で決まったように、ガウス過程は次の2つで決まります。</p>
+          <ul>
+            <li><b>平均関数</b> \(m(x)\): 何もデータがないときに「だいたいこのあたり」という基準線。よく \(m(x)=0\) とします。</li>
+            <li><b>カーネル関数</b> \(k(x, x')\): 2点 \(x\) と \(x'\) の値がどれくらい似るかを決める「なめらかさのルール」。</li>
+          </ul>
+        </div>
+
+        <p>主役は<span class="term">カーネル関数</span>（かーねるかんすう）です。これは「近い場所どうしの値は似ている」という常識を式にしたものです。たとえばよく使う形は次の通りです。</p>
+
+        <div class="formula">
+          <span class="formula-label">よく使うカーネル（RBFカーネル）</span>
+          $$ k(x, x') = \sigma^2 \exp\!\left( -\frac{(x - x')^2}{2\ell^2} \right) $$
+          <div class="formula-parts">
+            <span class="part"><b>\(x\) と \(x'\) が近い</b>: 指数の中がほぼ0 → \(k\) が大きい → 値が似る</span>
+            <span class="part"><b>\(x\) と \(x'\) が遠い</b>: 指数の中が大きな負 → \(k\) がほぼ0 → 値は無関係</span>
+            <span class="part"><b>\(\ell\)（長さスケール）</b>: どれくらい離れたら「無関係」になるかの距離</span>
+          </div>
+        </div>
+
+        <p>\(\exp\) は指数関数、\(\ell\)（エル）は<span class="term">長さスケール</span>と呼ばれ、曲線のなめらかさを決めます。\(\ell\) が大きいと、遠くの点まで影響し合うので、ゆったりした曲線になります。小さいと、すぐ近くしか影響せず、こまかく波打つ曲線になります。</p>
+
+        <figure class="figure">
+          <svg viewBox="0 0 460 220" width="460" aria-label="ガウス過程による回帰のイメージ">
+            <!-- 軸 -->
+            <line x1="40" y1="190" x2="440" y2="190" stroke="var(--border)" stroke-width="2"/>
+            <line x1="40" y1="20" x2="40" y2="190" stroke="var(--border)" stroke-width="2"/>
+            <text x="240" y="212" font-size="12" text-anchor="middle" fill="var(--text-muted)">入力 x</text>
+            <text x="20" y="105" font-size="12" text-anchor="middle" fill="var(--text-muted)" transform="rotate(-90 20 105)">出力 y</text>
+
+            <!-- 不確かさの帯 (信用区間のイメージ) -->
+            <path d="M40,110 C110,40 150,40 200,95 C250,150 300,150 380,80 L440,70
+                     L440,150 C380,160 300,210 250,200 C200,190 150,130 110,150 C80,160 60,160 40,160 Z"
+                  fill="var(--level-color)" opacity="0.15" stroke="none"/>
+
+            <!-- 平均の曲線 -->
+            <path d="M40,135 C110,100 150,90 200,147 C250,175 300,180 380,100 L440,110"
+                  fill="none" stroke="var(--level-color)" stroke-width="2.5"/>
+
+            <!-- 観測データ点 -->
+            <circle cx="110" cy="98" r="4" fill="var(--text)"/>
+            <circle cx="200" cy="147" r="4" fill="var(--text)"/>
+            <circle cx="290" cy="160" r="4" fill="var(--text)"/>
+            <circle cx="380" cy="103" r="4" fill="var(--text)"/>
+
+            <!-- 注釈 -->
+            <text x="155" y="35" font-size="11" fill="var(--text-muted)">データの間は帯が広い（不確か）</text>
+            <text x="240" y="178" font-size="11" text-anchor="middle" fill="var(--text)">点の近くは帯が細い（確か）</text>
+          </svg>
+          <figcaption>図1: ガウス過程回帰のイメージ。黒点が観測データ、太線が事後分布の平均、薄い帯が不確かさ（信用区間）。データのある場所では帯が細く、データのない場所では帯が広がる。</figcaption>
+        </figure>
+
+        <p>図1がガウス過程のいちばんの魅力を表しています。予測の<strong>不確かさ</strong>が自動で出てくるのです。データ点の近くでは「ここはほぼ確実」と帯が細くなり、データのない場所では「ここはよくわからない」と帯が広がります。これは<a href="../level3/3-5.html">3-5</a>で学んだ信用区間（ベイズの区間）が、曲線の全体にわたって描かれていると思えばよいでしょう。</p>
+
+        <div class="box box-intuition">
+          <div class="box-title">直感でつかむ — なぜ不確かさが広がるのか</div>
+          <p>「曲線のくじ引き袋」を思い出してください。データ点の上では、ほぼすべての残った曲線がその点を通ります。だから値がそろっていて帯が細い。一方データのない場所では、上を通る曲線も下を通る曲線も生き残っています。だから値がばらけて帯が広がるのです。点から離れるほど自由度が増す、と覚えておきましょう。</p>
+        </div>
+
+        <div class="box box-warn">
+          <div class="box-title">つまずき注意 — ふつうの回帰との違い</div>
+          <p>最小二乗法のようなふつうの回帰は、1本の曲線（点推定）を返すだけです。「外れた場所がどれくらい怪しいか」は教えてくれません。ガウス過程は、ベイズらしく<strong>分布そのもの</strong>を返します。平均の曲線に加えて不確かさの帯がついてくる。これは予測を意思決定に使うとき決定的に役立ちます。「自信のある予測」と「あてずっぽうの予測」を区別できるからです。</p>
+        </div>
+
+        <div class="quiz" data-answer="a">
+          <p class="quiz-q">問: ガウス過程回帰で、入力 \(x\) の予測の不確かさ（帯の幅）がいちばん大きくなるのはどんな場所？</p>
+          <button class="quiz-option" data-key="a">観測データ点から遠く離れた場所</button>
+          <button class="quiz-option" data-key="b">観測データ点のすぐ上</button>
+          <button class="quiz-option" data-key="c">平均関数が0になる場所</button>
+          <div class="quiz-explain">
+            <p>正解はAです。データ点の近くでは、残った曲線たちがその点を通るので値がそろい、帯が細くなります。データから遠い場所では、上を通る曲線も下を通る曲線も生き残るので値がばらけ、帯が広がります。だから不確かさは「データのない場所」で大きくなります。Cの平均関数の値は帯の中心を決めるだけで、幅とは関係ありません。</p>
+          </div>
+        </div>
+
+        <h2>機械学習の中のベイズ、ひとめぐり</h2>
+        <p>ナイーブベイズとガウス過程を見てきました。最後に、機械学習というもっと広い地図の中で、ベイズがどこに効いているかを俯瞰しましょう。共通する考え方は、いつも同じです。</p>
+
+        <table>
+          <thead>
+            <tr><th>道具</th><th>何に事前分布を置くか</th><th>ベイズらしさ</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>ナイーブベイズ</td><td>クラス（事前確率）</td><td>尤度のかけ算で事後確率を出して分類する</td></tr>
+            <tr><td>ベイズ線形回帰（<a href="5-2.html">5-2</a>）</td><td>直線の係数 \(a, b\)</td><td>係数の分布から予測の幅が出る</td></tr>
+            <tr><td>ガウス過程</td><td>関数そのもの</td><td>予測に不確かさの帯がつく</td></tr>
+            <tr><td>階層ベイズ（<a href="5-4.html">5-4</a>）</td><td>集団とグループの両方</td><td>情報を共有して賢く縮める</td></tr>
+          </tbody>
+        </table>
+
+        <p>並べてみると、どれも「<strong>わからないものに分布を置き、データで更新し、不確かさごと答えを出す</strong>」という1つの態度の現れだとわかります。事前分布・尤度・事後分布という<a href="../level1/1-4.html">1-4</a>からの三点セットが、姿を変えて何度も出てくるのです。</p>
+
+        <div class="box box-intuition">
+          <div class="box-title">直感でつかむ — 「点」より「分布」を返す</div>
+          <p>ふつうの機械学習の多くは「答えはこれ」と1点を返します。ベイズ的な道具は「答えはこのあたりで、これくらい確からしい」と分布を返します。データが少ない・ノイズが多い・予測を意思決定に使う、そんな場面でこの違いは効いてきます。「自信のなさ」を正直に表せるのが、ベイズ機械学習のいちばんの強みです。</p>
+        </div>
+
+        <h2>演習</h2>
+
+        <div class="box box-practice">
+          <div class="box-title">演習1 — ナイーブベイズで分類する</div>
+          <p>迷惑メールが \(P(S)=0.4\)、ふつうが \(P(H)=0.6\)。単語の尤度は、迷惑メール側が \(P(\text{割引} \mid S)=0.6,\ P(\text{議事録} \mid S)=0.1\)、ふつう側が \(P(\text{割引} \mid H)=0.2,\ P(\text{議事録} \mid H)=0.5\)。「割引」と「議事録」の両方を含むメールは、どちらに分類されますか。条件付き独立を仮定して分子を比べなさい。</p>
+          <details class="answer">
+            <summary>解答を見る</summary>
+            <p>迷惑メール側の分子: \(0.4 \times 0.6 \times 0.1 = 0.024\)。</p>
+            <p>ふつう側の分子: \(0.6 \times 0.2 \times 0.5 = 0.060\)。</p>
+            <p>\(0.024\) 対 \(0.060\) で<strong>ふつうのメールが大きい</strong>ので、ふつうのメールに分類されます。「割引」は迷惑寄りですが、「議事録」がふつうのメールに強い単語なので引き戻されました。事後確率なら \(P(S \mid \dots)=0.024/(0.024+0.060)=0.024/0.084 \approx 0.29\) です。</p>
+          </details>
+        </div>
+
+        <div class="box box-practice">
+          <div class="box-title">演習2 — ゼロ頻度の落とし穴</div>
+          <p>ある単語が、集めたデータの中で迷惑メールには一度も現れませんでした。つまり \(P(\text{その単語} \mid S)=0\)。この単語を含むメールに対して、ナイーブベイズは迷惑メールの分子をどう計算しますか。なぜそれが問題で、どう対処しますか。</p>
+          <details class="answer">
+            <summary>解答を見る</summary>
+            <p>分子は各尤度のかけ算なので、1つでも \(0\) があると<strong>積全体が \(0\)</strong> になります。つまり、他の単語がどれだけ迷惑メールらしくても、迷惑メールの可能性がゼロに消えてしまいます。たった1単語が「一度も観測されなかった」というだけで結論をひっくり返すのは乱暴です。</p>
+            <p>対処はラプラススムージング（加算スムージング）です。各単語の出現回数に \(+1\) などの下駄をはかせてから割合を出すと、尤度が完全な \(0\) にはなりません。<a href="../level2/2-6.html">2-6</a>のベータ分布で「事前に少しだけ観測があったことにする」のと同じ発想です。</p>
+          </details>
+        </div>
+
+        <div class="box box-practice">
+          <div class="box-title">演習3 — 長さスケールを動かす</div>
+          <p>ガウス過程のカーネル \(k(x,x') = \sigma^2 \exp\!\left( -\frac{(x-x')^2}{2\ell^2}\right)\) で、長さスケール \(\ell\) を<strong>とても小さく</strong>したとします。得られる事後分布の平均曲線は、どんな形になりやすいですか。理由とともに説明しなさい。</p>
+          <details class="answer">
+            <summary>解答を見る</summary>
+            <p>\(\ell\) が小さいと、少し離れただけで \(k(x,x')\) がほぼ \(0\) になります。つまり「近い点しか影響し合わない」状態です。すると曲線は、各データ点の近くだけ反応し、点と点の間ではすぐに平均関数（たとえば0）へ戻ります。結果として、<strong>こまかく波打つ、とがった曲線</strong>になりやすいです。</p>
+            <p>これは過剰にデータへ食いつく「過学習」に近い状態です。逆に \(\ell\) を大きくすると遠くの点まで影響し合い、ゆったりなめらかな曲線になります。長さスケールは「曲線のなめらかさのつまみ」だと覚えておきましょう。</p>
+          </details>
+        </div>
+
+        <h2>まとめ</h2>
+        <ul>
+          <li>ナイーブベイズは「クラスが決まれば各特徴は独立」という条件付き独立を仮定し、尤度をかけ算 \(\prod_i P(x_i \mid C)\) にして分類します。</li>
+          <li>クラスを選ぶだけなら分母は共通なので、事前確率 × 尤度の積（分子）を比べて大きいほうを選びます。</li>
+          <li>尤度が \(0\) になると積がつぶれるので、ラプラススムージングで下駄をはかせます。</li>
+          <li>ガウス過程は「関数そのものに事前分布を置く」発想で、カーネル関数が「近い点は似る」というなめらかさのルールを決めます。</li>
+          <li>ガウス過程回帰はベイズらしく分布を返すので、予測に<strong>不確かさの帯（信用区間）</strong>がつき、データのない場所では帯が広がります。</li>
+          <li>機械学習の道具の多くは「わからないものに分布を置き、データで更新し、不確かさごと答えを出す」というベイズの態度を共有しています。</li>
+        </ul>
+        <p>これでLevel 5「実践ベイズモデリング」は完走です。ベイズの定理という1つの式から始めて、分布・更新・サンプリング、そして機械学習まで、ずいぶん遠くまで来ましたね。事前分布・尤度・事後分布という地図さえあれば、新しいモデルに出会っても「これは何に分布を置いているのか」と問うだけで、見通しが立ちます。ここから先の最前線も、同じ階段の続きです。お疲れさまでした。</p>
+
+      </div>
+      <!-- ▲▲▲ レッスン本文ここまで ▲▲▲ -->
+
+      <div class="complete-area">
+        <button class="btn btn-level" id="complete-btn">このレッスンを完了にする</button>
+        <p class="complete-note">進捗はこのブラウザに保存されます</p>
+      </div>
+
+      <!-- 前後ナビ: main.js がカリキュラムから自動生成 -->
+      <nav class="lesson-nav" id="lesson-nav" aria-label="前後のレッスン"></nav>
+
+    </main>
+
+    <!-- ページ内目次: main.js が本文の h2 から自動生成 -->
+    <aside class="toc">
+      <div class="toc-title">このページの内容</div>
+      <nav id="toc"></nav>
+    </aside>
+
+  </div>
+
+  <footer class="site-footer">
+    <p>ベイズの階段 — 中学数学から最前線まで、一段ずつ。</p>
+  </footer>
+
+  <script src="../../assets/js/curriculum.js"></script>
+  <script src="../../assets/js/main.js"></script>
+</body>
+</html>

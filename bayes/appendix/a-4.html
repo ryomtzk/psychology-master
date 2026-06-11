@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>a-4 記号表 | ベイズの階段</title>
+  <meta name="description" content="P(A|B), ∝, 〜, Σ, ∫, E[X], μ, σ, θ, R̂ などベイズ統計で出てくる記号の読み方と意味を一覧にまとめた参照ページ。">
+  <script>
+    document.documentElement.dataset.theme =
+      localStorage.getItem("bayes-stairs-theme") ||
+      (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Noto+Serif+JP:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/css/main.css">
+
+  <!-- KaTeX: 数式を使うページでは必ずこの3行を入れる -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+          onload="renderMathInElement(document.body, {delimiters: [
+            {left: '$$', right: '$$', display: true},
+            {left: '\\(', right: '\\)', display: false}
+          ]});"></script>
+</head>
+<body data-root="../" data-level="appendix" data-lesson-id="a-4">
+
+  <header class="site-header">
+    <button class="sidebar-toggle" id="sidebar-toggle" aria-label="メニュー">☰</button>
+    <a class="brand" href="../index.html">
+      <span class="brand-mark">階</span>
+      <span>ベイズの階段</span>
+    </a>
+    <div class="header-spacer"></div>
+    <div class="header-progress" id="header-progress"></div>
+    <button class="theme-toggle" id="theme-toggle" aria-label="テーマ切替">🌙</button>
+  </header>
+
+  <div class="layout">
+
+    <!-- サイドバー: main.js がカリキュラムから自動生成 -->
+    <aside class="sidebar"><nav id="sidebar-nav" aria-label="カリキュラム"></nav></aside>
+
+    <main class="lesson">
+
+      <nav class="breadcrumbs" aria-label="パンくず">
+        <a href="../index.html">ホーム</a><span class="sep">›</span>
+        <a href="index.html">付録</a><span class="sep">›</span>
+        <span>a-4 記号表</span>
+      </nav>
+
+      <header class="lesson-header">
+        <div class="lesson-meta">
+          <span class="level-badge">付録</span>
+          <span class="small">レッスン a-4</span>
+        </div>
+        <h1>記号表</h1>
+        <p class="lead">本文に出てくる数式記号を「記号 / 読み方 / 意味」の3列で引けるようにまとめました。読み方が分からない記号に出会ったら、まずここで音を確認してください。記号は声に出して読めるだけで、ぐっと身近になります。</p>
+      </header>
+
+      <!-- ▼▼▼ ここから本文 ▼▼▼ 参照用ページ: table 中心 -->
+      <div class="lesson-body">
+
+        <h2>この表の使い方</h2>
+        <p>数式が読めないと感じるとき、その正体は「記号の音が分からない」だけのことが多いです。<span class="term">記号</span>は短い略語のようなもので、それぞれに決まった読み方と意味があります。たとえば \( P(A \mid B) \) は「BのもとでのAの確率」と読みます。読み方さえ分かれば、頭の中で文として再生でき、式がぐっと近づいてきます。</p>
+
+        <p>ここでは記号を「確率」「総和と積分」「期待値とばらつき」「ギリシャ文字とパラメータ」「上に付く記号」の5グループに分けました。本文を読んでいて手が止まったら、その記号を声に出して読むところから始めてください。意味の暗記より、読めることが先です。</p>
+
+        <div class="box box-intuition">
+          <div class="box-title">直感でつかむ</div>
+          <p>記号は「外国語の単語帳」だと思ってください。\( \Sigma \)(シグマ)は「ぜんぶ足す」、\( \int \)(インテグラル)は「なめらかに足す」。一度に覚えなくて大丈夫です。出会ったときにこの表へ戻り、読み方を1つずつ手に入れていきましょう。</p>
+        </div>
+
+        <h2>1. 確率の記号</h2>
+        <p>確率を表す記号です。\( P \) は Probability(確率)の頭文字で、「ピー」と読みます。カッコの中に「どんな出来事か」を書きます。</p>
+
+        <table>
+          <thead>
+            <tr><th>記号</th><th>読み方</th><th>意味</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>\( P(A) \)</td>
+              <td>ピー・エー</td>
+              <td>出来事 \( A \) が起こる確率。0以上1以下の数になります。</td>
+            </tr>
+            <tr>
+              <td>\( P(A \mid B) \)</td>
+              <td>ピー・エー・ギブン・ビー<br>(BのもとでのAの確率)</td>
+              <td>出来事 \( B \) が起きたと分かったうえで、\( A \) が起こる確率。縦棒 \( \mid \) は「のもとで」と読みます。<span class="term">条件付き確率</span>(じょうけんつきかくりつ)と呼びます。</td>
+            </tr>
+            <tr>
+              <td>\( P(A \cap B) \)</td>
+              <td>ピー・エー・キャップ・ビー<br>(AかつBの確率)</td>
+              <td>\( A \) と \( B \) が<strong>両方とも</strong>起こる確率。\( \cap \) は「かつ(同時に)」を表します。</td>
+            </tr>
+            <tr>
+              <td>\( P(A \cup B) \)</td>
+              <td>ピー・エー・カップ・ビー<br>(AまたはBの確率)</td>
+              <td>\( A \) と \( B \) の<strong>少なくとも一方</strong>が起こる確率。\( \cup \) は「または」を表します。</td>
+            </tr>
+            <tr>
+              <td>\( P(H \mid D) \)</td>
+              <td>ピー・エイチ・ギブン・ディー</td>
+              <td>データ \( D \) を見たあとの仮説 \( H \) の確率。ベイズでは<span class="term">事後確率</span>(じごかくりつ)と呼びます。\( H \) は Hypothesis(仮説)、\( D \) は Data(データ)の頭文字です。</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="box box-warn">
+          <div class="box-title">つまずき注意</div>
+          <p>\( P(A \mid B) \) と \( P(B \mid A) \) は<strong>別物</strong>です。「雨の日に傘を持つ確率」と「傘を持つ人が雨の日である確率」が違うのと同じです。縦棒の左右を入れ替えると意味が変わります。</p>
+        </div>
+
+        <h2>2. 関係を表す記号</h2>
+        <p>2つのものの「つながり方」を表す記号です。とくに \( \propto \) と \( \sim \) はベイズで何度も出てきます。</p>
+
+        <table>
+          <thead>
+            <tr><th>記号</th><th>読み方</th><th>意味</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>\( \propto \)</td>
+              <td>比例(ひれい)<br>(proportional to)</td>
+              <td>「定数倍を除いて等しい」という意味。\( y \propto x \) は「\( y \) は \( x \) に比例する」、つまり \( y = (\text{ある定数}) \times x \)。ベイズでは「事後 \( \propto \) 尤度 \( \times \) 事前」のように、面倒な分母を省くために使います。</td>
+            </tr>
+            <tr>
+              <td>\( \sim \)</td>
+              <td>従う(したがう)<br>(distributed as)</td>
+              <td>\( X \sim \mathcal{N}(\mu, \sigma^2) \) で「\( X \) は正規分布に従う」と読みます。「この変数はこういう分布から出てくる」という宣言です。</td>
+            </tr>
+            <tr>
+              <td>\( \approx \)</td>
+              <td>ニアリーイコール<br>(およそ等しい)</td>
+              <td>ぴったりではないが、ほぼ等しいこと。近似値を示すときに使います。</td>
+            </tr>
+            <tr>
+              <td>\( \mid \)</td>
+              <td>(縦棒) のもとで<br>(given)</td>
+              <td>条件を区切る記号。\( P(A \mid B) \) の縦棒は「\( B \) のもとで」を表します。</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="box box-def">
+          <div class="box-title">定義 — 比例記号 \( \propto \)</div>
+          <p>ある定数 \( c \)(\( c \neq 0 \))が存在して \( y = c\,x \) と書けるとき、\( y \) は \( x \) に比例するといい、
+          $$ y \propto x $$
+          と書きます。\( \propto \) は「比例する」と読みます。</p>
+        </div>
+
+        <h2>3. 総和と積分の記号</h2>
+        <p>「たくさん足す」ための記号です。バラバラな個数を足すときは \( \Sigma \)(シグマ)、なめらかにつながった量を足すときは \( \int \)(インテグラル)を使います。</p>
+
+        <table>
+          <thead>
+            <tr><th>記号</th><th>読み方</th><th>意味</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>\( \displaystyle\sum_{i=1}^{n} x_i \)</td>
+              <td>シグマ<br>(sum / 総和)</td>
+              <td>\( x_1 + x_2 + \cdots + x_n \) のこと。下の \( i=1 \) から上の \( n \) まで番号を変えながら全部足します。詳しくは <a href="a-1.html">a-1 文字式とシグマ記法</a> へ。</td>
+            </tr>
+            <tr>
+              <td>\( \displaystyle\int_a^b f(x)\,dx \)</td>
+              <td>インテグラル<br>(integral / 積分)</td>
+              <td>区間 \( a \) から \( b \) までの「なめらかな足し算」。連続な分布では、面積が確率になります。詳しくは <a href="a-2.html">a-2 微分積分の最小限</a> へ。</td>
+            </tr>
+            <tr>
+              <td>\( \prod_{i=1}^{n} x_i \)</td>
+              <td>パイ(大文字)<br>(product / 総乗)</td>
+              <td>\( x_1 \times x_2 \times \cdots \times x_n \) のこと。足し算の \( \Sigma \) に対して、こちらは全部の<strong>かけ算</strong>です。尤度を全データ分かけ合わせるときに登場します。</td>
+            </tr>
+            <tr>
+              <td>\( x_i \)</td>
+              <td>エックス・アイ</td>
+              <td>\( i \) 番目の \( x \)。右下の小さな番号を<span class="term">添字</span>(そえじ)と呼び、「何番目か」を表します。</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h2>4. 期待値とばらつきの記号</h2>
+        <p>分布の「だいたいの真ん中」と「ばらけ具合」を表す記号です。\( E \) は Expectation(期待)、\( V \) は Variance(分散)の頭文字です。</p>
+
+        <table>
+          <thead>
+            <tr><th>記号</th><th>読み方</th><th>意味</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>\( E[X] \)</td>
+              <td>イー・エックス<br>(期待値 / expectation)</td>
+              <td>\( X \) の<span class="term">期待値</span>(きたいち)。たくさん試したときの平均的な値、分布の「重心」です。\( \mathbb{E}[X] \) と書くこともあります。</td>
+            </tr>
+            <tr>
+              <td>\( V[X] \)</td>
+              <td>ブイ・エックス<br>(分散 / variance)</td>
+              <td>\( X \) の<span class="term">分散</span>(ぶんさん)。値が期待値からどれだけ散らばるかを表します。大きいほど不確実です。</td>
+            </tr>
+            <tr>
+              <td>\( \sqrt{V[X]} \)</td>
+              <td>標準偏差(ひょうじゅんへんさ)<br>(standard deviation)</td>
+              <td>分散の平方根。元の量と同じ単位になるので、ばらつきの感覚をつかみやすい指標です。\( \sigma \) で表します。</td>
+            </tr>
+            <tr>
+              <td>\( \bar{x} \)</td>
+              <td>エックス・バー<br>(標本平均)</td>
+              <td>手元のデータ \( x_1, \dots, x_n \) の平均 \( \frac{1}{n}\sum x_i \)。上の横棒(バー)は「平均」を表します。</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="box box-ex">
+          <div class="box-title">例題</div>
+          <p>サイコロを1回振り、出る目を \( X \) とします。\( E[X] \) を求めましょう。</p>
+          <p><strong>解</strong>: 1から6の目が等しい確率 \( \frac{1}{6} \) で出ます。期待値は各目に確率をかけて足したもので、
+          $$ E[X] = \sum_{k=1}^{6} k \times \frac{1}{6} = \frac{1+2+3+4+5+6}{6} = \frac{21}{6} = 3.5 $$
+          となります。「平均的には3.5の目」という意味で、\( \Sigma \) が「全部足す」記号として働いています。</p>
+        </div>
+
+        <h2>5. ギリシャ文字とパラメータの記号</h2>
+        <p>分布の形を決める「設定値」を<span class="term">パラメータ</span>(parameter)と呼びます。多くはギリシャ文字で書かれます。読み方さえ知っていれば怖くありません。</p>
+
+        <table>
+          <thead>
+            <tr><th>記号</th><th>読み方</th><th>意味</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>\( \mu \)</td>
+              <td>ミュー<br>(mu)</td>
+              <td>分布の<strong>平均</strong>を表すパラメータ。正規分布では山の中心の位置です。</td>
+            </tr>
+            <tr>
+              <td>\( \sigma \)</td>
+              <td>シグマ(小文字)<br>(sigma)</td>
+              <td>分布の<strong>標準偏差</strong>。山の広がり(ばらつき)を決めます。\( \sigma^2 \) は分散です。総和の \( \Sigma \)(大文字)とは別物なので注意。</td>
+            </tr>
+            <tr>
+              <td>\( \theta \)</td>
+              <td>シータ<br>(theta)</td>
+              <td>推定したい未知のパラメータの代表的な記号。「コインの表が出る確率」など、知りたい値を \( \theta \) と置きます。</td>
+            </tr>
+            <tr>
+              <td>\( \alpha,\ \beta \)</td>
+              <td>アルファ、ベータ<br>(alpha, beta)</td>
+              <td>分布の形を決める2つのパラメータによく使われます。たとえばベータ分布 \( \mathrm{Beta}(\alpha, \beta) \) の形を決めます。</td>
+            </tr>
+            <tr>
+              <td>\( \lambda \)</td>
+              <td>ラムダ<br>(lambda)</td>
+              <td>「1回あたりの平均回数」を表すパラメータ。ポアソン分布などで、起こりやすさの強さを決めます。</td>
+            </tr>
+            <tr>
+              <td>\( \pi \)</td>
+              <td>パイ(小文字)<br>(pi)</td>
+              <td>円周率 \( 3.14\ldots \) のほか、確率や割合を表す記号としても使われます。文脈で見分けます。</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="box box-warn">
+          <div class="box-title">つまずき注意</div>
+          <p>同じ「シグマ」でも、大文字 \( \Sigma \) は<strong>総和</strong>、小文字 \( \sigma \) は<strong>標準偏差</strong>です。同じく \( \pi \) も、大文字 \( \prod \) は総乗、小文字 \( \pi \) は円周率や確率と、文脈で意味が変わります。読みは同じでも役割が違う点に気をつけてください。</p>
+        </div>
+
+        <h2>6. 文字の上に付く記号</h2>
+        <p>文字の真上に付くしるしには、それぞれ意味があります。「推定値」「平均」「収束のチェック」など、ひと目で役割が分かるようになっています。</p>
+
+        <figure class="figure">
+          <svg viewBox="0 0 320 130" width="320" aria-label="ハット記号とバー記号のイメージ">
+            <!-- ハット記号 -->
+            <text x="55" y="80" font-size="48" fill="var(--text)" text-anchor="middle" font-family="serif">θ</text>
+            <path d="M40,40 L55,28 L70,40" fill="none" stroke="var(--level-color)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+            <text x="55" y="112" font-size="13" fill="var(--text-muted)" text-anchor="middle">ハット(推定値)</text>
+            <!-- バー記号 -->
+            <text x="175" y="80" font-size="48" fill="var(--text)" text-anchor="middle" font-family="serif">x</text>
+            <line x1="158" y1="34" x2="192" y2="34" stroke="var(--level-color)" stroke-width="3" stroke-linecap="round"/>
+            <text x="175" y="112" font-size="13" fill="var(--text-muted)" text-anchor="middle">バー(平均)</text>
+            <!-- R-hat -->
+            <text x="285" y="80" font-size="44" fill="var(--text)" text-anchor="middle" font-family="serif">R</text>
+            <path d="M270,42 L285,30 L300,42" fill="none" stroke="var(--level-color)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+            <text x="285" y="112" font-size="13" fill="var(--text-muted)" text-anchor="middle">R̂(収束の目安)</text>
+          </svg>
+          <figcaption>図1: 文字の上に付く記号。山形の「ハット」は推定値、横棒の「バー」は平均を表す。</figcaption>
+        </figure>
+
+        <table>
+          <thead>
+            <tr><th>記号</th><th>読み方</th><th>意味</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>\( \hat{\theta} \)</td>
+              <td>シータ・ハット</td>
+              <td>真の値 \( \theta \) に対する<strong>推定値</strong>。山形の<span class="term">ハット</span>記号は「データから見積もった値」を表します。\( \hat{p} \)(ピー・ハット)なら割合の推定値です。</td>
+            </tr>
+            <tr>
+              <td>\( \bar{x} \)</td>
+              <td>エックス・バー</td>
+              <td>横棒の<span class="term">バー</span>は<strong>平均</strong>を表します。\( \bar{x} \) は標本平均です。</td>
+            </tr>
+            <tr>
+              <td>\( \hat{R} \)</td>
+              <td>アール・ハット<br>(R̂)</td>
+              <td>MCMC という計算がうまく収束したかを測る指標。複数の計算の結果がそろっているほど1に近づきます。目安は <span class="term">R̂</span> が1.0に十分近い(おおむね1.01以下)こと。詳しくは後のレベルで学びます。</td>
+            </tr>
+            <tr>
+              <td>\( \tilde{x} \)</td>
+              <td>エックス・チルダ</td>
+              <td>波形の<span class="term">チルダ</span>記号。中央値や「予測した値」など、ふつうの \( x \) と区別したいときの目印として使われます。</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h2>理解度チェック</h2>
+
+        <div class="quiz" data-answer="b">
+          <p class="quiz-q">問: \( P(A \mid B) \) の読み方として正しいのはどれ?</p>
+          <button class="quiz-option" data-key="a">AかつBの確率</button>
+          <button class="quiz-option" data-key="b">BのもとでのAの確率</button>
+          <button class="quiz-option" data-key="c">AまたはBの確率</button>
+          <div class="quiz-explain"><p>縦棒 \( \mid \) は「のもとで(given)」と読みます。よって \( P(A \mid B) \) は「\( B \) のもとでの \( A \) の確率」です。「かつ」は \( \cap \)、「または」は \( \cup \) なので、別の記号です。</p></div>
+        </div>
+
+        <div class="quiz" data-answer="c">
+          <p class="quiz-q">問: 「事後 \( \propto \) 尤度 \( \times \) 事前」の \( \propto \) はどんな意味?</p>
+          <button class="quiz-option" data-key="a">およそ等しい(ニアリーイコール)</button>
+          <button class="quiz-option" data-key="b">分布に従う</button>
+          <button class="quiz-option" data-key="c">定数倍を除いて等しい(比例する)</button>
+          <div class="quiz-explain"><p>\( \propto \) は「比例する」記号で、「ある定数をかければ等しくなる」という意味です。ベイズでは面倒な分母(定数)を省いて書くために使います。「およそ等しい」は \( \approx \)、「従う」は \( \sim \) です。</p></div>
+        </div>
+
+        <div class="quiz" data-answer="a">
+          <p class="quiz-q">問: 大文字 \( \Sigma \) と小文字 \( \sigma \) の役割の組み合わせとして正しいのは?</p>
+          <button class="quiz-option" data-key="a">\( \Sigma \) は総和、\( \sigma \) は標準偏差</button>
+          <button class="quiz-option" data-key="b">\( \Sigma \) は標準偏差、\( \sigma \) は総和</button>
+          <button class="quiz-option" data-key="c">どちらも総和を表す</button>
+          <div class="quiz-explain"><p>大文字 \( \Sigma \) は「全部足す」総和の記号、小文字 \( \sigma \) は分布のばらつきを表す標準偏差です。読みは同じ「シグマ」でも役割はまったく違います。</p></div>
+        </div>
+
+        <h2>演習</h2>
+
+        <div class="box box-practice">
+          <div class="box-title">演習1</div>
+          <p>次の式を、記号の読み方を使って日本語の文に直しなさい。
+          $$ X \sim \mathcal{N}(\mu, \sigma^2) $$</p>
+          <details class="answer">
+            <summary>解答を見る</summary>
+            <p>\( \sim \) は「従う」、\( \mathcal{N} \) は正規分布、\( \mu \) は「ミュー(平均)」、\( \sigma \) は「シグマ(標準偏差)」です。よって「\( X \) は、平均 \( \mu \)・分散 \( \sigma^2 \) の正規分布に従う」と読めます。短く言えば「\( X \) はこういう山の形の分布から出てくる」という宣言です。</p>
+          </details>
+        </div>
+
+        <div class="box box-practice">
+          <div class="box-title">演習2</div>
+          <p>\( \hat{\theta} \) と \( \theta \) は何が違いますか。記号の意味から説明しなさい。</p>
+          <details class="answer">
+            <summary>解答を見る</summary>
+            <p>\( \theta \)(シータ)は知りたい<strong>真の値</strong>そのもの(ふつうは分かりません)。\( \hat{\theta} \)(シータ・ハット)は、データから<strong>見積もった推定値</strong>です。上の山形ハット記号が「データから求めた値」という目印になっています。両者が一致するとは限らず、データが増えるほど推定値が真の値に近づくことを期待します。</p>
+          </details>
+        </div>
+
+        <div class="box box-practice">
+          <div class="box-title">演習3</div>
+          <p>次の3つの記号 \( \Sigma \)、\( \int \)、\( \prod \) は、それぞれどんな「足す・かける」操作を表しますか。</p>
+          <details class="answer">
+            <summary>解答を見る</summary>
+            <p>\( \Sigma \)(シグマ)はバラバラな個数の<strong>総和(全部足す)</strong>、\( \int \)(インテグラル)はなめらかにつながった量の<strong>積分(なめらかに足す)</strong>、\( \prod \)(パイ・大文字)は全部の<strong>総乗(全部かける)</strong>です。「足す」が2種類(とびとびと、なめらか)、「かける」が1種類、と整理すると覚えやすいです。</p>
+          </details>
+        </div>
+
+        <div class="box box-practice">
+          <div class="box-title">演習4</div>
+          <p>MCMC の計算結果で \( \hat{R} = 1.35 \) と出ました。この値から何が言えますか。</p>
+          <details class="answer">
+            <summary>解答を見る</summary>
+            <p>\( \hat{R} \)(アール・ハット)は計算がそろって収束したかの目安で、1.0に十分近いほど良い状態です。\( 1.35 \) は1から大きく離れているので、<strong>まだ収束していない(計算が信用できない)</strong>サインです。目安としておおむね1.01以下を目指します。計算をやり直すか、回数を増やす必要があります(詳しくは後のレベルで学びます)。</p>
+          </details>
+        </div>
+
+        <h2>まとめ</h2>
+        <ul>
+          <li>記号はまず<strong>読み方</strong>から。声に出して読めれば、式は文として頭に入ってきます。</li>
+          <li>確率では縦棒 \( \mid \)(のもとで)、\( \cap \)(かつ)、\( \cup \)(または)を区別しましょう。</li>
+          <li>\( \propto \) は「比例(定数倍を除いて等しい)」、\( \sim \) は「分布に従う」。ベイズの式で頻出です。</li>
+          <li>大文字 \( \Sigma \) は総和、小文字 \( \sigma \) は標準偏差。読みが同じでも役割は別です。</li>
+          <li>上に付く記号は意味のしるし。ハットは推定値、バーは平均、\( \hat{R} \) は収束の目安です。</li>
+        </ul>
+        <p>分からない記号に出会ったら、いつでもこのページへ戻ってきてください。隣の <a href="a-3.html">a-3 用語集</a> と合わせて使うと、本文がさらに読みやすくなります。</p>
+
+      </div>
+      <!-- ▲▲▲ 本文ここまで ▲▲▲ -->
+
+      <!-- 前後ナビ: main.js がカリキュラムから自動生成 -->
+      <nav class="lesson-nav" id="lesson-nav" aria-label="前後のレッスン"></nav>
+
+    </main>
+
+    <!-- ページ内目次: main.js が本文の h2 から自動生成 -->
+    <aside class="toc">
+      <div class="toc-title">このページの内容</div>
+      <nav id="toc"></nav>
+    </aside>
+
+  </div>
+
+  <footer class="site-footer">
+    <p>ベイズの階段 — 中学数学から最前線まで、一段ずつ。</p>
+  </footer>
+
+  <script src="../assets/js/curriculum.js"></script>
+  <script src="../assets/js/main.js"></script>
+</body>
+</html>

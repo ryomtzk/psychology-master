@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>4-5 ハミルトニアンモンテカルロとNUTS | ベイズの階段</title>
+  <meta name="description" content="物理のアナロジーで高次元を効率よく探索する">
+  <script>
+    document.documentElement.dataset.theme =
+      localStorage.getItem("bayes-stairs-theme") ||
+      (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Noto+Serif+JP:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../assets/css/main.css">
+
+  <!-- KaTeX: 数式を使うページでは必ずこの3行を入れる -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+          onload="renderMathInElement(document.body, {delimiters: [
+            {left: '$$', right: '$$', display: true},
+            {left: '\\(', right: '\\)', display: false}
+          ]});"></script>
+</head>
+<body data-root="../../" data-level="4" data-lesson-id="4-5">
+
+  <header class="site-header">
+    <button class="sidebar-toggle" id="sidebar-toggle" aria-label="メニュー">☰</button>
+    <a class="brand" href="../../index.html">
+      <span class="brand-mark">階</span>
+      <span>ベイズの階段</span>
+    </a>
+    <div class="header-spacer"></div>
+    <div class="header-progress" id="header-progress"></div>
+    <button class="theme-toggle" id="theme-toggle" aria-label="テーマ切替">🌙</button>
+  </header>
+
+  <div class="layout">
+
+    <!-- サイドバー: main.js がカリキュラムから自動生成 -->
+    <aside class="sidebar"><nav id="sidebar-nav" aria-label="カリキュラム"></nav></aside>
+
+    <main class="lesson">
+
+      <nav class="breadcrumbs" aria-label="パンくず">
+        <a href="../../index.html">ホーム</a><span class="sep">›</span>
+        <a href="index.html">Level 4 計算ベイズ — MCMCと近似推論</a><span class="sep">›</span>
+        <span>4-5 ハミルトニアンモンテカルロとNUTS</span>
+      </nav>
+
+      <header class="lesson-header">
+        <div class="lesson-meta">
+          <span class="level-badge">Level 4</span>
+          <span class="small">レッスン 4-5</span>
+        </div>
+        <h1>ハミルトニアンモンテカルロとNUTS</h1>
+
+        <div class="lesson-goals">
+          <h2>このレッスンでできるようになること</h2>
+          <ul>
+            <li><span class="term">ハミルトニアンモンテカルロ</span>が「運動量と勾配を使って物理的に動く」サンプリングだと説明できる</li>
+            <li>ランダムウォーク型のサンプリングに比べ、高次元・相関の強い事後分布でHMCが有利な理由を述べられる</li>
+            <li><span class="term">NUTS</span>が軌道の長さを自動調整する役割を持ち、PyMC/Stanの標準だと理解できる</li>
+          </ul>
+          <p class="prereq">前提: <a href="4-3.html">4-3 メトロポリス・ヘイスティングス法</a> と <a href="4-1.html">4-1 解析的に解けない事後分布</a> を読んでいること（勾配の話で <a href="../../appendix/a-2.html">付録 a-2 微分積分</a> を使います）</p>
+        </div>
+      </header>
+
+      <div class="lesson-body">
+
+        <h2>「酔っぱらいの千鳥足」から卒業したい</h2>
+        <p><a href="4-3.html">4-3 メトロポリス・ヘイスティングス法</a>では、いまの位置から少しだけランダムにずれた候補をつくり、それを採るか採らないかで事後分布を探りました。便利な方法ですが、弱点もあります。動き方が<strong>でたらめな千鳥足</strong>だということです。</p>
+        <p>パラメータが2個や3個ならまだいいのです。でも現実のモデルは、パラメータが何十個、何百個になることもあります。次元が増えると、でたらめに動くだけでは目的の場所になかなかたどり着けません。サンプルどうしも似たものばかりになり、効率が落ちます。</p>
+        <p>そこで登場するのが <span class="term">ハミルトニアンモンテカルロ</span>（Hamiltonian Monte Carlo、略してHMC）です。これは<strong>物理のアナロジー</strong>を使って、賢く遠くまで動く方法です。今回はその考え方をつかみます。</p>
+
+        <div class="box box-intuition">
+          <div class="box-title">直感でつかむ</div>
+          <p>すり鉢のような谷に、ボールを置く場面を想像してください。谷の底ほど事後確率が高い「居心地のよい場所」です。ボールをただ置くと底で止まってしまいます。</p>
+          <p>そこで、ボールをポンと<strong>横に弾いてやります</strong>。ボールは勢い（運動量）を持って斜面をすべり、向こう側の壁を駆け上がり、また戻ってきます。重力（坂の傾き）に導かれて、谷の形に沿ってなめらかに移動します。</p>
+          <p>でたらめな千鳥足とちがって、ボールは<strong>谷の地形を感じながら</strong>動きます。だから一気に遠くへ、それでいて確率の高い場所をたどって移動できるのです。これがHMCの心臓部です。</p>
+        </div>
+
+        <h2>坂の傾き = 勾配を使う</h2>
+        <p>ボールが地形に沿って転がれるのは、各地点の<strong>坂の傾き</strong>を知っているからです。ベイズの世界では、この傾きが <span class="term">勾配</span>（こうばい、gradient）にあたります。勾配とは、事後分布を各パラメータで微分したもので、「どちらへ進めば確率が高くなるか」を指し示す矢印です。</p>
+        <p>微分は<a href="../../appendix/a-2.html">付録 a-2 微分積分</a>で扱いました。ここでは「傾きを表す量」とだけ思っておけば十分です。事後分布 \(P(\theta \mid D)\)（データ \(D\) のもとでのパラメータ \(\theta\)（シータ）の確率）が急に立ち上がる向きを、勾配が教えてくれます。</p>
+
+        <div class="box box-warn">
+          <div class="box-title">つまずき注意 — 物理では「位置エネルギー」で考える</div>
+          <p>物理のアナロジーでは、確率が高い場所を<strong>低い谷</strong>として扱います。事後分布 \(P(\theta \mid D)\) が高いところほど<strong>谷を深く（位置エネルギーを低く）</strong>、低いところほど谷を浅く（高く）するのです。確率が高い=谷が深い、という対応をつけておくと、ボールが谷の底に集まる様子が、確率の高い場所にサンプルが集まる様子にそのまま対応します。この「確率の高さを谷の深さに変換する」変換のしかたには定番の作り方がありますが、ここでは「確率が高いほど谷が深い」という向きだけ押さえれば十分です。</p>
+        </div>
+
+        <h2>運動量を足して「転がす」</h2>
+        <p>ボールを転がすには、坂の傾きだけでなく<strong>勢い</strong>も要ります。HMCは、いまのパラメータ \(\theta\) に、毎回ランダムな<span class="term">運動量</span>（うんどうりょう、momentum）\(p\) を新しく与えます。運動量はふつう正規分布から引いてきます。「どっちへ、どれくらいの勢いで弾くか」をサイコロで決めるイメージです。</p>
+        <p>こうして「位置 \(\theta\)」と「勢い \(p\)」のペアができます。あとは物理法則に従って、このボールをしばらく転がします。坂を下れば勢いが増し、坂を上れば勢いが減る。エネルギーが位置と運動の間を行き来します。その合計を表すのが <span class="term">ハミルトニアン</span>（Hamiltonian）で、これが手法の名前の由来です。</p>
+
+        <div class="box box-def">
+          <div class="box-title">定義 — ハミルトニアンモンテカルロ</div>
+          <p>パラメータ \(\theta\) に補助変数の運動量 \(p\) を足し、次のエネルギー \(H\) を考えます:
+          $$ H(\theta, p) = \underbrace{U(\theta)}_{\text{位置エネルギー}} + \underbrace{\tfrac{1}{2}\,p^{2}}_{\text{運動エネルギー}} $$
+          ここで \(U(\theta)\) は、事後分布 \(P(\theta \mid D)\) が高いほど小さく（谷が深く）なるように決めた「谷の深さ」です。毎ステップ \(p\) を正規分布から引き直し、\(H\) を保つように \((\theta, p)\) を物理的に動かして候補を作ります。最後に動いた先の \(\theta\) を新しいサンプルの候補とします。</p>
+        </div>
+
+        <p>「位置エネルギー」は谷の深さ、「運動エネルギー」は勢いの大きさです。ボールが転がる間、この2つは増えたり減ったりしますが、合計の \(H\) はほぼ一定に保たれます。これが「エネルギー保存」です。</p>
+
+        <h2>リープフロッグ — 跳び石でボールを進める</h2>
+        <p>ボールの動きをコンピュータで再現するには、時間を小さく刻んで一歩ずつ計算します。このとき使う計算手順が <span class="term">リープフロッグ</span>（leapfrog、跳び石）法です。名前のとおり、位置と運動量を<strong>交互に半歩ずつ</strong>進めるのが特徴です。</p>
+
+        <div class="box box-intuition">
+          <div class="box-title">直感でつかむ — なぜ「跳び石」なのか</div>
+          <p>運動量をまず半歩だけ更新し、その勢いで位置を1歩進め、新しい場所の傾きでまた運動量を半歩更新する。位置と運動量が、川の跳び石を交互に踏むように前へ進みます。</p>
+          <p>この交互のやり方には、うれしい性質があります。長く転がしても<strong>エネルギーがほとんどずれない</strong>のです。ふつうの雑な計算だとボールがだんだん谷から飛び出してしまいますが、リープフロッグは地形に沿った動きをきれいに保ちます。</p>
+        </div>
+
+        <figure class="figure">
+          <svg viewBox="0 0 380 200" width="380" aria-label="谷の地形を転がるボールの軌道とランダムウォークの比較">
+            <!-- 谷の輪郭 -->
+            <path d="M20,40 C90,40 110,170 190,170 C270,170 290,40 360,40"
+                  fill="none" stroke="var(--border)" stroke-width="2"/>
+            <!-- HMC の軌道（谷に沿ってなめらかに進む） -->
+            <path d="M90,95 C120,150 150,168 190,170 C230,168 260,150 290,95"
+                  fill="none" stroke="var(--level-color)" stroke-width="3"/>
+            <!-- スタートとゴール -->
+            <circle cx="90" cy="95" r="5" fill="var(--level-color)"/>
+            <circle cx="290" cy="95" r="5" fill="var(--level-color)"/>
+            <!-- 進む向きの矢印 -->
+            <path d="M180,172 l10,-2 l-7,-5" fill="none" stroke="var(--level-color)" stroke-width="2"/>
+            <!-- ランダムウォークの千鳥足（谷の底付近でうろうろ） -->
+            <path d="M175,168 l8,-6 l-6,9 l10,-4 l-5,7 l9,-3"
+                  fill="none" stroke="var(--text-muted)" stroke-width="2" stroke-dasharray="3 3"/>
+            <text x="190" y="32" font-size="11" fill="var(--text-muted)" text-anchor="middle">確率が高い＝谷が深い</text>
+            <text x="90" y="115" font-size="11" fill="var(--level-color)" text-anchor="middle">弾く</text>
+            <text x="290" y="115" font-size="11" fill="var(--level-color)" text-anchor="middle">遠くへ</text>
+          </svg>
+          <figcaption>図1: HMC（実線）は運動量を与えて谷の地形に沿い、一気に遠くまで移動する。ランダムウォーク（破線）はでたらめな千鳥足で、谷の底をうろうろするだけになりがち。</figcaption>
+        </figure>
+
+        <h2>採択するかどうかは最後に判定</h2>
+        <p>リープフロッグの計算は完璧ではなく、エネルギー \(H\) がほんの少しだけずれます。そこでHMCは、<a href="4-3.html">4-3 メトロポリス・ヘイスティングス法</a>と同じ<strong>採択判定</strong>を最後に1回だけ行います。エネルギーのずれが小さいほど高い確率で候補を採り、大きいほど棄てて元の位置にとどまります。</p>
+        <p>この一手間のおかげで、リープフロッグのわずかな誤差が補正され、得られるサンプルがちゃんと事後分布に従うことが保証されます。HMCは「物理で大きく動く」ことと「メトロポリス判定で正しさを守る」ことを組み合わせた方法なのです。</p>
+
+        <div class="formula">
+          <span class="formula-label">HMC の採択確率</span>
+          $$ A = \min\!\left(1,\ \exp\big(H(\theta_{\text{古}}, p_{\text{古}}) - H(\theta_{\text{新}}, p_{\text{新}})\big)\right) $$
+          <div class="formula-parts">
+            <span class="part"><b>エネルギーが保たれた</b>: \(H\) の差がほぼ0 → \(A \approx 1\) でほぼ必ず採択</span>
+            <span class="part"><b>大きくずれた</b>: \(H\) が増えた → 採択確率が下がり、棄てられやすい</span>
+          </div>
+        </div>
+
+        <div class="box box-warn">
+          <div class="box-title">つまずき注意 — ステップ幅の調整が要る</div>
+          <p>リープフロッグの「1歩の大きさ」を<strong>ステップ幅</strong>と呼びます。大きすぎるとボールが谷から飛び出してエネルギーが狂い、採択されにくくなります。小さすぎると、ちょっとずつしか進めず時間がかかります。HMCをそのまま使うには、ステップ幅と「何歩転がすか（軌道長）」を手で調整する必要がありました。ここが次のNUTSで自動化されます。</p>
+        </div>
+
+        <h2>NUTS — 軌道の長さを自動で決める</h2>
+        <p>HMCには面倒な点がありました。「ボールを<strong>何歩ぶん転がすか</strong>」を人が決めねばならないのです。短すぎると近くにしか行けず、長すぎるとボールがUターンして元の場所へ戻ってきてしまい、せっかく転がした意味がなくなります。</p>
+        <p>この「ちょうどいい軌道長」を<strong>自動で見つける</strong>のが <span class="term">NUTS</span>（No-U-Turn Sampler、ナッツ）です。名前の「No-U-Turn」が示すとおり、<strong>ボールがUターンを始めた瞬間に転がすのをやめる</strong>、という賢い止め方をします。</p>
+
+        <div class="box box-intuition">
+          <div class="box-title">直感でつかむ — Uターンしたら止める</div>
+          <p>谷を転がるボールは、向こう側の壁を上りきると、やがて戻ってきます。戻り始めたら、それ以上転がしても「来た道を引き返す」だけで新しい場所には行けません。</p>
+          <p>NUTSは、ボールが<strong>遠ざかるのをやめて近づき始めたか</strong>を毎回チェックします。「Uターンの気配」を感じたら、そこで軌道を打ち切ります。だから短すぎず長すぎず、ちょうど往復しきる手前で止まれるのです。軌道長を人が決めなくてよくなります。</p>
+        </div>
+
+        <p>ステップ幅のほうも、NUTSは試運転（ウォームアップ）の間に自動で調整します。つまり、HMCで手調整が必要だった2つのつまみ — ステップ幅と軌道長 — を、どちらもNUTSが面倒みてくれます。利用者は「サンプルして」と頼むだけでよくなります。</p>
+
+        <div class="box box-def">
+          <div class="box-title">定義 — NUTS（No-U-Turn Sampler）</div>
+          <p>HMCを土台にした手法で、ボールの軌道が<strong>Uターン（折り返し）を始めたところで自動的に打ち切る</strong>ことで、軌道長の手調整をなくしたもの。ステップ幅もウォームアップ中に自動調整する。現在、<strong>PyMCやStanといった主要なベイズ推定ソフトの標準</strong>のサンプラーになっている。</p>
+        </div>
+
+        <h2>どんなときに効くのか</h2>
+        <p>HMC・NUTSが特に力を発揮するのは、次の2つの場面です。</p>
+        <ul>
+          <li><strong>高次元</strong>: パラメータがたくさんあるモデル。でたらめな千鳥足は次元が増えるほど効率が落ちますが、勾配を使うHMCは向かうべき向きがわかるので強いです。</li>
+          <li><strong>相関の強い事後分布</strong>: あるパラメータが大きいと別のパラメータも大きくなる、というように、パラメータどうしが連動している場合。谷が細長く斜めにのびた地形になります。勾配に沿うHMCは、この細長い谷に沿ってスイスイ進めます。</li>
+        </ul>
+
+        <figure class="figure">
+          <svg viewBox="0 0 380 180" width="380" aria-label="細長く斜めにのびた相関の強い事後分布の等高線">
+            <!-- 斜めの楕円（相関の強い事後分布の等高線） -->
+            <g transform="rotate(-32 190 90)">
+              <ellipse cx="190" cy="90" rx="140" ry="26" fill="none" stroke="var(--border)" stroke-width="1.5"/>
+              <ellipse cx="190" cy="90" rx="95" ry="17" fill="none" stroke="var(--border)" stroke-width="1.5"/>
+              <ellipse cx="190" cy="90" rx="50" ry="9" fill="none" stroke="var(--level-color)" stroke-width="2"/>
+            </g>
+            <!-- HMC: 谷に沿って斜めに大きく進む -->
+            <path d="M110,140 L270,40" fill="none" stroke="var(--level-color)" stroke-width="3"/>
+            <circle cx="110" cy="140" r="4" fill="var(--level-color)"/>
+            <circle cx="270" cy="40" r="4" fill="var(--level-color)"/>
+            <!-- ランダムウォーク: 細い谷を横切れずちょこちょこ -->
+            <path d="M165,108 l9,-3 l-5,8 l8,-2 l-4,7"
+                  fill="none" stroke="var(--text-muted)" stroke-width="2" stroke-dasharray="3 3"/>
+            <text x="300" y="30" font-size="11" fill="var(--level-color)" text-anchor="middle">HMC は谷に沿う</text>
+          </svg>
+          <figcaption>図2: パラメータの相関が強いと、事後分布は細長く斜めにのびる（等高線）。HMC（実線）は勾配を使ってこの谷に沿って大きく進めるが、ランダムウォーク（破線）は細い谷を横切れず小刻みにしか動けない。</figcaption>
+        </figure>
+
+        <div class="box box-warn">
+          <div class="box-title">つまずき注意 — 万能ではない</div>
+          <p>HMCは勾配（傾き）を使うので、事後分布が<strong>なめらかで微分できる</strong>ことが前提です。パラメータが「0か1か」のような飛び飛び（離散）の値だと、傾きが定義できず、そのままでは使えません。離散パラメータには別の工夫や、<a href="4-4.html">4-4 ギブスサンプリング</a>のような手法を組み合わせます。「迷ったらNUTS」は多くの場合に正しいですが、唯一の道具ではないと覚えておきましょう。</p>
+        </div>
+
+        <h2>使うときはこれだけ</h2>
+        <p>うれしいことに、実際のコードはとても短くてすみます。PyMCでは、特に指定しなければNUTSが自動で選ばれます。利用者はモデルを書いて「サンプルして」と頼むだけです。</p>
+
+        <pre><code>import pymc as pm
+
+with pm.Model() as model:
+    theta = pm.Beta("theta", alpha=1, beta=1)   # 事前分布
+    y = pm.Binomial("y", n=100, p=theta, observed=62)
+    idata = pm.sample()        # 連続パラメータなら自動で NUTS が走る</code></pre>
+
+        <p><code>pm.sample()</code>と書くだけで、ステップ幅も軌道長も内部で自動調整されます。<a href="4-3.html">4-3</a>で手を動かして組んだメトロポリス法の苦労を、ライブラリが肩代わりしてくれるわけです。</p>
+
+        <div class="box box-ex">
+          <div class="box-title">例題</div>
+          <p>あるモデルでメトロポリス・ヘイスティングス法を使ったところ、隣どうしのサンプルがよく似ていて、なかなか動きませんでした。パラメータは50個あり、しかも互いに強く相関しています。NUTSに切り替えると改善が期待できるのはなぜでしょうか。理由を説明しましょう。</p>
+          <p><strong>解</strong>:</p>
+          <p>メトロポリス法はでたらめな千鳥足で動きます。パラメータが50個もあると、よい向きへ進める当たりくじを引く確率が小さく、ほとんど足踏みになります。さらに相関が強いと事後分布は細長い谷になり、千鳥足ではその谷を横切れず、小刻みにしか進めません。だから隣のサンプルが似てしまいます。</p>
+          <p>NUTS（HMC系）は<strong>勾配</strong>で谷の傾きを読み、運動量で<strong>谷に沿って一気に</strong>遠くへ動けます。50次元でも、相関で谷が斜めにのびていても、向かうべき向きがわかるので効率よく探索できます。軌道長もUターンを検知して自動で決めるため、人が調整する手間もありません。結果として、似ていないサンプルを少ない計算で集められ、改善が期待できます。</p>
+        </div>
+
+        <div class="quiz" data-answer="b">
+          <p class="quiz-q">問: HMCがランダムウォーク型のサンプリングより遠くまで効率よく動けるのは、何を利用しているからですか?</p>
+          <button class="quiz-option" data-key="a">事後分布の最大値だけを利用しているから</button>
+          <button class="quiz-option" data-key="b">事後分布の勾配（傾き）と運動量を利用して、地形に沿って動くから</button>
+          <button class="quiz-option" data-key="c">候補を完全にでたらめに、より大きくジャンプさせるから</button>
+          <div class="quiz-explain"><p>正解はb。HMCは勾配で「どちらが確率の高い向きか」を知り、運動量を与えて谷の地形に沿って転がります。だから遠くへ、それでいて確率の高い場所をたどって移動できます。最大値だけを使うわけではなく（a）、でたらめに大きく飛ぶわけでもありません（c）。でたらめに飛ぶとかえって採択されにくくなります。</p></div>
+        </div>
+
+        <div class="quiz" data-answer="c">
+          <p class="quiz-q">問: NUTSの「No-U-Turn」という名前は、何を自動で決めることを表していますか?</p>
+          <button class="quiz-option" data-key="a">運動量を引いてくる正規分布の幅</button>
+          <button class="quiz-option" data-key="b">事前分布の種類</button>
+          <button class="quiz-option" data-key="c">ボールをどこまで転がすか（軌道の長さ）</button>
+          <div class="quiz-explain"><p>正解はc。NUTSはボールがUターン（折り返し）を始めた瞬間に軌道を打ち切ります。これにより「何歩転がすか」という軌道長を自動で決められます。HMCでは人が手で決める必要があった部分です。事前分布の種類（b）はサンプラーとは別の話で、NUTSが決めるものではありません。</p></div>
+        </div>
+
+        <h2>つまずきやすいポイント</h2>
+        <div class="box box-warn">
+          <div class="box-title">つまずき注意 — 運動量は「捨てる」補助変数</div>
+          <p>HMCは運動量 \(p\) を足しますが、これは<strong>知りたいものではありません</strong>。あくまでボールを転がすための助っ人で、最後に欲しいのはパラメータ \(\theta\) のほうです。だから毎ステップ \(p\) は新しく引き直され、用が済んだら捨てられます。「パラメータが増えた」と心配しなくて大丈夫です。</p>
+        </div>
+
+        <div class="box box-practice">
+          <div class="box-title">演習1</div>
+          <p>メトロポリス・ヘイスティングス法とHMCの「候補の作り方」のちがいを、一文ずつで説明しなさい。</p>
+          <details class="answer">
+            <summary>解答を見る</summary>
+            <p><strong>メトロポリス・ヘイスティングス法</strong>: いまの位置から、でたらめに（ランダムに）少しずれた候補を作る。地形の情報は使わない。</p>
+            <p><strong>HMC</strong>: いまの位置に運動量を与え、事後分布の勾配（傾き）に従って物理的に転がし、その移動先を候補にする。地形に沿って遠くまで動ける。</p>
+          </details>
+        </div>
+
+        <div class="box box-practice">
+          <div class="box-title">演習2</div>
+          <p>HMCで、リープフロッグのステップ幅を大きくしすぎると、採択確率はどうなりますか。図1のボールのイメージを使って理由とともに答えなさい。</p>
+          <details class="answer">
+            <summary>解答を見る</summary>
+            <p>採択確率は<strong>下がります</strong>。ステップ幅が大きいと1歩で大きく動くため、リープフロッグの計算誤差がふくらみ、ボールが谷の地形から外れてエネルギー \(H\) が大きくずれます。採択確率 \(A\) は \(H\) のずれが大きいほど小さくなるので、候補が棄てられやすくなります。図1でいえば、ボールが谷の壁を突き抜けて飛び出してしまうイメージです。</p>
+          </details>
+        </div>
+
+        <div class="box box-practice">
+          <div class="box-title">演習3</div>
+          <p>友人が「パラメータが2個だけの簡単なモデルなのに、わざわざNUTSを使う意味はあるの?」と聞いてきました。あなたならどう答えますか。HMC/NUTSが特に有利な場面を踏まえて答えなさい。</p>
+          <details class="answer">
+            <summary>解答を見る</summary>
+            <p>HMC/NUTSが本領を発揮するのは<strong>高次元</strong>や<strong>相関の強い事後分布</strong>です。パラメータが2個で相関も弱いなら、メトロポリス法でも十分うまくいくことが多く、差は小さいかもしれません。</p>
+            <p>ただし、PyMCやStanではNUTSが標準で、しかもステップ幅も軌道長も自動調整してくれます。手で何かを調整する必要がなく、わざわざ他の手法を選ぶ理由もありません。「簡単なモデルでも、迷わずNUTSに任せておけば安心」というのが実用上の答えになります。</p>
+          </details>
+        </div>
+
+        <div class="box box-practice">
+          <div class="box-title">演習4</div>
+          <p>あるモデルに「サイコロの出た目（1〜6の離散値）」を表すパラメータが含まれています。このパラメータをHMCでそのまま扱えない理由を答えなさい。</p>
+          <details class="answer">
+            <summary>解答を見る</summary>
+            <p>HMCは事後分布の<strong>勾配（傾き）</strong>を使って動きます。傾きを求めるには事後分布がなめらかで<strong>微分できる</strong>必要があります。しかし「1〜6の飛び飛び（離散）の値」は、値と値の間がつながっておらず、傾きが定義できません。だからHMCでそのまま転がすことができないのです。こうした離散パラメータには、ギブスサンプリングなど別の手法を組み合わせて対応します。</p>
+          </details>
+        </div>
+
+        <h2>まとめ</h2>
+        <ul>
+          <li><span class="term">ハミルトニアンモンテカルロ（HMC）</span>は、運動量と勾配を使い、事後分布を「谷の地形」とみなしてボールを物理的に転がすサンプリング手法。</li>
+          <li><span class="term">リープフロッグ</span>法で位置と運動量を交互に半歩ずつ進め、最後にメトロポリス判定で正しさを守る。</li>
+          <li>でたらめに動くランダムウォークとちがい、地形に沿って一気に遠くへ、確率の高い場所をたどって移動できる。</li>
+          <li><span class="term">NUTS</span>はUターンを検知して軌道長を自動で打ち切り、ステップ幅も自動調整する。<strong>PyMC/Stanの標準</strong>。</li>
+          <li>特に<strong>高次元</strong>や<strong>相関の強い事後分布</strong>で有利。ただし勾配が必要なので、離散パラメータには別の工夫が要る。</li>
+        </ul>
+        <p>これで、現実の複雑なモデルでも頼りになる最強クラスのサンプラーが手に入りました。次は、得られたサンプルが本当に信用できるのか — 収束したかどうかを見分ける診断の読み方へ進みます。</p>
+
+      </div>
+
+      <div class="complete-area">
+        <button class="btn btn-level" id="complete-btn">このレッスンを完了にする</button>
+        <p class="complete-note">進捗はこのブラウザに保存されます</p>
+      </div>
+
+      <!-- 前後ナビ: main.js がカリキュラムから自動生成 -->
+      <nav class="lesson-nav" id="lesson-nav" aria-label="前後のレッスン"></nav>
+
+    </main>
+
+    <!-- ページ内目次: main.js が本文の h2 から自動生成 -->
+    <aside class="toc">
+      <div class="toc-title">このページの内容</div>
+      <nav id="toc"></nav>
+    </aside>
+
+  </div>
+
+  <footer class="site-footer">
+    <p>ベイズの階段 — 中学数学から最前線まで、一段ずつ。</p>
+  </footer>
+
+  <script src="../../assets/js/curriculum.js"></script>
+  <script src="../../assets/js/main.js"></script>
+</body>
+</html>

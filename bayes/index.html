@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ベイズの階段 — 中学数学から最前線まで、一段ずつ。</title>
+  <meta name="description" content="ベイズ統計を中学レベルの数学から段階的に学べる学習サイト。条件付き確率からMCMC・実践ベイズモデリングまで全6レベル38レッスン。">
+  <script>
+    /* ちらつき防止: CSS読み込み前にテーマを確定する */
+    document.documentElement.dataset.theme =
+      localStorage.getItem("bayes-stairs-theme") ||
+      (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Noto+Serif+JP:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/main.css">
+</head>
+<body data-root="">
+
+  <header class="site-header">
+    <a class="brand" href="index.html">
+      <span class="brand-mark">階</span>
+      <span>ベイズの階段</span>
+      <span class="brand-tagline">中学数学から最前線まで、一段ずつ。</span>
+    </a>
+    <div class="header-spacer"></div>
+    <div class="header-progress" id="header-progress"></div>
+    <button class="theme-toggle" id="theme-toggle" aria-label="テーマ切替">🌙</button>
+  </header>
+
+  <div class="layout-single">
+
+    <section class="hero">
+      <div class="hero-formula" aria-hidden="true">P(仮説|データ)</div>
+      <h1>確率で、考えを更新する。</h1>
+      <p class="hero-lead">
+        ベイズ統計は「新しい情報を得るたびに、考えを合理的にアップデートする」ための数学です。
+        このサイトでは、サイコロの確率(中学レベル)から出発して、
+        MCMC・階層ベイズ・実践モデリングまでを<strong>6つのレベル</strong>で段階的に学びます。
+        途中の数学はすべてサイト内で補えるので、前提知識は中学数学だけで十分です。
+      </p>
+      <div class="hero-actions">
+        <a class="btn btn-primary" href="levels/level0/index.html">Level 0 から始める</a>
+        <a class="btn btn-outline" href="#map">学習マップを見る</a>
+      </div>
+    </section>
+
+    <section class="feature-grid">
+      <div class="feature-card">
+        <div class="feature-icon">🪜</div>
+        <h3>一段ずつ登れる設計</h3>
+        <p>各レッスンは前のレッスンだけを前提に書かれています。順番に読めば、途中で置いていかれることはありません。</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">💡</div>
+        <h3>直感 → 数式の順</h3>
+        <p>いきなり数式は出しません。具体例と図で「なぜそうなるか」を腹落ちさせてから、式で一般化します。</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🎲</div>
+        <h3>手を動かして確かめる</h3>
+        <p>各レッスンに理解度チェックと演習付き。後半はブラウザ上のシミュレーションとPythonコードで体験します。</p>
+      </div>
+    </section>
+
+    <h2 class="section-title" id="map">学習マップ</h2>
+    <p class="section-lead">どこからでも読めますが、迷ったら Level 0 から順番に。進捗はこのブラウザに自動保存されます。</p>
+
+    <div class="level-map" id="level-map"></div>
+
+    <h2 class="section-title">このサイトの歩き方</h2>
+    <p class="section-lead">
+      1レッスンは20〜30分で読める分量です。各レッスンの最後にある「完了にする」ボタンを押すと、
+      学習マップとサイドバーに進捗が記録されます。
+      数学でつまずいたら<a href="appendix/index.html">付録</a>へ。用語を忘れたら用語集へ。
+      いつでも戻ってこられるのが、このサイトの設計思想です。
+    </p>
+
+  </div>
+
+  <footer class="site-footer">
+    <p>ベイズの階段 — 中学数学から最前線まで、一段ずつ。</p>
+  </footer>
+
+  <script src="assets/js/curriculum.js"></script>
+  <script src="assets/js/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>Level 1 条件付き確率とベイズの定理 | ベイズの階段</title>
+  <meta name="description" content="ベイズ統計の心臓部を、数え上げから式へと橋渡しする">
+  <script>
+    document.documentElement.dataset.theme =
+      localStorage.getItem("bayes-stairs-theme") ||
+      (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Noto+Serif+JP:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../assets/css/main.css">
+</head>
+<body data-root="../../" data-level="1">
+
+  <header class="site-header">
+    <button class="sidebar-toggle" id="sidebar-toggle" aria-label="メニュー">☰</button>
+    <a class="brand" href="../../index.html">
+      <span class="brand-mark">階</span>
+      <span>ベイズの階段</span>
+    </a>
+    <div class="header-spacer"></div>
+    <div class="header-progress" id="header-progress"></div>
+    <button class="theme-toggle" id="theme-toggle" aria-label="テーマ切替">🌙</button>
+  </header>
+
+  <div class="layout">
+
+    <aside class="sidebar"><nav id="sidebar-nav" aria-label="カリキュラム"></nav></aside>
+
+    <main class="lesson">
+
+      <nav class="breadcrumbs" aria-label="パンくず">
+        <a href="../../index.html">ホーム</a><span class="sep">›</span>
+        <span>Level 1 条件付き確率とベイズの定理</span>
+      </nav>
+
+      <header class="lesson-header">
+        <div class="lesson-meta">
+          <span class="level-badge">Level 1</span>
+        </div>
+        <h1>条件付き確率とベイズの定理</h1>
+        <p class="lead">ベイズ統計の心臓部を、数え上げから式へと橋渡しする</p>
+      </header>
+
+      <div class="lesson-body">
+        <p>このレベルでは、「ある情報を知ったあとに確率がどう変わるか」を扱う条件付き確率からスタートし、その定義だけを手がかりにベイズの定理を自分の手で導きます。導いた式の一つひとつの部品に事前確率・尤度・事後確率という名前を与え、何を表しているのかを腑に落とします。仕上げに検査の偽陽性やモンティ・ホール問題、迷惑メールフィルタといった具体例で定理を実際に動かし、結果を読み解けるようになります。これらを通じて、ベイズ統計のこの先すべての土台となる考え方が身につきます。</p>
+        <p class="muted">Level 0（とくに 0-4 表で整理する確率、0-5 逆向きの確率）を読んでいることが前提です。</p>
+
+        <h2>レッスン一覧</h2>
+        <!-- main.js が data-level を見て自動生成 -->
+        <ul class="lesson-list" id="lesson-list"></ul>
+      </div>
+
+    </main>
+
+    <aside class="toc"></aside>
+
+  </div>
+
+  <footer class="site-footer">
+    <p>ベイズの階段 — 中学数学から最前線まで、一段ずつ。</p>
+  </footer>
+
+  <script src="../../assets/js/curriculum.js"></script>
+  <script src="../../assets/js/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>3-7 モデル比較とベイズファクター | ベイズの階段</title>
+  <meta name="description" content="どちらの仮説がデータをよく説明するかを測る">
+  <script>
+    document.documentElement.dataset.theme =
+      localStorage.getItem("bayes-stairs-theme") ||
+      (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Noto+Serif+JP:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../assets/css/main.css">
+
+  <!-- KaTeX: 数式を使うページでは必ずこの3行を入れる -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+          onload="renderMathInElement(document.body, {delimiters: [
+            {left: '$$', right: '$$', display: true},
+            {left: '\\(', right: '\\)', display: false}
+          ]});"></script>
+</head>
+<body data-root="../../" data-level="3" data-lesson-id="3-7">
+
+  <header class="site-header">
+    <button class="sidebar-toggle" id="sidebar-toggle" aria-label="メニュー">☰</button>
+    <a class="brand" href="../../index.html">
+      <span class="brand-mark">階</span>
+      <span>ベイズの階段</span>
+    </a>
+    <div class="header-spacer"></div>
+    <div class="header-progress" id="header-progress"></div>
+    <button class="theme-toggle" id="theme-toggle" aria-label="テーマ切替">🌙</button>
+  </header>
+
+  <div class="layout">
+
+    <!-- サイドバー: main.js がカリキュラムから自動生成 -->
+    <aside class="sidebar"><nav id="sidebar-nav" aria-label="カリキュラム"></nav></aside>
+
+    <main class="lesson">
+
+      <nav class="breadcrumbs" aria-label="パンくず">
+        <a href="../../index.html">ホーム</a><span class="sep">›</span>
+        <a href="index.html">Level 3 ベイズ推定の基礎</a><span class="sep">›</span>
+        <span>3-7 モデル比較とベイズファクター</span>
+      </nav>
+
+      <header class="lesson-header">
+        <div class="lesson-meta">
+          <span class="level-badge">Level 3</span>
+          <span class="small">レッスン 3-7</span>
+        </div>
+        <h1>モデル比較とベイズファクター</h1>
+
+        <div class="lesson-goals">
+          <h2>このレッスンでできるようになること</h2>
+          <ul>
+            <li><span class="term">周辺尤度</span> \(P(D \mid M)\) が「モデルがデータを出す確からしさ」だと説明できる</li>
+            <li>2つのモデルの周辺尤度の比から<span class="term">ベイズファクター</span>を計算できる</li>
+            <li>事前オッズとベイズファクターから事後オッズを求め、結果を解釈できる</li>
+          </ul>
+          <p class="prereq">前提: <a href="../level1/1-4.html">1-4 事前確率・尤度・事後確率</a> と <a href="../level2/2-5.html">2-5 尤度 — データから見た「もっともらしさ」</a> を読んでいること</p>
+        </div>
+      </header>
+
+      <div class="lesson-body">
+
+        <h2>「どっちのモデルがマシ?」を測りたい</h2>
+        <p>コインを10回投げたら、表が7回出ました。さて、このコインは普通の<strong>公平なコイン</strong>でしょうか。それとも<strong>表が出やすいイカサマコイン</strong>でしょうか。</p>
+        <p>これは1つのモデルの中でパラメータを推定する話ではありません。「公平」「イカサマ」という<strong>2つのモデルそのもの</strong>を比べる話です。どちらのモデルがこのデータをうまく説明できるか。それを数字で測りたいのです。</p>
+        <p>これまでのレッスンでは、ベイズの定理で事後分布を求めてきました。同じ考え方は、モデルどうしの比較にもそのまま使えます。今回はその道具を学びます。</p>
+
+        <div class="box box-intuition">
+          <div class="box-title">直感でつかむ</div>
+          <p>2人の予想屋がいると思ってください。予想屋Aは「このコインは公平だ」、予想屋Bは「表が出やすい」と言っています。</p>
+          <p>10回投げて表が7回。出た目を聞いて、「その出方を前もってどれだけ言い当てられそうだったか」を2人それぞれで考えます。Bのほうが「ありそう」と言える度合いが高ければ、Bに賭けたくなりますよね。</p>
+          <p>このとき大事なのは、各予想屋が<strong>あらかじめ持っていた可能性すべてをならして</strong>「データの出やすさ」を出すことです。この「ならした出やすさ」が、これから学ぶ周辺尤度です。</p>
+        </div>
+
+        <h2>周辺尤度 — モデルがデータを出す確からしさ</h2>
+        <p>1つのモデル \(M\) は、ふつう中にパラメータ \(\theta\)（シータ）を持っています。たとえば「表が出る確率 \(\theta\)」です。モデルは、その \(\theta\) に対する事前分布も一緒に持っています。</p>
+        <p>ここで <span class="term">周辺尤度</span>（しゅうへんゆうど）を導入します。これは、モデルがデータ \(D\) を生み出す確からしさです。記号では \(P(D \mid M)\) と書き、「\(M\) のもとでの \(D\) の確率」と読みます。</p>
+
+        <div class="box box-def">
+          <div class="box-title">定義 — 周辺尤度</div>
+          <p>モデル \(M\) のパラメータ \(\theta\) について、尤度 \(P(D \mid \theta, M)\) を事前分布 \(P(\theta \mid M)\) で重みづけして、すべての \(\theta\) についてならしたものを周辺尤度と呼びます。連続パラメータなら次のように積分します:
+          $$ P(D \mid M) = \int P(D \mid \theta, M)\, P(\theta \mid M)\, d\theta $$</p>
+        </div>
+
+        <p>名前に「周辺」とつくのは、<a href="../level1/1-2.html">1-2 同時確率と周辺確率</a>で学んだ周辺化と同じ操作だからです。\(\theta\) という余分な変数を、ならして消しているのです。積分が苦手なら<a href="../../appendix/a-2.html">付録 a-2 微分積分</a>を見てください。やっていることは「全部の \(\theta\) を少しずつ試して、出やすさの平均をとる」ことです。</p>
+
+        <div class="box box-warn">
+          <div class="box-title">つまずき注意</div>
+          <p>周辺尤度は「いちばん当てはまる \(\theta\) での尤度」では<strong>ありません</strong>。事前分布が広げた \(\theta\) の<strong>全範囲をならした平均</strong>です。ここを取り違えると、このあと出てくる「自動的な単純さ選好」が理解できなくなります。</p>
+        </div>
+
+        <h2>ベイズファクター — 周辺尤度の比</h2>
+        <p>モデルが2つあるとき、それぞれの周辺尤度を比べれば「どちらがデータを出しやすいか」がわかります。この比が <span class="term">ベイズファクター</span>（Bayes factor、ベイズ因子とも）です。</p>
+
+        <div class="box box-def">
+          <div class="box-title">定義 — ベイズファクター</div>
+          <p>2つのモデル \(M_1\) と \(M_2\) について、ベイズファクター \(\mathrm{BF}_{12}\) は周辺尤度の比です:
+          $$ \mathrm{BF}_{12} = \frac{P(D \mid M_1)}{P(D \mid M_2)} $$
+          値が \(1\) より大きいほど \(M_1\) がデータをよく説明し、\(1\) より小さいほど \(M_2\) が有利です。</p>
+        </div>
+
+        <p>ベイズファクターは、データだけが決める「証拠の重み」です。事前にどちらのモデルを信じていたかは、ここには入っていません。信念のほうは、次のオッズの式で別に扱います。</p>
+
+        <h2>事前オッズ × ベイズファクター = 事後オッズ</h2>
+        <p><span class="term">オッズ</span>（odds）とは、2つの確率の比のことです。「\(M_1\) を信じる度合い」対「\(M_2\) を信じる度合い」を比で表します。データを見る前の比が<strong>事前オッズ</strong>、見た後の比が<strong>事後オッズ</strong>です。</p>
+        <p>ベイズの定理を \(M_1\) と \(M_2\) のそれぞれに当てはめて、割り算すると、分母にあった \(P(D)\) がきれいに消えます。残るのは、とても見やすい関係です。</p>
+
+        <div class="formula">
+          <span class="formula-label">モデル比較のベイズの定理</span>
+          $$ \underbrace{\frac{P(M_1 \mid D)}{P(M_2 \mid D)}}_{\text{事後オッズ}} = \underbrace{\frac{P(D \mid M_1)}{P(D \mid M_2)}}_{\text{ベイズファクター}} \times \underbrace{\frac{P(M_1)}{P(M_2)}}_{\text{事前オッズ}} $$
+          <div class="formula-parts">
+            <span class="part"><b>事前オッズ</b>: データを見る前に2モデルをどれだけ信じていたか</span>
+            <span class="part"><b>ベイズファクター</b>: データがもたらす証拠の重み</span>
+            <span class="part"><b>事後オッズ</b>: データを見た後の2モデルの信じ方の比</span>
+          </div>
+        </div>
+
+        <p>言葉で言えば、こうです。<strong>「最初の比に、データの証拠をかけ算すると、更新後の比になる」</strong>。<a href="3-1.html">3-1 ベイズ更新</a>でやった更新と、形がそっくりですね。事前オッズが \(1\)（どちらも五分五分）なら、事後オッズはそのままベイズファクターに等しくなります。</p>
+
+        <h2>なぜか単純なモデルが好かれる — オッカムの剃刀</h2>
+        <p>ベイズファクターには、うれしい性質があります。<strong>むやみに複雑なモデルを自動的に嫌う</strong>のです。これは<span class="term">オッカムの剃刀</span>（かみそり)、つまり「同じ説明力なら単純なほうを選べ」という考えに対応します。</p>
+
+        <div class="box box-intuition">
+          <div class="box-title">直感でつかむ — 複雑さのコスト</div>
+          <p>周辺尤度は、事前分布が広げた \(\theta\) の全範囲でならした平均でした。複雑なモデルは、いろんなデータに対応できるよう \(\theta\) を広くとります。すると確率を広い範囲にうすく配ることになります。</p>
+          <p>うすく配ると、実際に出たデータ1点に割り当てられる確率は小さくなりがちです。つまり「なんでも説明できるモデル」は、特定のデータを言い当てる力がかえって弱まる。これがペナルティの正体です。</p>
+        </div>
+
+        <figure class="figure">
+          <svg viewBox="0 0 360 180" width="360" aria-label="単純なモデルと複雑なモデルの予測のばらつき">
+            <!-- baseline -->
+            <line x1="20" y1="150" x2="340" y2="150" stroke="var(--border)" stroke-width="2"/>
+            <!-- 単純モデル: 狭く高い山 -->
+            <path d="M60,150 C90,150 95,40 120,40 C145,40 150,150 180,150"
+                  fill="none" stroke="var(--level-color)" stroke-width="3"/>
+            <!-- 複雑モデル: 広く低い山 -->
+            <path d="M200,150 C240,150 245,100 280,100 C315,100 320,150 340,150 L200,150"
+                  fill="none" stroke="var(--text-muted)" stroke-width="3" stroke-dasharray="6 4"/>
+            <!-- 観測データの位置 -->
+            <line x1="120" y1="150" x2="120" y2="40" stroke="var(--level-color)" stroke-width="1" stroke-dasharray="3 3"/>
+            <circle cx="120" cy="40" r="4" fill="var(--level-color)"/>
+            <text x="120" y="170" font-size="11" fill="var(--text-muted)" text-anchor="middle">単純モデル</text>
+            <text x="270" y="170" font-size="11" fill="var(--text-muted)" text-anchor="middle">複雑モデル</text>
+          </svg>
+          <figcaption>図1: 単純なモデル（実線）はデータの出方を狭く予測するので、当たれば高い確率を割り当てられる。複雑なモデル（破線）は広く予測する分、1点ごとの確率がうすくなる。これが自動的な単純さ選好を生む。</figcaption>
+        </figure>
+
+        <p>大事なのは、このペナルティを<strong>人が手で足しているわけではない</strong>点です。周辺尤度を律儀に計算するだけで、勝手にこのバランスが現れます。だからベイズファクターは「データへの当てはまり」と「単純さ」を同時に天秤にかけてくれるのです。</p>
+
+        <h2>解釈の目安</h2>
+        <p>ベイズファクターの値は、そのまま証拠の強さの目安になります。よく使われるのは次の表です（おおよその慣習であり、絶対の線引きではありません）。</p>
+
+        <table>
+          <thead>
+            <tr><th>\(\mathrm{BF}_{12}\)</th><th>\(M_1\) への証拠</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>1 〜 3</td><td>ほとんど語るに足りない</td></tr>
+            <tr><td>3 〜 10</td><td>そこそこの証拠</td></tr>
+            <tr><td>10 〜 30</td><td>強い証拠</td></tr>
+            <tr><td>30 以上</td><td>とても強い証拠</td></tr>
+            <tr><td>1 未満</td><td>むしろ \(M_2\) が有利</td></tr>
+          </tbody>
+        </table>
+
+        <div class="box box-ex">
+          <div class="box-title">例題</div>
+          <p>コインを10回投げたら表が7回出ました。次の2つのモデルを比べましょう。</p>
+          <ul>
+            <li>\(M_1\)（公平）: 表の確率は \(\theta = 0.5\) で固定</li>
+            <li>\(M_2\)（イカサマ）: 表の確率は \(\theta = 0.8\) で固定</li>
+          </ul>
+          <p>どちらのモデルもパラメータが1点に決まっているので、周辺尤度はそのまま二項分布の尤度になります（<a href="../level2/2-2.html">2-2 二項分布</a>）。10回中7回表が出る確率は \(\binom{10}{7}\theta^{7}(1-\theta)^{3}\) です。両モデルで \(\binom{10}{7}=120\) は共通なので、比をとると消えます。</p>
+          <p><strong>解</strong>:</p>
+          <p>\(M_1\) の周辺尤度（係数を除く部分）: \(0.5^{7}\times 0.5^{3} = 0.5^{10} \approx 0.000977\)</p>
+          <p>\(M_2\) の周辺尤度（同）: \(0.8^{7}\times 0.2^{3} = 0.2097\times 0.008 \approx 0.001678\)</p>
+          <p>ベイズファクター（\(M_2\) を上に置きます）:
+          $$ \mathrm{BF}_{21} = \frac{0.001678}{0.000977} \approx 1.72 $$
+          値は約 \(1.72\)。目安の表では「ほとんど語るに足りない」レベルです。表が7回出たとはいえ、10回ではイカサマと言い切る証拠としては弱い、というわけです。</p>
+          <p>もし事前にどちらも五分五分（事前オッズ \(=1\)）と思っていたなら、事後オッズも約 \(1.72\)。確率に直すと \(M_2\) を信じる度合いは \(\dfrac{1.72}{1+1.72}\approx 0.63\)、つまり約63%です。</p>
+        </div>
+
+        <div class="quiz" data-answer="b">
+          <p class="quiz-q">問: 事前オッズが \(\dfrac{P(M_1)}{P(M_2)} = 2\)、ベイズファクター \(\mathrm{BF}_{12} = 5\) のとき、事後オッズはいくつ?</p>
+          <button class="quiz-option" data-key="a">2.5</button>
+          <button class="quiz-option" data-key="b">10</button>
+          <button class="quiz-option" data-key="c">7</button>
+          <div class="quiz-explain"><p>事後オッズ = ベイズファクター × 事前オッズ なので、\(5 \times 2 = 10\) です。足し算（7）ではなくかけ算であることに注意しましょう。</p></div>
+        </div>
+
+        <div class="quiz" data-answer="c">
+          <p class="quiz-q">問: 複雑なモデルがベイズファクターで自動的に不利になりやすいのはなぜ?</p>
+          <button class="quiz-option" data-key="a">複雑なモデルは尤度の最大値が必ず小さいから</button>
+          <button class="quiz-option" data-key="b">人が複雑さのペナルティを式に足しているから</button>
+          <button class="quiz-option" data-key="c">広い事前分布で確率をうすく配るので、周辺尤度が下がりやすいから</button>
+          <div class="quiz-explain"><p>正解はc。周辺尤度は事前分布の全範囲でならした平均です。複雑なモデルは予測を広げる分、確率をうすく配るので、実際のデータ1点に割り当てる確率が小さくなりがちです。ペナルティは人が足すのではなく、計算から自然に出ます（bは誤り）。最大尤度はむしろ複雑なモデルのほうが高くなることも多いです（aは誤り）。</p></div>
+        </div>
+
+        <h2>使うときの注意点</h2>
+        <div class="box box-warn">
+          <div class="box-title">つまずき注意 — 事前分布に敏感</div>
+          <p>周辺尤度は事前分布をならして計算します。だから<strong>事前分布の選び方でベイズファクターの値が変わります</strong>。「とりあえず広い事前分布」を雑に置くと、複雑なモデルに思わぬペナルティがかかり、結論が揺れることがあります。事前分布は意味を考えて選びましょう。</p>
+        </div>
+
+        <div class="box box-warn">
+          <div class="box-title">つまずき注意 — BFは確率ではない</div>
+          <p>ベイズファクターは確率では<strong>ありません</strong>。あくまで2モデルの周辺尤度の<strong>比</strong>です。「どちらのモデルが正しい確率」を知りたいなら、事前オッズをかけて事後オッズにし、必要なら確率へ直す必要があります。\(\mathrm{BF}=5\) は「\(M_1\) が正しい確率5倍」ではなく「データが \(M_1\) を5倍支持する」という意味です。</p>
+        </div>
+
+        <div class="box box-practice">
+          <div class="box-title">演習1</div>
+          <p>あるモデル比較で、データに対する周辺尤度が \(P(D \mid M_1) = 0.012\)、\(P(D \mid M_2) = 0.003\) でした。ベイズファクター \(\mathrm{BF}_{12}\) を求め、目安の表でどの程度の証拠か答えなさい。</p>
+          <details class="answer">
+            <summary>解答を見る</summary>
+            <p>\(\mathrm{BF}_{12} = \dfrac{0.012}{0.003} = 4\)。目安の表では「3〜10」に入るので、\(M_1\) への<strong>そこそこの証拠</strong>です。決定的ではありませんが、\(M_1\) のほうがデータをうまく説明していると言えます。</p>
+          </details>
+        </div>
+
+        <div class="box box-practice">
+          <div class="box-title">演習2</div>
+          <p>事前オッズ \(\dfrac{P(M_1)}{P(M_2)} = \dfrac{1}{4}\)（最初は \(M_2\) のほうを4倍信じていた）。ベイズファクター \(\mathrm{BF}_{12} = 12\) のとき、事後オッズを求め、データを見たあとはどちらをより信じるか答えなさい。</p>
+          <details class="answer">
+            <summary>解答を見る</summary>
+            <p>事後オッズ = \(\mathrm{BF}_{12} \times\) 事前オッズ = \(12 \times \dfrac{1}{4} = 3\)。事後オッズが \(3\)（\(>1\)）なので、データを見たあとは<strong>\(M_1\) のほうを信じる</strong>ことになります（\(M_1\):\(M_2\) = 3:1)。最初は \(M_2\) 寄りでしたが、強い証拠が信念をひっくり返しました。確率に直すと \(M_1\) を信じる度合いは \(\dfrac{3}{1+3}=0.75\)、約75%です。</p>
+          </details>
+        </div>
+
+        <div class="box box-practice">
+          <div class="box-title">演習3</div>
+          <p>サイコロを6回振って、6が3回出ました。次の2モデルを比べます。\(M_1\): 公平なサイコロ（6の確率 \(\theta = \tfrac{1}{6}\)）。\(M_2\): 6が出やすいイカサマ（\(\theta = \tfrac{1}{2}\)）。\(\mathrm{BF}_{21}\)（イカサマ対公平）を求めなさい。二項分布の共通係数 \(\binom{6}{3}\) は比で消えてよい。</p>
+          <details class="answer">
+            <summary>解答を見る</summary>
+            <p>係数を除いた尤度の中身を比べます。</p>
+            <p>\(M_1\): \(\left(\tfrac{1}{6}\right)^{3}\left(\tfrac{5}{6}\right)^{3} = \dfrac{1}{216}\times\dfrac{125}{216} = \dfrac{125}{46656} \approx 0.00268\)</p>
+            <p>\(M_2\): \(\left(\tfrac{1}{2}\right)^{3}\left(\tfrac{1}{2}\right)^{3} = \left(\tfrac{1}{2}\right)^{6} = \dfrac{1}{64} \approx 0.01563\)</p>
+            <p>\(\mathrm{BF}_{21} = \dfrac{0.01563}{0.00268} \approx 5.8\)。目安の表で「3〜10」の<strong>そこそこの証拠</strong>。6回中3回も6が出るのは、公平より「6が出やすい」モデルで約6倍ありそうだ、と読めます。</p>
+          </details>
+        </div>
+
+        <h2>まとめ</h2>
+        <ul>
+          <li><span class="term">周辺尤度</span> \(P(D \mid M)\) は、モデルがデータを出す確からしさ。パラメータを事前分布でならして求める。</li>
+          <li><span class="term">ベイズファクター</span>は2モデルの周辺尤度の比 \(\mathrm{BF}_{12} = \dfrac{P(D\mid M_1)}{P(D\mid M_2)}\)。データだけが決める証拠の重み。</li>
+          <li>関係式は「<strong>事後オッズ = ベイズファクター × 事前オッズ</strong>」。更新は足し算ではなくかけ算。</li>
+          <li>周辺尤度を計算するだけで、複雑なモデルに<strong>自動的なペナルティ</strong>がかかる。これがオッカムの剃刀。</li>
+          <li>ベイズファクターは事前分布に敏感で、確率そのものではない。値は証拠の強さの目安として読む。</li>
+        </ul>
+        <p>これでLevel 3の基礎はひと通りそろいました。事後分布を求め、要約し、頻度論と比べ、モデルどうしまで比較できます。次のレベルでは、手で積分できない複雑なモデルをどう計算するか — その鍵となる方法へ進みます。</p>
+
+      </div>
+
+      <div class="complete-area">
+        <button class="btn btn-level" id="complete-btn">このレッスンを完了にする</button>
+        <p class="complete-note">進捗はこのブラウザに保存されます</p>
+      </div>
+
+      <!-- 前後ナビ: main.js がカリキュラムから自動生成 -->
+      <nav class="lesson-nav" id="lesson-nav" aria-label="前後のレッスン"></nav>
+
+    </main>
+
+    <!-- ページ内目次: main.js が本文の h2 から自動生成 -->
+    <aside class="toc">
+      <div class="toc-title">このページの内容</div>
+      <nav id="toc"></nav>
+    </aside>
+
+  </div>
+
+  <footer class="site-footer">
+    <p>ベイズの階段 — 中学数学から最前線まで、一段ずつ。</p>
+  </footer>
+
+  <script src="../../assets/js/curriculum.js"></script>
+  <script src="../../assets/js/main.js"></script>
+</body>
+</html>

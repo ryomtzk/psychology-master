@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>4-3 メトロポリス・ヘイスティングス法 | ベイズの階段</title>
+  <meta name="description" content="最初のMCMC。受理・棄却のルールを実装レベルで理解">
+  <script>
+    document.documentElement.dataset.theme =
+      localStorage.getItem("bayes-stairs-theme") ||
+      (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Noto+Serif+JP:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../assets/css/main.css">
+
+  <!-- KaTeX: 数式を使うページでは必ずこの3行を入れる -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+          onload="renderMathInElement(document.body, {delimiters: [
+            {left: '$$', right: '$$', display: true},
+            {left: '\\(', right: '\\)', display: false}
+          ]});"></script>
+</head>
+<body data-root="../../" data-level="4" data-lesson-id="4-3">
+
+  <header class="site-header">
+    <button class="sidebar-toggle" id="sidebar-toggle" aria-label="メニュー">☰</button>
+    <a class="brand" href="../../index.html">
+      <span class="brand-mark">階</span>
+      <span>ベイズの階段</span>
+    </a>
+    <div class="header-spacer"></div>
+    <div class="header-progress" id="header-progress"></div>
+    <button class="theme-toggle" id="theme-toggle" aria-label="テーマ切替">🌙</button>
+  </header>
+
+  <div class="layout">
+
+    <!-- サイドバー: main.js がカリキュラムから自動生成 -->
+    <aside class="sidebar"><nav id="sidebar-nav" aria-label="カリキュラム"></nav></aside>
+
+    <main class="lesson">
+
+      <nav class="breadcrumbs" aria-label="パンくず">
+        <a href="../../index.html">ホーム</a><span class="sep">›</span>
+        <a href="index.html">Level 4 計算ベイズ — MCMCと近似推論</a><span class="sep">›</span>
+        <span>4-3 メトロポリス・ヘイスティングス法</span>
+      </nav>
+
+      <header class="lesson-header">
+        <div class="lesson-meta">
+          <span class="level-badge">Level 4</span>
+          <span class="small">レッスン 4-3</span>
+        </div>
+        <h1>メトロポリス・ヘイスティングス法</h1>
+
+        <div class="lesson-goals">
+          <h2>このレッスンでできるようになること</h2>
+          <ul>
+            <li>提案・受理・棄却という3ステップで、事後分布からサンプルを集める仕組みを説明できる</li>
+            <li>受理確率 \( \min(1,\ \text{比}) \) を計算し、なぜ正規化定数が消えるのかを説明できる</li>
+            <li>メトロポリス法の擬似コードを読み、1ステップずつ何が起きているかを追える</li>
+          </ul>
+          <p class="prereq">前提: <a href="4-1.html">4-1 解析的に解けない事後分布</a> と <a href="4-2.html">4-2 モンテカルロ法の考え方</a> を読んでいること</p>
+        </div>
+      </header>
+
+      <!-- ▼▼▼ ここからレッスン本文 ▼▼▼ -->
+      <div class="lesson-body">
+
+        <h2>サンプルが欲しい、でも分布の形が分からない</h2>
+        <p>
+          <a href="4-2.html">前のレッスン</a>では、事後分布から<strong>サンプル</strong>（標本）をたくさん集められれば、平均も信用区間も全部ヒストグラムで分かる、という話をしました。
+        </p>
+        <p>
+          ところが困ったことが1つあります。サンプルを集めるには、ふつう「分布の形」が必要です。
+          でも<a href="4-1.html">4-1</a>で見たように、現実の事後分布は形が分からないことだらけです。
+          正規化定数（全体を足して1にするための割り算）が計算できないからです。
+        </p>
+        <p>
+          手元にあるのは「正規化していない事後分布」、つまり<strong>事前確率 × 尤度（ゆうど）</strong>の値だけ。
+          ある点での<em>高さの比</em>なら分かるけれど、面積が1になっているかは分からない。
+          この中途半端な情報だけで、どうやってサンプルを集めればいいのでしょうか。
+        </p>
+        <p>
+          それを可能にしたのが、今回学ぶ<span class="term">メトロポリス・ヘイスティングス法</span>（Metropolis–Hastings、略してMH法）です。
+          これは<span class="term">MCMC</span>（マルコフ連鎖モンテカルロ、Markov Chain Monte Carlo）と呼ばれる仲間の、いちばん基本的な一手です。
+        </p>
+
+        <div class="box box-intuition">
+          <div class="box-title">直感でつかむ</div>
+          <p>
+            霧の中で山登りをするところを想像してください。あなたは目で全体の地形を見ることはできません。
+            でも、いま立っている場所と、すぐ隣の場所の「高さ」を比べることだけはできます。
+          </p>
+          <p>
+            ルールはこうです。隣の場所をテキトーに指さして、そこへ行くか決めます。
+            <strong>隣のほうが高ければ、必ず行く。</strong>
+            隣のほうが低ければ、<strong>たまには行く（低いほどめったに行かない）</strong>。
+          </p>
+          <p>
+            これを延々とくり返すと、不思議なことに「足あと」が高い場所ほど密に、低い場所ほどまばらに残ります。
+            この足あとこそが、事後分布からのサンプルなのです。
+            高さの<em>比</em>しか使っていないので、正規化定数を知らなくても歩けます。
+          </p>
+        </div>
+
+        <h2>マルコフ連鎖 — 「今の場所」だけで次を決める</h2>
+        <p>
+          MH法は、点を1つずつジグザグに動かしながらサンプルを集めます。
+          このように「次の場所が<strong>今いる場所だけ</strong>で決まり、過去の道のりには依存しない」動き方を
+          <span class="term">マルコフ連鎖</span>（Markov chain）と呼びます。
+          すごろくで、今のマスからサイコロを振って進むのと同じイメージです。何マス目から来たかは関係ありません。
+        </p>
+        <p>
+          集めたい分布（今回は事後分布）を <span class="term">目標分布</span>（target distribution）と呼びます。
+          次に進む候補は <span class="term">提案分布</span>（proposal distribution）から選びます。
+          提案分布は「今の場所の近くをふらっと指さす」ためのもので、たとえば現在地を中心とした正規分布を使います。
+        </p>
+
+        <div class="box box-def">
+          <div class="box-title">定義 — 提案分布とランダムウォーク</div>
+          <p>
+            現在地を \( \theta \)（シータ）とします。次の候補 \( \theta' \)（シータ・ダッシュ）を、
+            \( \theta \) を中心とした正規分布などから引きます:
+            $$ \theta' \sim \mathcal{N}(\theta,\ \sigma^2) $$
+            \( \mathcal{N}(\theta, \sigma^2) \) は「平均 \( \theta \)、分散 \( \sigma^2 \) の正規分布」と読みます。
+            このように現在地のまわりをランダムにうろつく動き方を
+            <span class="term">ランダムウォーク</span>（random walk、酔っぱらいの千鳥足）と呼びます。
+          </p>
+        </div>
+
+        <h2>受理確率 — 行くか、とどまるか</h2>
+        <p>
+          候補 \( \theta' \) が決まったら、そこへ「引っ越す」か「今の場所にとどまる」かを決めます。
+          そのカギになるのが <span class="term">受理確率</span>（acceptance probability）です。
+          目標分布の高さを \( p(\theta) \) と書くとき、受理確率 \( A \) は次の式で計算します。
+        </p>
+
+        <div class="formula">
+          <span class="formula-label">受理確率（メトロポリス法・対称な提案のとき）</span>
+          $$ A = \min\!\left(1,\ \frac{p(\theta')}{p(\theta)}\right) $$
+          <div class="formula-parts">
+            <span class="part"><b>\( p(\theta') \)</b>: 候補地点での高さ（事前 × 尤度）</span>
+            <span class="part"><b>\( p(\theta) \)</b>: 現在地点での高さ（事前 × 尤度）</span>
+            <span class="part"><b>\( \min(1,\ \cdot) \)</b>: 比が1を超えても確率は1で頭打ち</span>
+          </div>
+        </div>
+
+        <p>
+          \( \min(1, x) \) は「1と \( x \) のうち小さいほう」という意味です。読み方は「ミニマム1とエックス」。
+          この式の気持ちを、2つの場合に分けて見てみましょう。
+        </p>
+        <ul>
+          <li><strong>候補のほうが高い</strong>（\( p(\theta') \ge p(\theta) \)）とき、比は1以上。\( \min \) で1に切られるので、受理確率は必ず1。<strong>つまり必ず引っ越します。</strong></li>
+          <li><strong>候補のほうが低い</strong>（\( p(\theta') < p(\theta) \)）とき、比は0〜1の値。たとえば比が0.3なら、確率0.3でだけ引っ越し、確率0.7では今の場所にとどまります。</li>
+        </ul>
+        <p>
+          引っ越すかどうかは、0〜1の一様乱数 \( u \) を1つ引いて、\( u \le A \) なら受理（引っ越す）、そうでなければ棄却（とどまる）と決めます。
+          <strong>棄却したときは、今いる場所をもう一度サンプルとして記録します。</strong>同じ場所に2回足あとが付く、というわけです。
+        </p>
+
+        <div class="box box-thm">
+          <div class="box-title">なぜ正規化定数が消えるのか</div>
+          <p>
+            正規化していない事後分布を \( \tilde p(\theta) \)（チルダ・ピー）、本当の事後分布を \( p(\theta) = \tilde p(\theta) / Z \) とします。
+            \( Z \) は正規化定数（求めるのが難しい厄介者）です。受理確率の比に代入すると:
+            $$ \frac{p(\theta')}{p(\theta)} = \frac{\tilde p(\theta')/Z}{\tilde p(\theta)/Z} = \frac{\tilde p(\theta')}{\tilde p(\theta)} $$
+            分母と分子の \( Z \) がきれいに約分されて消えます。
+            <strong>だからMH法は、正規化していない事後（事前 × 尤度）の値さえあれば動くのです。</strong>
+            これがMCMCの強さの核心です。
+          </p>
+        </div>
+
+        <h2>擬似コードで見る1ステップ</h2>
+        <p>
+          ここまでをコードにまとめます。<code>p_tilde(theta)</code> は「事前 × 尤度」、つまり正規化していない事後の高さを返す関数だと思ってください。
+        </p>
+
+        <pre><code>theta = 0.5            # 出発点（どこでもよい）
+samples = []           # 集めた足あとを入れる箱
+sigma  = 0.1           # 提案分布の歩幅
+
+for i in range(10000):
+    # 1) 提案: 今の場所の近くから候補を引く
+    theta_new = normal(mean=theta, sd=sigma)
+
+    # 2) 受理確率: 高さの比（Z は約分で消える）
+    ratio = p_tilde(theta_new) / p_tilde(theta)
+    A = min(1, ratio)
+
+    # 3) 受理 / 棄却: 一様乱数で決める
+    u = uniform(0, 1)
+    if u <= A:
+        theta = theta_new     # 受理 → 引っ越す
+    # else: 棄却 → theta はそのまま（とどまる）
+
+    # 4) 記録: 受理でも棄却でも、今の場所を必ず記録
+    samples.append(theta)</code></pre>
+
+        <p>
+          ポイントは <strong>4)の記録が if の外</strong>にあること。
+          棄却されたときは <code>theta</code> が変わらないまま、もう一度同じ値が <code>samples</code> に入ります。
+          こうして集まった <code>samples</code> のヒストグラムが、事後分布の形になります。
+        </p>
+
+        <div class="box box-warn">
+          <div class="box-title">つまずき注意</div>
+          <p>
+            「候補が低かったら捨てて、もう一度引き直す」のではありません。
+            候補が低くても確率 \( A \) で受理することがありますし、棄却したら<strong>今の場所を記録する</strong>のがルールです。
+            低い場所をときどき受理するからこそ、サンプルが分布全体に広がります。
+            毎回高いほうへ行くだけだと、ただの山登り（最頻値さがし）になってしまい、分布のすそ野が描けません。
+          </p>
+        </div>
+
+        <figure class="figure">
+          <svg viewBox="0 0 360 200" width="360" aria-label="メトロポリス法のジグザグな歩み">
+            <!-- 目標分布の山 -->
+            <path d="M10,175 C90,175 105,40 180,40 C255,40 270,175 350,175"
+                  fill="none" stroke="var(--level-color)" stroke-width="2.5" opacity="0.55"/>
+            <line x1="10" y1="175" x2="350" y2="175" stroke="var(--border)" stroke-width="2"/>
+            <!-- 足あと（高い所ほど密、低い所ほどまばら）: 山の線上に乗せた点 -->
+            <circle cx="40"  cy="172" r="3.2" fill="var(--level-color)"/>
+            <circle cx="80"  cy="160" r="3.2" fill="var(--level-color)"/>
+            <circle cx="110" cy="120" r="3.2" fill="var(--level-color)"/>
+            <circle cx="135" cy="78"  r="3.2" fill="var(--level-color)"/>
+            <circle cx="160" cy="50"  r="3.2" fill="var(--level-color)"/>
+            <circle cx="180" cy="40"  r="3.2" fill="var(--level-color)"/>
+            <circle cx="180" cy="40"  r="3.2" fill="var(--level-color)"/>
+            <circle cx="200" cy="50"  r="3.2" fill="var(--level-color)"/>
+            <circle cx="225" cy="78"  r="3.2" fill="var(--level-color)"/>
+            <circle cx="255" cy="125" r="3.2" fill="var(--level-color)"/>
+            <circle cx="300" cy="165" r="3.2" fill="var(--level-color)"/>
+            <!-- 中央付近のとどまり（棄却で同じ場所に重なる足あと）を強調 -->
+            <text x="186" y="32" font-size="10" fill="var(--text-muted)">●●（とどまり）</text>
+          </svg>
+          <figcaption>図1: 高い場所ほど足あとが密に、低い場所ほどまばらに残る。棄却で同じ点に重なることもある（中央の表示）。</figcaption>
+        </figure>
+
+        <div class="box box-ex">
+          <div class="box-title">例題 — 受理確率を計算する</div>
+          <p>
+            ある事後分布で、現在地の高さが \( \tilde p(\theta) = 4 \)、候補地の高さが \( \tilde p(\theta') = 1 \) でした。
+            （これは正規化していない値です。）受理確率 \( A \) を求め、引っ越す確率を答えましょう。
+          </p>
+          <p><strong>解</strong>: 比は
+            \( \dfrac{\tilde p(\theta')}{\tilde p(\theta)} = \dfrac{1}{4} = 0.25 \)。
+            候補のほうが低いので比は1未満です。よって
+            $$ A = \min(1,\ 0.25) = 0.25 $$
+            引っ越す確率は0.25。一様乱数 \( u \) を引いて \( u \le 0.25 \) なら候補へ移り、それ以外（確率0.75）は今の場所にとどまって、もう一度 \( \theta \) を記録します。
+          </p>
+          <p>
+            もし候補地の高さが \( \tilde p(\theta') = 9 \) だったら、比は \( 9/4 = 2.25 \) で1を超えます。
+            このとき \( A = \min(1,\ 2.25) = 1 \) なので、<strong>必ず引っ越します</strong>。
+          </p>
+        </div>
+
+        <div class="quiz" data-answer="b">
+          <p class="quiz-q">問: 候補地点の高さ \( \tilde p(\theta') \) が現在地の高さ \( \tilde p(\theta) \) より<strong>大きい</strong>とき、受理確率はいくつになりますか?</p>
+          <button class="quiz-option" data-key="a">比 \( \tilde p(\theta')/\tilde p(\theta) \) そのまま（1より大きい値）</button>
+          <button class="quiz-option" data-key="b">1（必ず受理する）</button>
+          <button class="quiz-option" data-key="c">0（必ず棄却する）</button>
+          <div class="quiz-explain"><p>候補が高いと比は1を超えますが、受理確率は \( \min(1,\ \text{比}) \) で1に切られます。確率が1を超えることはないからです。よって受理確率は1、つまり必ず引っ越します。高い場所へは迷わず進む、というのがMH法の基本姿勢です。</p></div>
+        </div>
+
+        <div class="quiz" data-answer="c">
+          <p class="quiz-q">問: メトロポリス法で受理確率の比を計算するとき、事後分布の正規化定数 \( Z \) はどうなりますか?</p>
+          <button class="quiz-option" data-key="a">あらかじめ積分して求めておく必要がある</button>
+          <button class="quiz-option" data-key="b">提案分布の分散から計算する</button>
+          <button class="quiz-option" data-key="c">分母と分子で約分されて消えるので、求める必要がない</button>
+          <div class="quiz-explain"><p>受理確率は2つの高さの<em>比</em>です。\( p(\theta')/p(\theta) = (\tilde p(\theta')/Z)\,/\,(\tilde p(\theta)/Z) \) のように \( Z \) が分母分子で打ち消し合います。だから正規化していない事後（事前 × 尤度）の値だけでMH法は動きます。これが、解析的に解けない事後分布でもサンプルを集められる理由です。</p></div>
+        </div>
+
+        <div class="quiz" data-answer="a">
+          <p class="quiz-q">問: 候補が棄却されたとき、サンプルとして記録するのはどれですか?</p>
+          <button class="quiz-option" data-key="a">今いる場所（\( \theta \)）をもう一度記録する</button>
+          <button class="quiz-option" data-key="b">何も記録せず、候補を引き直す</button>
+          <button class="quiz-option" data-key="c">棄却された候補（\( \theta' \)）を記録する</button>
+          <div class="quiz-explain"><p>棄却＝引っ越さない、なので位置は \( \theta \) のまま変わりません。そして毎ステップ必ず「今の場所」を記録するルールなので、同じ \( \theta \) がもう一度サンプルに入ります。引き直しでも、候補の記録でもありません。この「とどまりの記録」があるおかげで、高い場所のサンプルが正しく密になります。</p></div>
+        </div>
+
+        <div class="box box-practice">
+          <div class="box-title">演習1</div>
+          <p>
+            現在地の高さが \( \tilde p(\theta) = 2 \)、候補地の高さが \( \tilde p(\theta') = 5 \) のとき、受理確率 \( A \) を求めなさい。
+          </p>
+          <details class="answer">
+            <summary>解答を見る</summary>
+            <p>
+              比は \( \dfrac{5}{2} = 2.5 \) で1を超えます。よって \( A = \min(1,\ 2.5) = 1 \)。
+              候補のほうが高いので、必ず引っ越します。
+            </p>
+          </details>
+        </div>
+
+        <div class="box box-practice">
+          <div class="box-title">演習2</div>
+          <p>
+            現在地の高さが \( \tilde p(\theta) = 6 \)、候補地の高さが \( \tilde p(\theta') = 3 \) でした。
+            受理確率を求め、引いた一様乱数が \( u = 0.4 \) だったとき、引っ越すかとどまるかを答えなさい。
+          </p>
+          <details class="answer">
+            <summary>解答を見る</summary>
+            <p>
+              比は \( \dfrac{3}{6} = 0.5 \)。よって \( A = \min(1,\ 0.5) = 0.5 \)。
+              判定は \( u \le A \)、つまり \( 0.4 \le 0.5 \) が成り立つので<strong>受理</strong>。候補へ引っ越します。
+              （もし \( u = 0.7 \) なら \( 0.7 \le 0.5 \) は成り立たないので棄却で、今の場所にとどまり \( \theta = 6 \) の点をもう一度記録します。）
+            </p>
+          </details>
+        </div>
+
+        <div class="box box-practice">
+          <div class="box-title">演習3</div>
+          <p>
+            擬似コードで、サンプルを記録する <code>samples.append(theta)</code> の行を、もし <code>if u &lt;= A:</code> の<strong>中</strong>に入れてしまったら、結果はどう変わるでしょうか。言葉で説明しなさい。
+          </p>
+          <details class="answer">
+            <summary>解答を見る</summary>
+            <p>
+              受理されたときだけ記録され、棄却されたとき（とどまったとき）が記録されなくなります。
+              すると「とどまりの足あと」が抜け落ちて、高い場所のサンプルが本来より少なく数えられてしまいます。
+              結果として集まったヒストグラムは目標の事後分布からずれてしまいます。
+              記録は受理・棄却にかかわらず<strong>毎ステップ必ず</strong>行うのが正しいルールです。
+            </p>
+          </details>
+        </div>
+
+        <div class="box box-practice">
+          <div class="box-title">演習4</div>
+          <p>
+            提案分布の歩幅 \( \sigma \) を極端に大きくすると、候補はいつも現在地から遠い場所に飛びます。
+            遠くは目標分布の高さが低いことが多いです。このとき受理・棄却はどうなりがちか、考えなさい。
+          </p>
+          <details class="answer">
+            <summary>解答を見る</summary>
+            <p>
+              遠くの候補は高さ \( \tilde p(\theta') \) が小さくなりがちなので、比 \( \tilde p(\theta')/\tilde p(\theta) \) が小さくなり、棄却が増えます。
+              すると同じ場所にとどまり続け、なかなか動かなくなります。
+              逆に \( \sigma \) が小さすぎると、ちょこちょこ動くばかりで分布全体を回るのに時間がかかります。
+              ちょうどよい歩幅を選ぶことが、効率よくサンプルを集めるコツになります（細かい調整は後のレッスンで扱います）。
+            </p>
+          </details>
+        </div>
+
+        <h2>まとめ</h2>
+        <ul>
+          <li>メトロポリス・ヘイスティングス法は、点をジグザグに動かしながら事後分布のサンプルを集めるMCMCの基本手法です。</li>
+          <li>1ステップは「提案 → 受理確率を計算 → 受理/棄却 → 記録」の4つ。次の場所は今の場所だけで決まる（マルコフ連鎖）。</li>
+          <li>受理確率は \( A = \min\!\left(1,\ \tilde p(\theta')/\tilde p(\theta)\right) \)。高い候補へは必ず行き、低い候補へはたまに行きます。</li>
+          <li>比の中で正規化定数 \( Z \) が約分されて消えるので、<strong>正規化していない事後（事前 × 尤度）だけで動きます</strong>。</li>
+          <li>棄却したときは「今の場所」をもう一度記録するのが鉄則。これを忘れると分布がずれます。</li>
+        </ul>
+        <p>
+          これで、解けない事後分布からでもサンプルを集める道具が手に入りました。
+          次のレッスンでは、もっと賢く動く別のMCMCの考え方に進みます。一段ずつ上がっていきましょう。
+        </p>
+
+      </div>
+      <!-- ▲▲▲ レッスン本文ここまで ▲▲▲ -->
+
+      <div class="complete-area">
+        <button class="btn btn-level" id="complete-btn">このレッスンを完了にする</button>
+        <p class="complete-note">進捗はこのブラウザに保存されます</p>
+      </div>
+
+      <!-- 前後ナビ: main.js がカリキュラムから自動生成 -->
+      <nav class="lesson-nav" id="lesson-nav" aria-label="前後のレッスン"></nav>
+
+    </main>
+
+    <!-- ページ内目次: main.js が本文の h2 から自動生成 -->
+    <aside class="toc">
+      <div class="toc-title">このページの内容</div>
+      <nav id="toc"></nav>
+    </aside>
+
+  </div>
+
+  <footer class="site-footer">
+    <p>ベイズの階段 — 中学数学から最前線まで、一段ずつ。</p>
+  </footer>
+
+  <script src="../../assets/js/curriculum.js"></script>
+  <script src="../../assets/js/main.js"></script>
+</body>
+</html>

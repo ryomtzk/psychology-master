@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>3-4 正規分布のベイズ推定 | ベイズの階段</title>
+  <meta name="description" content="平均と分散の推定。精度(precision)という見方">
+  <script>
+    document.documentElement.dataset.theme =
+      localStorage.getItem("bayes-stairs-theme") ||
+      (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Noto+Serif+JP:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../assets/css/main.css">
+
+  <!-- KaTeX: 数式を使うページでは必ずこの3行を入れる -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+          onload="renderMathInElement(document.body, {delimiters: [
+            {left: '$$', right: '$$', display: true},
+            {left: '\\(', right: '\\)', display: false}
+          ]});"></script>
+</head>
+<body data-root="../../" data-level="3" data-lesson-id="3-4">
+
+  <header class="site-header">
+    <button class="sidebar-toggle" id="sidebar-toggle" aria-label="メニュー">☰</button>
+    <a class="brand" href="../../index.html">
+      <span class="brand-mark">階</span>
+      <span>ベイズの階段</span>
+    </a>
+    <div class="header-spacer"></div>
+    <div class="header-progress" id="header-progress"></div>
+    <button class="theme-toggle" id="theme-toggle" aria-label="テーマ切替">🌙</button>
+  </header>
+
+  <div class="layout">
+
+    <!-- サイドバー: main.js がカリキュラムから自動生成 -->
+    <aside class="sidebar"><nav id="sidebar-nav" aria-label="カリキュラム"></nav></aside>
+
+    <main class="lesson">
+
+      <nav class="breadcrumbs" aria-label="パンくず">
+        <a href="../../index.html">ホーム</a><span class="sep">›</span>
+        <a href="index.html">Level 3 ベイズ推定の基礎</a><span class="sep">›</span>
+        <span>3-4 正規分布のベイズ推定</span>
+      </nav>
+
+      <header class="lesson-header">
+        <div class="lesson-meta">
+          <span class="level-badge">Level 3</span>
+          <span class="small">レッスン 3-4</span>
+        </div>
+        <h1>正規分布のベイズ推定</h1>
+
+        <div class="lesson-goals">
+          <h2>このレッスンでできるようになること</h2>
+          <ul>
+            <li>分散が分かっている正規分布で、平均 \( \mu \) の事後分布を求められる</li>
+            <li>「精度＝1÷分散」という見方を使い、精度の足し算で事後分布を計算できる</li>
+            <li>事後平均が、事前とデータの「重みつき平均」になることを説明できる</li>
+          </ul>
+          <p class="prereq">前提: <a href="../level2/2-3.html">2-3 連続型の分布 — 一様分布と正規分布</a>・<a href="../level2/2-4.html">2-4 期待値・分散・標準偏差</a>・<a href="3-3.html">3-3 共役事前分布</a> を読んでいること</p>
+        </div>
+      </header>
+
+      <div class="lesson-body">
+
+        <h2>「だいたい何分?」を数で更新する</h2>
+        <p>あなたは毎朝、最寄り駅まで歩いています。かかる時間は日によって少しブレますが、平均すると「だいたい何分」かは決まっているはずです。その平均を知りたい、というのが今日のテーマです。</p>
+        <p>ここまでのレッスンでは、コインの表が出る割合のように、\(0\) から \(1\) のあいだの「確率」を推定してきました。<a href="3-2.html">3-2</a> のベータ・二項モデルがその代表です。でも今回知りたいのは「歩く時間の平均」。これは割合ではなく、何分という普通の数です。</p>
+        <p>こういう連続した量の平均を推定するときに活躍するのが、<a href="../level2/2-3.html">2-3</a> で学んだ<strong>正規分布</strong>です。今日は「正規分布を事前分布にして、データで平均を更新する」というベイズ推定を、最後まで通してやってみましょう。</p>
+
+        <div class="box box-intuition">
+          <div class="box-title">直感でつかむ</div>
+          <p>頭の中に「平均はこのへんかな」という山があるとします。これが事前分布です。山の頂上が「いちばんありそうな平均」、山のはばが「自信のなさ」です。</p>
+          <p>そこへ実際に歩いた時間というデータが入ってくると、山は動いて、しかも細くなります。位置はデータの方へ引っぱられ、はばはせまくなって自信が増します。この「動いて細くなる」を数で表すのが、今日のゴールです。</p>
+        </div>
+
+        <h2>今日の設定 — 分散は分かっているとする</h2>
+        <p>正規分布には2つのつまみがあります。中心を決める<strong>平均 \( \mu \)</strong>(ミュー)と、ばらつきを決める<strong>分散 \( \sigma^2 \)</strong>(シグマ2乗)です。読み方は \( \mu \) が「ミュー」、\( \sigma \) が「シグマ」です。</p>
+        <p>2つ同時に推定するのは少し大変なので、今日は<strong>分散 \( \sigma^2 \) は分かっている</strong>と決めて、平均 \( \mu \) だけを推定します。これを<span class="term">分散既知（ぶんさんきち）</span>の設定と呼びます。「ブレ幅はもう知っていて、中心の位置だけ知りたい」という状況です。</p>
+
+        <div class="box box-warn">
+          <div class="box-title">つまずき注意</div>
+          <p>「分散が分かっているなんて都合がよすぎる」と感じるかもしれません。たしかにその通りで、本当は分散も推定したいことが多いです。でも、まずは片方を固定したほうが仕組みがはっきり見えます。分散も一緒に推定する話は、もっと先のレベルで扱います。今は平均 \( \mu \) に集中しましょう。</p>
+        </div>
+
+        <h2>精度 — 分散をひっくり返した見方</h2>
+        <p>正規分布のベイズ推定は、分散 \( \sigma^2 \) のままだと式がごちゃつきます。そこで主役を交代させます。分散の逆数を考えるのです。</p>
+
+        <div class="box box-def">
+          <div class="box-title">定義 — 精度（せいど, precision）</div>
+          <p>分散 \( \sigma^2 \) の逆数を<span class="term">精度（せいど）</span>と呼び、よく \( \tau \)(タウ)で表します。</p>
+          $$ \tau = \frac{1}{\sigma^2} $$
+          <p>分散が小さい(ばらつきが少ない)ほど精度は大きく、分散が大きい(ばらつく)ほど精度は小さくなります。「どれだけ正確に分かっているか」を表す数だと思ってください。</p>
+        </div>
+
+        <div class="box box-intuition">
+          <div class="box-title">直感でつかむ</div>
+          <p>分散は「ぼやけ具合」、精度は「くっきり具合」です。同じことを裏返しに言っているだけです。</p>
+          <p>ぼやけた写真(分散が大きい)は情報が少なく、くっきりした写真(精度が大きい)は情報が多い。だから「情報の量」をそのまま数にしたのが精度だ、というイメージがしっくりきます。</p>
+        </div>
+
+        <h2>精度はたまっていく — 足し算でいい</h2>
+        <p>精度を主役にすると、いいことが起こります。<strong>精度は足し算でたまる</strong>のです。これが今日いちばん大事なところです。</p>
+        <p>事前分布が持っている精度を \( \tau_0 \)、データが持ち込む精度を \( \tau_d \) とします。すると事後分布の精度 \( \tau_n \) は、ただ足すだけで出ます。</p>
+
+        <div class="box box-thm">
+          <div class="box-title">公式 — 精度は足し算でたまる</div>
+          <p>事後分布の精度は、事前の精度とデータの精度の和になります。</p>
+          $$ \underbrace{\tau_n}_{\text{事後の精度}} = \underbrace{\tau_0}_{\text{事前の精度}} + \underbrace{\tau_d}_{\text{データの精度}} $$
+          <p>事前にも精度があり、そこへデータの精度が積み上がって、事後の精度はそれより必ず大きくなります。つまり、データを見れば見るほど自信が増す、ということです。</p>
+        </div>
+
+        <div class="box box-intuition">
+          <div class="box-title">直感でつかむ</div>
+          <p>精度を「持っている情報の量」だと思うと、足し算なのは自然です。最初から持っていた情報(事前)に、新しく手に入れた情報(データ)を足す。情報は重ねるほど増えるので、合計しているだけなのです。</p>
+          <p>ベイズ更新を「情報の足し算」として見られるのが、精度という見方の一番おいしいところです。分散のままだと、この足し算がぜんぜん見えません。</p>
+        </div>
+
+        <p>では、データの精度 \( \tau_d \) は何で決まるのでしょうか。データを \(n\) 個集めたとき、1個1個のばらつきは分散 \( \sigma^2 \)(精度 \( 1/\sigma^2 \))です。\(n\) 個の平均を取ると、その精度は \(n\) 倍になります。</p>
+
+        <div class="formula">
+          <span class="formula-label">データの精度</span>
+          $$ \tau_d = \frac{n}{\sigma^2} $$
+          <div class="formula-parts">
+            <span class="part"><b>\(n\)</b>: 集めたデータの個数</span>
+            <span class="part"><b>\(\sigma^2\)</b>: 1個あたりの分散（既知）</span>
+            <span class="part"><b>多いほど精度大</b>: データが増えると \( \tau_d \) も増える</span>
+          </div>
+        </div>
+
+        <p>データが増えると精度が増える。当たり前のようですが、これがきちんと式に出ているのが気持ちいいですね。1個より100個のほうが、平均をぐっと正確に言い当てられます。</p>
+
+        <h2>事後平均は「重みつき平均」</h2>
+        <p>精度で事後分布の「はば」は決まりました。残るは中心、つまり事後平均 \( \mu_n \) です。これは事前の中心とデータの中心を、<strong>精度を重みにして混ぜた平均</strong>になります。</p>
+
+        <div class="box box-def">
+          <div class="box-title">定義 — 加重平均（かじゅうへいきん）</div>
+          <p>いくつかの値を、ただ平均するのではなく、重要なものほど大きな「重み」をつけて混ぜた平均を<span class="term">加重平均（かじゅうへいきん）</span>と呼びます。重み \(w_1, w_2\) を持つ2つの値 \(a, b\) の加重平均は次の形です。</p>
+          $$ \frac{w_1\, a + w_2\, b}{w_1 + w_2} $$
+          <p>重みが大きい側に、混ぜた結果が引き寄せられます。</p>
+        </div>
+
+        <p>ベイズの事後平均は、まさにこの形です。重みには精度を使います。事前の中心を \( \mu_0 \)、データの平均(標本平均)を \( \bar{x} \)(エックスバー)とすると、次のようになります。</p>
+
+        <div class="formula">
+          <span class="formula-label">事後平均（加重平均）</span>
+          $$ \mu_n = \frac{\tau_0\, \mu_0 + \tau_d\, \bar{x}}{\tau_0 + \tau_d} $$
+          <div class="formula-parts">
+            <span class="part"><b>\(\mu_0\)</b>: 事前の中心（見る前の予想）</span>
+            <span class="part"><b>\(\bar{x}\)</b>: データの平均</span>
+            <span class="part"><b>重みは精度</b>: 精度が大きい側に引き寄せられる</span>
+          </div>
+        </div>
+
+        <p>記号 \( \bar{x} \) は『集めたデータを全部足して個数で割った平均』のことで、「エックスバー」と読みます。</p>
+
+        <div class="box box-intuition">
+          <div class="box-title">直感でつかむ</div>
+          <p>事前への自信(\( \tau_0 \))が強ければ、事後平均は事前の予想 \( \mu_0 \) に近いまま。データの精度(\( \tau_d \))が強ければ、事後平均はデータ \( \bar{x} \) のほうへぐっと寄ります。</p>
+          <p>声の大きいほうの意見が通る、と思うと分かりやすいです。ここでの「声の大きさ」が精度なのです。データをたくさん集めれば、データの声がどんどん大きくなり、事前の予想はかすんでいきます。</p>
+        </div>
+
+        <h2>まとめると、たった3ステップ</h2>
+        <p>正規分布(分散既知)のベイズ推定は、結局この3つで終わります。事前分布が正規分布なら、事後分布もまた正規分布になります。これは <a href="3-3.html">3-3</a> で学んだ<span class="term">共役事前分布（きょうやくじぜんぶんぷ）</span>の性質で、正規分布は自分自身に対して共役です。</p>
+
+        <div class="box box-thm">
+          <div class="box-title">公式 — 正規・正規モデルの更新（分散既知）</div>
+          <p>事前分布を平均 \( \mu_0 \)・精度 \( \tau_0 \) の正規分布とし、分散 \( \sigma^2 \) のデータを \(n\) 個観測して標本平均 \( \bar{x} \) を得たとします。データの精度を \( \tau_d = n/\sigma^2 \) とおくと、事後分布も正規分布で、次のようになります。</p>
+          <p><b>① 事後の精度</b>(足すだけ):</p>
+          $$ \tau_n = \tau_0 + \tau_d $$
+          <p><b>② 事後の平均</b>(重みつき平均):</p>
+          $$ \mu_n = \frac{\tau_0\, \mu_0 + \tau_d\, \bar{x}}{\tau_n} $$
+          <p><b>③ 事後の分散</b>(精度をひっくり返すだけ):</p>
+          $$ \sigma_n^2 = \frac{1}{\tau_n} $$
+        </div>
+
+        <p>精度の世界では足し算と重みつき平均だけ。分散に戻したいときは、最後に逆数を取るだけ。これだけで正規分布のベイズ更新が回ります。</p>
+
+        <figure class="figure">
+          <svg viewBox="0 0 380 230" width="380" aria-label="事前・尤度・事後の3つの正規分布">
+            <!-- 横軸 -->
+            <line x1="20" y1="185" x2="360" y2="185" stroke="var(--border)" stroke-width="2"/>
+            <text x="350" y="205" text-anchor="end" font-size="11" fill="var(--text-muted)">平均 μ</text>
+
+            <!-- 事前分布: 中心が左寄り、はばが広い(低くなだらか) -->
+            <path d="M30,185 C90,185 100,120 140,120 C180,120 190,185 250,185"
+                  fill="none" stroke="var(--text-muted)" stroke-width="2.5" stroke-dasharray="5 4"/>
+            <line x1="140" y1="120" x2="140" y2="185" stroke="var(--text-muted)" stroke-width="1" stroke-dasharray="3 3"/>
+            <text x="140" y="200" text-anchor="middle" font-size="11" fill="var(--text-muted)">μ₀</text>
+            <text x="118" y="112" text-anchor="end" font-size="11" fill="var(--text-muted)">事前</text>
+
+            <!-- 尤度(データ): 中心が右寄り、ややシャープ -->
+            <path d="M170,185 C210,185 218,95 250,95 C282,95 290,185 330,185"
+                  fill="none" stroke="var(--border)" stroke-width="2.5" stroke-dasharray="2 4"/>
+            <line x1="250" y1="95" x2="250" y2="185" stroke="var(--border)" stroke-width="1" stroke-dasharray="3 3"/>
+            <text x="250" y="200" text-anchor="middle" font-size="11" fill="var(--text-muted)">x̄</text>
+            <text x="272" y="90" text-anchor="start" font-size="11" fill="var(--text-muted)">データ</text>
+
+            <!-- 事後分布: 2つの間、いちばん細く高い(レベル色で強調) -->
+            <path d="M120,185 C170,185 180,40 200,40 C220,40 230,185 280,185"
+                  fill="none" stroke="var(--level-color)" stroke-width="3.5"/>
+            <line x1="200" y1="40" x2="200" y2="185" stroke="var(--level-color)" stroke-width="1.5" stroke-dasharray="3 3"/>
+            <text x="200" y="200" text-anchor="middle" font-size="11" fill="var(--level-color)" font-weight="700">μₙ</text>
+            <text x="210" y="34" text-anchor="start" font-size="11" fill="var(--level-color)" font-weight="700">事後</text>
+          </svg>
+          <figcaption>図1: 事前分布(点線・なだらか)とデータ(細点線・右寄り)を合わせると、事後分布(太線)は両者のあいだに位置し、はばがいちばんせまくなります。中心 \( \mu_n \) は精度の大きいデータ側へ少し寄っています。</figcaption>
+        </figure>
+
+        <h2>例題でなぞってみる</h2>
+
+        <div class="box box-ex">
+          <div class="box-title">例題</div>
+          <p>駅まで歩く時間を分単位で考えます。1日のブレは分散 \( \sigma^2 = 4 \)(精度 \( 1/4 \))と分かっているとします。</p>
+          <p>事前分布は「平均は \( \mu_0 = 10 \) 分くらいだろう、ただしそこそこ自信がない」として、精度 \( \tau_0 = 0.25 \)(分散 \(4\))の正規分布にします。</p>
+          <p>ある朝、実際に歩いて \( 13 \) 分かかりました。データは1個(\(n = 1\)、\( \bar{x} = 13 \))です。事後分布の平均と分散を求めましょう。</p>
+
+          <p><strong>解</strong>:</p>
+          <p>① データの精度を出します。\(n = 1\)、\( \sigma^2 = 4 \) なので</p>
+          $$ \tau_d = \frac{n}{\sigma^2} = \frac{1}{4} = 0.25 $$
+          <p>② 事後の精度は足し算です。</p>
+          $$ \tau_n = \tau_0 + \tau_d = 0.25 + 0.25 = 0.5 $$
+          <p>③ 事後平均は精度を重みにした加重平均です。</p>
+          $$ \mu_n = \frac{0.25 \times 10 + 0.25 \times 13}{0.5} = \frac{2.5 + 3.25}{0.5} = \frac{5.75}{0.5} = 11.5 $$
+          <p>④ 事後の分散は精度の逆数です。</p>
+          $$ \sigma_n^2 = \frac{1}{\tau_n} = \frac{1}{0.5} = 2 $$
+          <p><strong>答え</strong>: 事後分布は、平均 \( 11.5 \) 分・分散 \( 2 \) の正規分布です。</p>
+          <p>事前の \(10\) 分とデータの \(13\) 分のちょうど真ん中(\(11.5\))になりました。今回は事前とデータの精度がたまたま等しい(\(0.25\) と \(0.25\))ので、重みが五分五分になり、ぴったり真ん中に来たのです。そして分散は \(4\) から \(2\) に減り、自信が増しています。</p>
+        </div>
+
+        <div class="box box-warn">
+          <div class="box-title">つまずき注意</div>
+          <p>事後平均が「いつも真ん中」になるわけではありません。今回は重みが等しかっただけです。たとえばデータを \(9\) 個に増やすと \( \tau_d = 9/4 = 2.25 \) になり、事前の \(0.25\) より重みがずっと大きくなります。すると事後平均はデータ \( \bar{x} \) のほうへ大きく寄ります。重みの比を見て判断するクセをつけましょう。</p>
+        </div>
+
+        <h2>理解度チェック</h2>
+
+        <div class="quiz" data-answer="b">
+          <p class="quiz-q">問1: 精度 \( \tau \) と分散 \( \sigma^2 \) の関係として正しいものはどれですか?</p>
+          <button class="quiz-option" data-key="a">精度は分散と同じ値である</button>
+          <button class="quiz-option" data-key="b">精度は分散の逆数で、分散が小さいほど精度は大きい</button>
+          <button class="quiz-option" data-key="c">精度は分散の2乗で、分散が大きいほど精度も大きい</button>
+          <div class="quiz-explain"><p>精度は \( \tau = 1/\sigma^2 \) と定義されます。分散(ばらつき)が小さいほど、逆数である精度は大きくなります。「ばらつきが少ない＝くっきり分かっている＝精度が高い」と覚えましょう。</p></div>
+        </div>
+
+        <div class="quiz" data-answer="c">
+          <p class="quiz-q">問2: 事前の精度が \( \tau_0 = 1 \)、データの精度が \( \tau_d = 3 \) のとき、事後分布の精度 \( \tau_n \) はいくつですか?</p>
+          <button class="quiz-option" data-key="a">3（大きいほうを取る）</button>
+          <button class="quiz-option" data-key="b">2（平均を取る）</button>
+          <button class="quiz-option" data-key="c">4（足し算でたまる）</button>
+          <div class="quiz-explain"><p>精度は足し算でたまります。\( \tau_n = \tau_0 + \tau_d = 1 + 3 = 4 \) です。事前にもデータにも情報があり、それを足し合わせるので、事後の精度はどちらより必ず大きくなります。</p></div>
+        </div>
+
+        <div class="quiz" data-answer="a">
+          <p class="quiz-q">問3: 事前の中心 \( \mu_0 = 10 \)(精度 \(1\))、データ平均 \( \bar{x} = 20 \)(精度 \(3\))のとき、事後平均 \( \mu_n \) はどのあたりに来ますか?</p>
+          <button class="quiz-option" data-key="a">中点(15)より、データ寄りの 17.5</button>
+          <button class="quiz-option" data-key="b">ちょうど中点の 15</button>
+          <button class="quiz-option" data-key="c">事前寄りの 12.5</button>
+          <div class="quiz-explain"><p>精度を重みにした加重平均なので、\( \mu_n = \dfrac{1 \times 10 + 3 \times 20}{1 + 3} = \dfrac{10 + 60}{4} = \dfrac{70}{4} = 17.5 \) です。データの精度(\(3\))が事前(\(1\))より大きいので、事後平均はデータ \( \bar{x} = 20 \) のほうへ引き寄せられます。</p></div>
+        </div>
+
+        <h2>演習</h2>
+
+        <div class="box box-practice">
+          <div class="box-title">演習1</div>
+          <p>分散 \( \sigma^2 = 5 \) のデータを \(n = 10\) 個集めました。このデータが持ち込む精度 \( \tau_d \) を求めなさい。</p>
+          <details class="answer">
+            <summary>解答を見る</summary>
+            <p>データの精度は \( \tau_d = \dfrac{n}{\sigma^2} = \dfrac{10}{5} = 2 \) です。データを多く集めるほど(\(n\) が大きいほど)、持ち込む精度が大きくなることが分かります。</p>
+          </details>
+        </div>
+
+        <div class="box box-practice">
+          <div class="box-title">演習2</div>
+          <p>事前分布の精度が \( \tau_0 = 0.5 \)、データの精度が \( \tau_d = 1.5 \) でした。事後分布の精度 \( \tau_n \) と分散 \( \sigma_n^2 \) を求めなさい。</p>
+          <details class="answer">
+            <summary>解答を見る</summary>
+            <p>精度は足し算なので \( \tau_n = 0.5 + 1.5 = 2 \) です。分散はその逆数で、\( \sigma_n^2 = \dfrac{1}{\tau_n} = \dfrac{1}{2} = 0.5 \) です。事前の分散(\( 1/0.5 = 2 \))より小さくなり、自信が増したことが分かります。</p>
+          </details>
+        </div>
+
+        <div class="box box-practice">
+          <div class="box-title">演習3</div>
+          <p>事前の中心 \( \mu_0 = 50 \)(精度 \( \tau_0 = 1 \))としたところ、データ平均 \( \bar{x} = 60 \)(精度 \( \tau_d = 4 \))が得られました。事後平均 \( \mu_n \) を求めなさい。</p>
+          <details class="answer">
+            <summary>解答を見る</summary>
+            <p>精度を重みにした加重平均です。
+            $$ \mu_n = \frac{\tau_0\, \mu_0 + \tau_d\, \bar{x}}{\tau_0 + \tau_d} = \frac{1 \times 50 + 4 \times 60}{1 + 4} = \frac{50 + 240}{5} = \frac{290}{5} = 58 $$
+            データの精度(\(4\))が事前(\(1\))の4倍大きいので、事後平均 \(58\) は中点(\(55\))よりデータ側に寄っています。</p>
+          </details>
+        </div>
+
+        <div class="box box-practice">
+          <div class="box-title">演習4</div>
+          <p>分散 \( \sigma^2 = 9 \) と分かっています。事前分布を「平均 \( \mu_0 = 100 \)、精度 \( \tau_0 = 1 \)」の正規分布とし、データを \(n = 9\) 個集めたところ標本平均は \( \bar{x} = 109 \) でした。事後分布の平均と分散を求めなさい。</p>
+          <details class="answer">
+            <summary>解答を見る</summary>
+            <p>まずデータの精度を出します。\( \tau_d = \dfrac{n}{\sigma^2} = \dfrac{9}{9} = 1 \)。</p>
+            <p>事後の精度は \( \tau_n = \tau_0 + \tau_d = 1 + 1 = 2 \) です。</p>
+            <p>事後平均は
+            $$ \mu_n = \frac{1 \times 100 + 1 \times 109}{2} = \frac{209}{2} = 104.5 $$
+            となります。事前とデータの精度が等しい(どちらも \(1\))ので、ちょうど真ん中の \(104.5\) になりました。</p>
+            <p>事後分散は \( \sigma_n^2 = \dfrac{1}{\tau_n} = \dfrac{1}{2} = 0.5 \) です。事前分散(\(1\))より小さく、自信が増しています。</p>
+          </details>
+        </div>
+
+        <h2>まとめ</h2>
+        <ul>
+          <li>分散が分かっている正規分布で平均 \( \mu \) を推定するとき、事前分布を正規分布にすると<span class="term">事後分布も正規分布</span>になります(正規分布は自分自身に共役)。</li>
+          <li><span class="term">精度</span>は分散の逆数 \( \tau = 1/\sigma^2 \)。「どれだけくっきり分かっているか＝情報の量」を表します。</li>
+          <li>事後の精度は<strong>足し算でたまる</strong>: \( \tau_n = \tau_0 + \tau_d \)。データの精度は \( \tau_d = n/\sigma^2 \) で、データが増えるほど大きくなります。</li>
+          <li>事後平均は精度を重みにした<strong>加重平均</strong>: \( \mu_n = \dfrac{\tau_0 \mu_0 + \tau_d \bar{x}}{\tau_0 + \tau_d} \)。精度の大きいほうへ引き寄せられます。</li>
+          <li>事後分散は精度の逆数 \( \sigma_n^2 = 1/\tau_n \)。データを見るたびに、必ず分散は小さく(自信は強く)なります。</li>
+        </ul>
+        <p>割合のベータ・二項、そして連続量の正規・正規。これで「ベイズ推定の基礎」のひと通りが見えてきました。事前とデータを精度で混ぜる、という発想は、このあと出てくるもっと複雑なモデルでも何度も顔を出します。次のレベルでは、計算では解ききれない事後分布をコンピュータで近づける方法へ進んでいきましょう。</p>
+
+      </div>
+
+      <div class="complete-area">
+        <button class="btn btn-level" id="complete-btn">このレッスンを完了にする</button>
+        <p class="complete-note">進捗はこのブラウザに保存されます</p>
+      </div>
+
+      <!-- 前後ナビ: main.js がカリキュラムから自動生成 -->
+      <nav class="lesson-nav" id="lesson-nav" aria-label="前後のレッスン"></nav>
+
+    </main>
+
+    <!-- ページ内目次: main.js が本文の h2 から自動生成 -->
+    <aside class="toc">
+      <div class="toc-title">このページの内容</div>
+      <nav id="toc"></nav>
+    </aside>
+
+  </div>
+
+  <footer class="site-footer">
+    <p>ベイズの階段 — 中学数学から最前線まで、一段ずつ。</p>
+  </footer>
+
+  <script src="../../assets/js/curriculum.js"></script>
+  <script src="../../assets/js/main.js"></script>
+</body>
+</html>

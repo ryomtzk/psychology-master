@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>2-1 確率変数と確率分布 | ベイズの階段</title>
+  <meta name="description" content="結果に数を割り当て、確率の全体像をグラフで見る">
+  <script>
+    document.documentElement.dataset.theme =
+      localStorage.getItem("bayes-stairs-theme") ||
+      (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Noto+Serif+JP:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../../assets/css/main.css">
+
+  <!-- KaTeX: 数式を使うページでは必ずこの3行を入れる -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+          onload="renderMathInElement(document.body, {delimiters: [
+            {left: '$$', right: '$$', display: true},
+            {left: '\\(', right: '\\)', display: false}
+          ]});"></script>
+</head>
+<body data-root="../../" data-level="2" data-lesson-id="2-1">
+
+  <header class="site-header">
+    <button class="sidebar-toggle" id="sidebar-toggle" aria-label="メニュー">☰</button>
+    <a class="brand" href="../../index.html">
+      <span class="brand-mark">階</span>
+      <span>ベイズの階段</span>
+    </a>
+    <div class="header-spacer"></div>
+    <div class="header-progress" id="header-progress"></div>
+    <button class="theme-toggle" id="theme-toggle" aria-label="テーマ切替">🌙</button>
+  </header>
+
+  <div class="layout">
+
+    <!-- サイドバー: main.js がカリキュラムから自動生成 -->
+    <aside class="sidebar"><nav id="sidebar-nav" aria-label="カリキュラム"></nav></aside>
+
+    <main class="lesson">
+
+      <nav class="breadcrumbs" aria-label="パンくず">
+        <a href="../../index.html">ホーム</a><span class="sep">›</span>
+        <a href="index.html">Level 2 確率分布と尤度</a><span class="sep">›</span>
+        <span>2-1 確率変数と確率分布</span>
+      </nav>
+
+      <header class="lesson-header">
+        <div class="lesson-meta">
+          <span class="level-badge">Level 2</span>
+          <span class="small">レッスン 2-1</span>
+        </div>
+        <h1>確率変数と確率分布</h1>
+
+        <div class="lesson-goals">
+          <h2>このレッスンでできるようになること</h2>
+          <ul>
+            <li>身のまわりの「結果」に数を割り当てて、確率変数として表せる</li>
+            <li>確率分布を表と棒グラフの両方で読み書きできる</li>
+            <li>確率の合計が必ず1になることを使って、抜けた確率を求められる</li>
+          </ul>
+          <p class="prereq">前提: <a href="../level0/0-1.html">0-1 確率ってなんだろう</a> と <a href="../level1/1-4.html">1-4 事前確率・尤度・事後確率</a> を読んでいること</p>
+        </div>
+      </header>
+
+      <div class="lesson-body">
+
+        <h2>サイコロの「出た目」を数として扱う</h2>
+        <p>サイコロを1回振ると、1から6のどれかが出ます。このとき「出た目」は、振ってみるまでわからない数です。でも、出る可能性のある値と、それぞれの起こりやすさは前もって決まっています。</p>
+        <p>これまでは「3が出る確率は \( \frac{1}{6} \)」のように、出来事ひとつずつを見てきました。ここからは少し視点を変えます。「出た目」という<strong>ひとつの数</strong>に注目し、その数が取りうる値の全体を、まとめて眺めてみましょう。</p>
+        <p>このまとめ方を覚えると、確率を一覧表や棒グラフで一望できます。あとのレッスンで尤度（ゆうど）を計算するときにも、この見方がそのまま土台になります。</p>
+
+        <div class="box box-intuition">
+          <div class="box-title">直感でつかむ</div>
+          <p>くじ引きの箱を想像してください。箱の中には「当たり」「はずれ」のくじが入っています。箱を1回ゆさぶって1枚引く前から、中身の割合は決まっています。</p>
+          <p><strong>確率変数</strong>は「引いた結果に付けた数」、<strong>確率分布</strong>は「箱の中身の割合の一覧」です。片方は1回の結果、もう片方は全体の地図、と覚えると見通しがよくなります。</p>
+        </div>
+
+        <h2>確率変数 — 結果に数を割り当てる</h2>
+        <p>まずは「結果を数にする」という発想からです。</p>
+
+        <div class="box box-def">
+          <div class="box-title">定義 — 確率変数（かくりつへんすう）</div>
+          <p><span class="term">確率変数</span>とは、試行の結果ひとつひとつに数を割り当てたものです。結果が出るまで値が定まらないので「変数」と呼びます。ふつう大文字 \(X\) で表します。</p>
+          <p>たとえばサイコロを振る試行で \(X\) を「出た目」とすると、\(X\) は \(1,2,3,4,5,6\) のどれかの値を取ります。</p>
+        </div>
+
+        <p>記号 \( P(X = 3) \) は『\(X\) が \(3\) という値を取る確率』と読みます。サイコロなら \( P(X = 3) = \frac{1}{6} \) です。</p>
+        <p>このレッスンで扱うのは、値がとびとびに数えられる確率変数です。これを<span class="term">離散（りさん）確率変数</span>と呼びます。サイコロの目、コインの表の枚数、迷惑メールの件数などが当てはまります。</p>
+
+        <div class="box box-warn">
+          <div class="box-title">つまずき注意</div>
+          <p>割り当てる数は、自分で自由に決めてかまいません。コイン投げで「表」を \(X = 1\)、「裏」を \(X = 0\) と決めるのは、よくある決め方のひとつです。大事なのは、どの結果にどの数を割り当てたかを、最初にはっきり決めておくことです。</p>
+        </div>
+
+        <h2>確率分布 — 値と確率の対応</h2>
+        <p>確率変数が決まったら、次はその値ごとに確率を並べます。これが確率分布です。</p>
+
+        <div class="box box-def">
+          <div class="box-title">定義 — 確率分布と確率質量関数</div>
+          <p><span class="term">確率分布</span>とは、確率変数が取りうる値と、その値が出る確率との対応のことです。離散確率変数では、各値 \(x\) に確率を返す関数</p>
+          $$ p(x) = P(X = x) $$
+          <p>を<span class="term">確率質量関数（かくりつしつりょうかんすう）</span>と呼びます。\( p(x) \) は『\(X\) が値 \(x\) を取る確率』を表します。</p>
+        </div>
+
+        <p>言葉だけだとかたく感じますね。サイコロの確率分布を、まず表にしてみましょう。</p>
+
+        <table>
+          <thead>
+            <tr><th>出た目 \(x\)</th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>確率 \( p(x) \)</td><td>1/6</td><td>1/6</td><td>1/6</td><td>1/6</td><td>1/6</td><td>1/6</td></tr>
+          </tbody>
+        </table>
+
+        <p>この表が、サイコロの確率分布そのものです。上の行が「取りうる値」、下の行が「その確率」。ふたつをセットで眺めるのがコツです。</p>
+
+        <h2>棒グラフで全体像を見る</h2>
+        <p>表は正確ですが、起こりやすさの違いがひと目では伝わりません。そこで棒グラフの出番です。横に値を並べ、縦に確率を取って棒を立てます。</p>
+
+        <figure class="figure">
+          <svg viewBox="0 0 360 220" width="360" aria-label="サイコロの確率分布の棒グラフ">
+            <!-- 軸 -->
+            <line x1="40" y1="180" x2="340" y2="180" stroke="var(--border)" stroke-width="2"/>
+            <line x1="40" y1="30" x2="40" y2="180" stroke="var(--border)" stroke-width="2"/>
+            <!-- p=1/6 のおおよその高さの目安線 -->
+            <line x1="40" y1="100" x2="340" y2="100" stroke="var(--border)" stroke-width="1" stroke-dasharray="4 4"/>
+            <text x="34" y="104" text-anchor="end" font-size="11" fill="var(--text-muted)">1/6</text>
+            <text x="34" y="184" text-anchor="end" font-size="11" fill="var(--text-muted)">0</text>
+            <!-- 棒 (6本とも同じ高さ) -->
+            <rect x="58"  y="100" width="30" height="80" fill="var(--level-color)"/>
+            <rect x="103" y="100" width="30" height="80" fill="var(--level-color)"/>
+            <rect x="148" y="100" width="30" height="80" fill="var(--level-color)"/>
+            <rect x="193" y="100" width="30" height="80" fill="var(--level-color)"/>
+            <rect x="238" y="100" width="30" height="80" fill="var(--level-color)"/>
+            <rect x="283" y="100" width="30" height="80" fill="var(--level-color)"/>
+            <!-- 値ラベル -->
+            <text x="73"  y="196" text-anchor="middle" font-size="12" fill="var(--text-muted)">1</text>
+            <text x="118" y="196" text-anchor="middle" font-size="12" fill="var(--text-muted)">2</text>
+            <text x="163" y="196" text-anchor="middle" font-size="12" fill="var(--text-muted)">3</text>
+            <text x="208" y="196" text-anchor="middle" font-size="12" fill="var(--text-muted)">4</text>
+            <text x="253" y="196" text-anchor="middle" font-size="12" fill="var(--text-muted)">5</text>
+            <text x="298" y="196" text-anchor="middle" font-size="12" fill="var(--text-muted)">6</text>
+            <text x="190" y="216" text-anchor="middle" font-size="11" fill="var(--text-muted)">出た目 x</text>
+          </svg>
+          <figcaption>図1: サイコロの確率分布。6本の棒がすべて同じ高さ（\( \frac{1}{6} \)）で、どの目も同じくらい出やすいことが見てとれます。</figcaption>
+        </figure>
+
+        <p>サイコロは6本の棒が同じ高さでした。でも世の中の多くの分布は、棒の高さがバラバラです。たとえばコインを2回投げて表が出た回数 \(X\) を考えると、棒の高さは均等になりません。次の図を見てください。</p>
+
+        <figure class="figure">
+          <svg viewBox="0 0 360 220" width="360" aria-label="コイン2回投げで表が出た回数の確率分布">
+            <line x1="50" y1="180" x2="340" y2="180" stroke="var(--border)" stroke-width="2"/>
+            <line x1="50" y1="20" x2="50" y2="180" stroke="var(--border)" stroke-width="2"/>
+            <!-- 目盛り: 0, 1/4, 1/2 -->
+            <line x1="50" y1="180" x2="340" y2="180" stroke="var(--border)" stroke-width="1"/>
+            <line x1="50" y1="100" x2="340" y2="100" stroke="var(--border)" stroke-width="1" stroke-dasharray="4 4"/>
+            <line x1="50" y1="20"  x2="340" y2="20"  stroke="var(--border)" stroke-width="1" stroke-dasharray="4 4"/>
+            <text x="44" y="184" text-anchor="end" font-size="11" fill="var(--text-muted)">0</text>
+            <text x="44" y="104" text-anchor="end" font-size="11" fill="var(--text-muted)">1/4</text>
+            <text x="44" y="24"  text-anchor="end" font-size="11" fill="var(--text-muted)">1/2</text>
+            <!-- 表0回: 1/4 -->
+            <rect x="90"  y="100" width="50" height="80"  fill="var(--level-color)"/>
+            <!-- 表1回: 1/2 -->
+            <rect x="170" y="20"  width="50" height="160" fill="var(--level-color)"/>
+            <!-- 表2回: 1/4 -->
+            <rect x="250" y="100" width="50" height="80"  fill="var(--level-color)"/>
+            <text x="115" y="196" text-anchor="middle" font-size="12" fill="var(--text-muted)">0回</text>
+            <text x="195" y="196" text-anchor="middle" font-size="12" fill="var(--text-muted)">1回</text>
+            <text x="275" y="196" text-anchor="middle" font-size="12" fill="var(--text-muted)">2回</text>
+            <text x="195" y="216" text-anchor="middle" font-size="11" fill="var(--text-muted)">表が出た回数 x</text>
+          </svg>
+          <figcaption>図2: コインを2回投げて表が出た回数の確率分布。真ん中の「1回」が出やすく、両端は出にくい。棒の高さの違いが、起こりやすさの違いを表します。</figcaption>
+        </figure>
+
+        <p>真ん中の棒がいちばん高いのは、表が1回というパターンが「表・裏」と「裏・表」の2通りあるからです。場合の数の数え方が、そのまま棒の高さに効いてくるわけですね。</p>
+
+        <h2>確率の合計はいつも1</h2>
+        <p>確率分布には、絶対に外せないルールがひとつあります。</p>
+
+        <div class="box box-thm">
+          <div class="box-title">公式 — 確率の総和は1</div>
+          <p>離散確率変数 \(X\) の取りうる値すべてについて確率を足すと、合計は必ず \(1\) になります。</p>
+          $$ \sum_{x} p(x) = 1 $$
+          <p>左辺の \( \sum_x \)（シグマ）は『\(x\) が取りうる値すべてについて足し合わせる』という意味です。記号の読み方は <a href="../../appendix/a-1.html">付録 a-1 シグマ記法</a> でくわしく扱います。</p>
+        </div>
+
+        <p>当たり前に思えるかもしれませんが、とても役に立ちます。なぜなら「どれかの値は必ず出る」からです。起こりうる場合をすべて足せば、もれなく全体になります。だから合計は \(1\)、つまり \(100\%\) です。</p>
+        <p>このルールがあると、確率がひとつ抜けていても埋められます。残り全部を足して、\(1\) から引けばよいのです。</p>
+
+        <div class="box box-ex">
+          <div class="box-title">例題</div>
+          <p>あるカフェの「本日のくじ」は、出る景品 \(X\) の確率分布が次のように決まっています。ただし「ドリンク無料」の確率だけ消えてしまいました。これを求めましょう。</p>
+          <table>
+            <thead>
+              <tr><th>景品 \(x\)</th><th>はずれ</th><th>クッキー</th><th>ドリンク無料</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>確率 \( p(x) \)</td><td>0.5</td><td>0.3</td><td>?</td></tr>
+            </tbody>
+          </table>
+          <p><strong>解</strong>: 確率の合計は \(1\) なので、次の式が成り立ちます。</p>
+          $$ 0.5 + 0.3 + P(\text{ドリンク無料}) = 1 $$
+          <p>左の2つを足すと \(0.8\) です。よって</p>
+          $$ P(\text{ドリンク無料}) = 1 - 0.8 = 0.2 $$
+          <p>「ドリンク無料」の確率は \(0.2\)、つまり \(20\%\) です。表の \(?\) には \(0.2\) が入ります。</p>
+        </div>
+
+        <div class="box box-intuition">
+          <div class="box-title">直感でつかむ</div>
+          <p>合計が1というルールは、ベイズでも大活躍します。<a href="../level1/1-4.html">1-4</a> で出てきた事後確率も、すべての仮説について足すと \(1\) になります。「全部足せば1」は、確率の世界の共通ルールだと思っておきましょう。</p>
+        </div>
+
+        <h2>つぎの一歩 — 分布をひとつの数で代表する</h2>
+        <p>棒グラフで全体像はつかめました。でも「結局、平均してどれくらいの値が出るの?」と聞かれたら、どう答えましょうか。</p>
+        <p>そこで使うのが<span class="term">期待値（きたいち）</span>です。期待値は、確率分布をたったひとつの数で代表させた「重みつきの平均」です。サイコロなら、長く振り続けたときの目の平均が期待値にあたります。</p>
+        <p>くわしい計算方法は <a href="2-4.html">2-4 期待値・分散・標準偏差</a> で扱います。いまは「分布をひと言で要約する数がある」とだけ覚えておけば十分です。</p>
+
+        <h2>理解度チェック</h2>
+
+        <div class="quiz" data-answer="b">
+          <p class="quiz-q">問1: 確率変数 \(X\) を「コインを1回投げて、表なら \(1\)、裏なら \(0\)」と決めました。\( P(X = 1) \) は何を表しますか?</p>
+          <button class="quiz-option" data-key="a">表と裏が同時に出る確率</button>
+          <button class="quiz-option" data-key="b">表が出る確率</button>
+          <button class="quiz-option" data-key="c">投げる回数の平均</button>
+          <div class="quiz-explain"><p>\(X = 1\) は「表」に割り当てた値なので、\( P(X = 1) \) は表が出る確率、つまり \( \frac{1}{2} \) です。確率変数では、結果に割り当てた数を使って確率を表します。</p></div>
+        </div>
+
+        <div class="quiz" data-answer="c">
+          <p class="quiz-q">問2: ある確率変数 \(X\) の分布が \( p(1) = 0.2 \)、\( p(2) = 0.5 \)、\( p(3) = ? \) のとき、\( p(3) \) はいくつですか?</p>
+          <button class="quiz-option" data-key="a">0.7</button>
+          <button class="quiz-option" data-key="b">0.5</button>
+          <button class="quiz-option" data-key="c">0.3</button>
+          <div class="quiz-explain"><p>確率の合計は \(1\) です。\( 0.2 + 0.5 = 0.7 \) なので、\( p(3) = 1 - 0.7 = 0.3 \) になります。残り全部を足して \(1\) から引く、という使い方です。</p></div>
+        </div>
+
+        <div class="quiz" data-answer="a">
+          <p class="quiz-q">問3: 確率分布の棒グラフについて、正しい説明はどれですか?</p>
+          <button class="quiz-option" data-key="a">棒の高さがその値の出やすさを表し、高さを全部足すと1になる</button>
+          <button class="quiz-option" data-key="b">棒は必ずすべて同じ高さになる</button>
+          <button class="quiz-option" data-key="c">棒の高さはマイナスになることもある</button>
+          <div class="quiz-explain"><p>棒の高さは確率なので、\(0\) 以上で、全部足すと \(1\) です。確率がマイナスになることはありません。また、サイコロのように同じ高さになるのは特別な場合で、ふつうは高さがバラバラです。</p></div>
+        </div>
+
+        <h2>演習</h2>
+
+        <div class="box box-practice">
+          <div class="box-title">演習1</div>
+          <p>コインを2回投げ、表が出た回数を \(X\) とします。\(X\) が取りうる値をすべて書き出しなさい。</p>
+          <details class="answer">
+            <summary>解答を見る</summary>
+            <p>2回のうち表が出る回数なので、取りうる値は \(0, 1, 2\) の3つです。「2回とも裏」で \(0\)、「片方だけ表」で \(1\)、「2回とも表」で \(2\) になります。</p>
+          </details>
+        </div>
+
+        <div class="box box-practice">
+          <div class="box-title">演習2</div>
+          <p>次の表は、ある確率変数 \(X\) の確率分布です。空欄 \( p(3) \) を求めなさい。</p>
+          <table>
+            <thead><tr><th>\(x\)</th><th>1</th><th>2</th><th>3</th></tr></thead>
+            <tbody><tr><td>\( p(x) \)</td><td>0.25</td><td>0.40</td><td>?</td></tr></tbody>
+          </table>
+          <details class="answer">
+            <summary>解答を見る</summary>
+            <p>確率の合計は \(1\) です。\( 0.25 + 0.40 = 0.65 \) なので、\( p(3) = 1 - 0.65 = 0.35 \) です。</p>
+          </details>
+        </div>
+
+        <div class="box box-practice">
+          <div class="box-title">演習3</div>
+          <p>サイコロを1回振り、出た目が偶数なら \(X = 1\)、奇数なら \(X = 0\) と決めます。このとき \( P(X = 1) \) を求めなさい。</p>
+          <details class="answer">
+            <summary>解答を見る</summary>
+            <p>偶数の目は \(2, 4, 6\) の3つです。サイコロの目は全部で6つ、それぞれ確率 \( \frac{1}{6} \) なので、\( P(X = 1) = \frac{3}{6} = \frac{1}{2} \) です。割り当て方しだいで、確率変数の中身を自由に設計できるのがポイントです。</p>
+          </details>
+        </div>
+
+        <div class="box box-practice">
+          <div class="box-title">演習4</div>
+          <p>確率変数 \(X\) の分布が \( p(0) = 0.1 \)、\( p(1) = 0.6 \)、\( p(2) = 0.3 \) です。\(X\) が \(1\) 以上になる確率 \( P(X \ge 1) \) を求めなさい。記号 \( P(X \ge 1) \) は『\(X\) が \(1\) 以上の値を取る確率』と読みます。</p>
+          <details class="answer">
+            <summary>解答を見る</summary>
+            <p>\(X\) が \(1\) 以上なのは、\(X = 1\) または \(X = 2\) のときです。よって \( P(X \ge 1) = p(1) + p(2) = 0.6 + 0.3 = 0.9 \) です。別解として、合計が \(1\) であることを使い、\( P(X \ge 1) = 1 - p(0) = 1 - 0.1 = 0.9 \) と求めても同じ答えになります。</p>
+          </details>
+        </div>
+
+        <h2>まとめ</h2>
+        <ul>
+          <li><span class="term">確率変数</span> \(X\) は、試行の結果ひとつひとつに割り当てた数のこと。結果が出るまで値は定まりません。</li>
+          <li><span class="term">確率分布</span>は、確率変数が取りうる値と、その確率の対応。離散の場合は \( p(x) = P(X = x) \) という確率質量関数で表します。</li>
+          <li>確率分布は表でも棒グラフでも書けます。棒の高さがその値の出やすさを表します。</li>
+          <li>取りうる値すべての確率を足すと、合計は必ず \(1\)。ひとつ抜けても、残りを足して \(1\) から引けば求まります。</li>
+          <li>分布をひとつの数で代表するのが<span class="term">期待値</span>。計算は次レベル内の 2-4 で扱います。</li>
+        </ul>
+        <p>結果を数にして、全体を棒グラフで眺める。この見方ができれば準備は万端です。つぎの <a href="2-2.html">2-2 二項分布とポアソン分布</a> では、回数を数える場面で何度も登場する、代表的な分布の形を覚えていきましょう。</p>
+
+      </div>
+
+      <div class="complete-area">
+        <button class="btn btn-level" id="complete-btn">このレッスンを完了にする</button>
+        <p class="complete-note">進捗はこのブラウザに保存されます</p>
+      </div>
+
+      <!-- 前後ナビ: main.js がカリキュラムから自動生成 -->
+      <nav class="lesson-nav" id="lesson-nav" aria-label="前後のレッスン"></nav>
+
+    </main>
+
+    <!-- ページ内目次: main.js が本文の h2 から自動生成 -->
+    <aside class="toc">
+      <div class="toc-title">このページの内容</div>
+      <nav id="toc"></nav>
+    </aside>
+
+  </div>
+
+  <footer class="site-footer">
+    <p>ベイズの階段 — 中学数学から最前線まで、一段ずつ。</p>
+  </footer>
+
+  <script src="../../assets/js/curriculum.js"></script>
+  <script src="../../assets/js/main.js"></script>
+</body>
+</html>
