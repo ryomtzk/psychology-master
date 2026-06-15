@@ -22,6 +22,7 @@
     { id: "dsp", label: "発達・社会・個人差" },
     { id: "applied", label: "臨床・応用" },
     { id: "vision", label: "視覚科学（特別編）" },
+    { id: "optimism", label: "楽観性の心理学（特別編）" },
   ];
 
   const App = {
@@ -251,6 +252,7 @@
         return this.viewModule(app, mod);
       }
       if (head === "vision") return this.viewVision(app);
+      if (head === "optimism") return this.viewOptimism(app);
       if (head === "review") return this.viewReview(app);
       if (head === "exam") return this.viewExam(app);
       if (head === "glossary") return this.viewGlossary(app);
@@ -342,6 +344,48 @@
         const mods = g.ids.map((id) => this.byId[id]).filter(Boolean);
         if (!mods.length) return;
         html += `<div class="cat-block" data-cat="vision"><div class="cat-head"><i class="cat-dot"></i>${g.label}</div><div class="grid">`;
+        mods.forEach((m) => { html += this.moduleCard(m); });
+        html += `</div></div>`;
+      });
+
+      app.innerHTML = html;
+      app.querySelectorAll("[data-goto]").forEach((c) =>
+        c.addEventListener("click", () => { location.hash = c.dataset.goto; }));
+      this.animateCounts(app);
+    },
+
+    /* ====================================================
+       楽観性の心理学（特別編）ハブ
+    ==================================================== */
+    viewOptimism(app) {
+      this.setNav("optimism");
+      const groups = [
+        { label: "I. 現象 — 楽観性バイアスとは何か", ids: ["opt_intro", "opt_unrealistic"] },
+        { label: "II. 概念の家系図 — 関連する幻想と特性", ids: ["opt_illusions", "opt_dispositional", "opt_planning"] },
+        { label: "III. メカニズム — 神経科学的転回", ids: ["opt_neuro", "opt_updating"] },
+        { label: "IV. 境界条件と方法論的論争", ids: ["opt_depression", "opt_controversy"] },
+        { label: "V. 応用と現代的展開", ids: ["opt_applied"] },
+      ];
+      const omods = this.modules.filter((m) => m.category === "optimism");
+      const nLessons = omods.reduce((a, m) => a + (m.lessons || []).length, 0);
+      const nQs = omods.reduce((a, m) => a + (m.questions || []).length, 0);
+
+      let html = `<section class="hero" data-cat="optimism">
+        <h1>🌈 楽観性の心理学 <span style="font-size:.5em;font-weight:800;vertical-align:middle;color:var(--cat);background:var(--cat-soft);padding:3px 12px;border-radius:999px;margin-left:8px">特別編</span></h1>
+        <p><b>楽観性バイアス（optimism bias）</b>——将来のよい出来事を過大に、悪い出来事を過小に見積もる体系的な傾向——を軸に、その研究史を体系的にたどる特別セクション。Weinstein による<b>非現実的楽観主義</b>の発見から、Taylor &amp; Brown の<b>ポジティブ・イリュージョン</b>、計画錯誤、Sharot らによる<b>信念更新の非対称性</b>の神経科学、抑うつとの鏡像関係、そして現象の存在自体を問う<b>統計的人工産物説</b>の論争まで。「確立された知見」と「方法論的論争」を<b>両面から</b>誠実に扱う、研究者のための一望図である。</p>
+        <div class="hero-stats">
+          <div class="hero-stat"><b data-n="${omods.length}">0</b><span>モジュール</span></div>
+          <div class="hero-stat"><b data-n="${nLessons}">0</b><span>レッスン</span></div>
+          <div class="hero-stat"><b data-n="${nQs}">0</b><span>演習問題</span></div>
+        </div>
+      </section>`;
+
+      html += `<div class="callout key"><b>おすすめの学び方</b>：番号順（I→V）に進むと、<b>現象の発見 → 概念の整理 → 神経メカニズム → 境界条件と論争 → 応用</b>という研究史の流れに沿って積み上がる。各モジュールは「📖 学ぶ → ✏️ 演習する」を1セットにし、間違えた問題は自動で復習キューに入る。論争を扱う回（IV）は、特定の立場を断定せず両論を併記している。</div>`;
+
+      groups.forEach((g) => {
+        const mods = g.ids.map((id) => this.byId[id]).filter(Boolean);
+        if (!mods.length) return;
+        html += `<div class="cat-block" data-cat="optimism"><div class="cat-head"><i class="cat-dot"></i>${g.label}</div><div class="grid">`;
         mods.forEach((m) => { html += this.moduleCard(m); });
         html += `</div></div>`;
       });

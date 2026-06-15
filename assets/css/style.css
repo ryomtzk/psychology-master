@@ -61,11 +61,13 @@
 [data-cat="dsp"]    {--cat:#bd8a45;--cat-soft:#f7f0e2}
 [data-cat="applied"]{--cat:#bd6c8d;--cat-soft:#f7edf2}
 [data-cat="vision"] {--cat:#8a63c2;--cat-soft:#f1ecf9}
+[data-cat="optimism"]{--cat:#d98a3d;--cat-soft:#fbeede}
 [data-theme="dark"] [data-cat="found"]  {--cat:#98a0e0;--cat-soft:color-mix(in srgb,#98a0e0 14%,#161b27)}
 [data-theme="dark"] [data-cat="biocog"] {--cat:#63c2b2;--cat-soft:color-mix(in srgb,#63c2b2 12%,#161b27)}
 [data-theme="dark"] [data-cat="dsp"]    {--cat:#d9b265;--cat-soft:color-mix(in srgb,#d9b265 11%,#161b27)}
 [data-theme="dark"] [data-cat="applied"]{--cat:#d990ad;--cat-soft:color-mix(in srgb,#d990ad 12%,#161b27)}
 [data-theme="dark"] [data-cat="vision"] {--cat:#b08fe0;--cat-soft:color-mix(in srgb,#b08fe0 13%,#161b27)}
+[data-theme="dark"] [data-cat="optimism"]{--cat:#e6a861;--cat-soft:color-mix(in srgb,#e6a861 13%,#161b27)}
 
 /* ---------- ベース ---------- */
 *{box-sizing:border-box}
