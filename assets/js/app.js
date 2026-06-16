@@ -14,6 +14,9 @@
   // Leitnerボックス: 復習間隔（日）
   const BOX_INTERVAL = [0, 1, 2, 4, 8, 16];
   const MAX_BOX = 5;
+  // このボックスに達したら「習得済み」。習熟度ゲージは box の進み具合を MASTER_BOX で割った加重平均で表す
+  // （正解1回ごとに box が1つ進むので、1周＝約33%、2周＝約67%、3周で100%）
+  const MASTER_BOX = 3;
   const DAY = 86400000;
 
   const CATEGORIES = [
@@ -84,22 +87,25 @@
     /* ---------- 集計 ---------- */
     moduleStats(mod) {
       const s = this.loadStore();
-      let seen = 0, mastered = 0, due = 0, correct = 0, total = 0;
+      let seen = 0, mastered = 0, due = 0, correct = 0, total = 0, points = 0;
       mod.questions.forEach((q) => {
         const r = s[this.qKey(mod.id, q.id)];
         if (r && r.seen > 0) {
           seen++;
           correct += r.correct;
           total += r.seen;
-          if (r.box >= 3) mastered++;
+          points += Math.min(r.box, MASTER_BOX); // 習熟度は box の進み具合（加重）で測る
+          if (r.box >= MASTER_BOX) mastered++;
           if (this.isDue(r)) due++;
         }
       });
       const n = mod.questions.length || 1;
+      const maxPoints = n * MASTER_BOX;
       return {
         total: mod.questions.length,
         seen, mastered, due,
-        mastery: Math.round((mastered / n) * 100),
+        points, maxPoints,
+        mastery: Math.round((points / maxPoints) * 100),
         coverage: Math.round((seen / n) * 100),
         accuracy: total ? Math.round((correct / total) * 100) : null,
       };
@@ -121,12 +127,13 @@
     totalDue() { return this.dueQuestions().length; },
 
     overallStats() {
-      let total = 0, seen = 0, mastered = 0;
+      let total = 0, seen = 0, mastered = 0, points = 0, maxPoints = 0;
       this.modules.forEach((m) => {
         const st = this.moduleStats(m);
         total += st.total; seen += st.seen; mastered += st.mastered;
+        points += st.points; maxPoints += st.maxPoints;
       });
-      return { total, seen, mastered, mastery: total ? Math.round((mastered / total) * 100) : 0 };
+      return { total, seen, mastered, mastery: maxPoints ? Math.round((points / maxPoints) * 100) : 0 };
     },
 
     /* ---------- ユーティリティ ---------- */
