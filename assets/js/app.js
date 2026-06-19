@@ -26,6 +26,7 @@
     { id: "applied", label: "臨床・応用" },
     { id: "vision", label: "視覚科学（特別編）" },
     { id: "optimism", label: "楽観性の心理学（特別編）" },
+    { id: "katakana", label: "横文字（カタカナ語）特別編" },
   ];
 
   const App = {
@@ -260,6 +261,7 @@
       }
       if (head === "vision") return this.viewVision(app);
       if (head === "optimism") return this.viewOptimism(app);
+      if (head === "katakana") return this.viewKatakana(app);
       if (head === "review") return this.viewReview(app);
       if (head === "exam") return this.viewExam(app);
       if (head === "glossary") return this.viewGlossary(app);
@@ -393,6 +395,47 @@
         const mods = g.ids.map((id) => this.byId[id]).filter(Boolean);
         if (!mods.length) return;
         html += `<div class="cat-block" data-cat="optimism"><div class="cat-head"><i class="cat-dot"></i>${g.label}</div><div class="grid">`;
+        mods.forEach((m) => { html += this.moduleCard(m); });
+        html += `</div></div>`;
+      });
+
+      app.innerHTML = html;
+      app.querySelectorAll("[data-goto]").forEach((c) =>
+        c.addEventListener("click", () => { location.hash = c.dataset.goto; }));
+      this.animateCounts(app);
+    },
+
+    /* ====================================================
+       横文字（カタカナ語）特別編 ハブ
+    ==================================================== */
+    viewKatakana(app) {
+      this.setNav("katakana");
+      const groups = [
+        { label: "I. 研究の数理と方法", ids: ["kana_stats", "kana_dynamics", "kana_compute"] },
+        { label: "II. 脳・知覚・学習のメカニズム", ids: ["kana_neuro", "kana_perception", "kana_learning"] },
+        { label: "III. 言語・発達・感情", ids: ["kana_language", "kana_devsocial", "kana_affect"] },
+        { label: "IV. 研究文化とメタ理論", ids: ["kana_reproducibility", "kana_meta"] },
+      ];
+      const kmods = this.modules.filter((m) => m.category === "katakana");
+      const nLessons = kmods.reduce((a, m) => a + (m.lessons || []).length, 0);
+      const nQs = kmods.reduce((a, m) => a + (m.questions || []).length, 0);
+
+      let html = `<section class="hero" data-cat="katakana">
+        <h1>🔤 横文字（カタカナ語） <span style="font-size:.5em;font-weight:800;vertical-align:middle;color:var(--cat);background:var(--cat-soft);padding:3px 12px;border-radius:999px;margin-left:8px">特別編</span></h1>
+        <p>心理学・認知科学の論文や講義で次々に出てくる<b>横文字（カタカナ語）</b>——モデレーター、アフォーダンス、プレディクティブコーディング……——を、分野ごとに<b>頻出順</b>で整理した語彙特別編。各分野で「よく出る順」に意味とセットで覚え、演習では<b>意味から単語を当てる（意味→単語）</b>形式でアウトプットを鍛える。混同しやすい対（モデレーター／メディエーター、レプリケーション／リプロデューシビリティ等）は並べて配置してある。学部の各分野を学んだ後の<b>「語彙の総ざらい」</b>として使うのがおすすめである。</p>
+        <div class="hero-stats">
+          <div class="hero-stat"><b data-n="${kmods.length}">0</b><span>分野</span></div>
+          <div class="hero-stat"><b data-n="${nLessons}">0</b><span>レッスン</span></div>
+          <div class="hero-stat"><b data-n="${nQs}">0</b><span>演習問題</span></div>
+        </div>
+      </section>`;
+
+      html += `<div class="callout key"><b>使い方</b>：各分野の「📖 学ぶ」で頻出順の語リストに目を通し、「✏️ 演習する」で<b>意味→単語</b>の4択に挑む。間違えた語は自動で復習キューに入り、間隔反復で定着する。語はすべて用語集にも合流し、模擬試験にも出題される。</div>`;
+
+      groups.forEach((g) => {
+        const mods = g.ids.map((id) => this.byId[id]).filter(Boolean);
+        if (!mods.length) return;
+        html += `<div class="cat-block" data-cat="katakana"><div class="cat-head"><i class="cat-dot"></i>${g.label}</div><div class="grid">`;
         mods.forEach((m) => { html += this.moduleCard(m); });
         html += `</div></div>`;
       });
