@@ -86,28 +86,31 @@ PsychApp.registerModule({
         <p>この枠組みは、楽観性バイアスを単なる「思い込み」ではなく、<strong>価数に応じて情報処理を切り替える脳の体系的な性質</strong>として位置づけ直す。ドーパミンや TMS による操作が効くのも、まさに価数依存的な学習の回路に介入しているからだと解釈できる。</p>
         <div class="callout warn"><b>因果か人工産物か</b>：L-DOPA や TMS が更新の<strong>非対称</strong>を動かしたという解釈は、前提として「もとの非対称が実在する」ことに依存する。前レッスンで触れたとおり、<em>Shah et al.(2016)</em> はこの非対称をベースレート処理の<strong>統計的人工産物</strong>とみなしうると批判している。したがって因果的操作の知見も、現象の実在をめぐる論争の文脈のなかで慎重に読むべきである。両論を踏まえることが、2020年代の学術的態度として求められる。</div>
       `,
-      figure: `<svg viewBox="0 0 480 250" xmlns="http://www.w3.org/2000/svg" font-family="sans-serif">
-        <rect x="0" y="0" width="480" height="250" rx="14" fill="#f5f7fd"/>
+      figure: `<svg viewBox="0 0 480 270" xmlns="http://www.w3.org/2000/svg" font-family="sans-serif">
+        <rect x="0" y="0" width="480" height="270" rx="14" fill="#f5f7fd"/>
         <defs>
-          <marker id="ou_arr" markerWidth="10" markerHeight="10" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#5b6cf0"/></marker>
+          <marker id="ou_imp" markerWidth="10" markerHeight="10" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#15c4a8"/></marker>
           <marker id="ou_block" markerWidth="10" markerHeight="10" refX="5" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#e0566b"/></marker>
         </defs>
         <text x="240" y="26" text-anchor="middle" font-size="14" font-weight="800" fill="#1d2433">価数依存的な信念形成への因果的操作</text>
-        <rect x="150" y="44" width="180" height="36" rx="8" fill="#e9ebfe" stroke="#5b6cf0" stroke-width="2"/>
-        <text x="240" y="67" text-anchor="middle" font-size="12" font-weight="700" fill="#1d2433">悪い知らせの取り込み</text>
-        <rect x="36" y="120" width="180" height="40" rx="8" fill="#ffffff" stroke="#f0a020" stroke-width="2"/>
-        <text x="126" y="138" text-anchor="middle" font-size="11" font-weight="700" fill="#1d2433">L-DOPA(150mg)</text>
-        <text x="126" y="153" text-anchor="middle" font-size="9.5" fill="#5b6478">ドーパミンを高める</text>
-        <rect x="264" y="120" width="180" height="40" rx="8" fill="#ffffff" stroke="#15c4a8" stroke-width="2"/>
-        <text x="354" y="138" text-anchor="middle" font-size="11" font-weight="700" fill="#1d2433">TMS（磁気刺激）</text>
-        <text x="354" y="153" text-anchor="middle" font-size="9.5" fill="#5b6478">信念形成を選択的に操作</text>
-        <line x1="126" y1="120" x2="195" y2="82" stroke="#e0566b" stroke-width="2.5" marker-end="url(#ou_block)"/>
-        <line x1="354" y1="120" x2="285" y2="82" stroke="#5b6cf0" stroke-width="2.5" marker-end="url(#ou_arr)"/>
-        <text x="240" y="200" text-anchor="middle" font-size="11" font-weight="700" fill="#e0566b">悪い知らせの更新が弱まる</text>
-        <text x="240" y="222" text-anchor="middle" font-size="11.5" font-weight="800" fill="#1d2433">→ 楽観性バイアスが増大</text>
-        <text x="240" y="240" text-anchor="middle" font-size="9" fill="#5b6478">Sharot ら(2012, Current Biology / PNAS)・Sharot & Garrett(2016)</text>
+        <rect x="30" y="44" width="180" height="44" rx="8" fill="#fff7ea" stroke="#f0a020" stroke-width="2"/>
+        <text x="120" y="64" text-anchor="middle" font-size="11" font-weight="700" fill="#1d2433">L-DOPA(150mg)</text>
+        <text x="120" y="80" text-anchor="middle" font-size="9.5" fill="#5b6478">ドーパミンを高める（薬理）</text>
+        <line x1="120" y1="90" x2="120" y2="126" stroke="#e0566b" stroke-width="2.5" marker-end="url(#ou_block)"/>
+        <text x="120" y="148" text-anchor="middle" font-size="10.5" font-weight="700" fill="#e0566b">悪い知らせの取り込みを阻害</text>
+        <text x="120" y="170" text-anchor="middle" font-size="11.5" font-weight="800" fill="#1d2433">→ 楽観性バイアス増大</text>
+        <rect x="270" y="44" width="180" height="44" rx="8" fill="#eafaf6" stroke="#15c4a8" stroke-width="2"/>
+        <text x="360" y="64" text-anchor="middle" font-size="11" font-weight="700" fill="#1d2433">TMS（左下前頭回）</text>
+        <text x="360" y="80" text-anchor="middle" font-size="9.5" fill="#5b6478">磁気で一時的に乱す（刺激）</text>
+        <line x1="360" y1="90" x2="360" y2="126" stroke="#15c4a8" stroke-width="2.5" marker-end="url(#ou_imp)"/>
+        <text x="360" y="148" text-anchor="middle" font-size="10.5" font-weight="700" fill="#15c4a8">悪い知らせの取り込みを改善</text>
+        <text x="360" y="170" text-anchor="middle" font-size="11.5" font-weight="800" fill="#1d2433">→ 楽観性バイアス消失</text>
+        <line x1="60" y1="190" x2="420" y2="190" stroke="#c9cfe0" stroke-width="1"/>
+        <text x="240" y="210" text-anchor="middle" font-size="9.5" fill="#5b6478">薬理(L-DOPA)と刺激(TMS)は反対方向にバイアスを動かすが、</text>
+        <text x="240" y="226" text-anchor="middle" font-size="9.5" fill="#5b6478">いずれも価数依存的な学習に因果的に介入できることを示す</text>
+        <text x="240" y="252" text-anchor="middle" font-size="9" fill="#5b6478">Sharot ら(2012, Current Biology / PNAS)・Sharot & Garrett(2016)</text>
       </svg>`,
-      figcaption: "因果的操作の概念図。ドーパミンを高める L-DOPA(150mg)は悪い知らせの取り込みを阻害し、TMS は信念形成を選択的に操作できる。いずれも価数依存的な学習回路に介入し、悪い知らせの更新を弱めることで楽観性バイアスを増大させうる（Sharot ら, 2012; Sharot & Garrett, 2016）。",
+      figcaption: "因果的操作の概念図。ドーパミンを高める L-DOPA(150mg)は悪い知らせの取り込みを阻害して楽観性バイアスを増大させた（Current Biology, 2012）。一方、左下前頭回への TMS は悪い知らせの取り込みをむしろ改善し、楽観性バイアスを消失させた（PNAS, 2012）。両者は反対方向にバイアスを動かすが、いずれも価数依存的な学習に因果的に介入できることを示す（Sharot ら, 2012; Sharot & Garrett, 2016）。",
       terms: [
         { term: "因果的証拠(causal evidence)", def: "脳の状態を操作してバイアスが変わると示すこと。相関より一歩進んだ証拠。" },
         { term: "L-DOPA(150 mg)", def: "ドーパミン機能を高める薬物。悪い知らせの更新を阻害し楽観性を増大させた。" },

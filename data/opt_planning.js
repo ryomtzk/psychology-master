@@ -17,7 +17,7 @@ PsychApp.registerModule({
         <p>この現象を「計画錯誤」と名づけたのは、<em>Kahneman</em> と <em>Tversky</em>(1979)の論文 <em>"Intuitive prediction: biases and corrective procedures"</em>(<em>TIMS Studies in Management Science</em>, 12, 313–327)である。彼らは、人々が直観的に行う予測には系統的なバイアスがあること、そしてそれを<strong>補正する手続き(corrective procedures)</strong>が必要であることを論じた。計画錯誤はその代表例として位置づけられた。</p>
         <div class="callout key"><b>計画錯誤の定義</b>：課題の完了に要する時間を<strong>過小評価</strong>する系統的な傾向。<em>Kahneman</em> & <em>Tversky</em>(1979)が命名した。たとえ過去に同種の課題で予定を超過していても、新しい計画では再び楽観的な見積もりが繰り返される。</div>
         <h3>内側の視点と外側の視点</h3>
-        <p><em>Kahneman</em> と <em>Tversky</em>(1979)が計画錯誤の核として区別したのが、予測の二つの取り方、すなわち<strong>内側の視点(inside view)</strong>と<strong>外側の視点(outside view)</strong>である。</p>
+        <p>計画錯誤の核にあるのが、予測の二つの取り方、すなわち<strong>内側の視点(inside view)</strong>と<strong>外側の視点(outside view)</strong>の区別である。この区別は <em>Kahneman</em> と <em>Tversky</em>(1979)の「内的アプローチ／外的アプローチ」に始まり、<strong>inside view／outside view</strong> という呼称は <em>Kahneman</em> と <em>Lovallo</em>(1993)による。</p>
         <ul>
           <li><strong>内側の視点(inside view)</strong>：いま手元にある<strong>個別の計画の詳細</strong>に注目して予測する立場。「まず章立てをして、資料を読んで、書いて、推敲して……」と、目の前の課題のシナリオを順に積み上げて所要時間をはじき出す。</li>
           <li><strong>外側の視点(outside view)</strong>：当の課題を<strong>類似事例の集まりの一例</strong>とみなし、それらが実際にどれだけの時間を要したかという<strong>分布</strong>に注目して予測する立場。「同じような卒論は、たいてい何日かかったか」を手がかりにする。</li>
@@ -71,12 +71,12 @@ PsychApp.registerModule({
         <p>注目すべきは、実際の平均完成時間(<strong>55.5 日</strong>)が、楽観的な平均予測(33.9 日)を約 <strong>64%</strong> 超過しただけでなく、学生が自ら挙げた「<strong>最悪の場合</strong>」の見積もり(48.6 日)すら上回った点である。そして<strong>予測した期限内に完了できたのは、学生のおよそ 30% にすぎなかった</strong>。すなわち、最悪のシナリオを思い描いても、人はなお現実を楽観視していたことになる。</p>
         <div class="callout example"><b>「最悪の場合」でも甘い</b>：直観的には、最悪ケースの見積もり（48.6 日）こそ安全側に振った数字に思える。しかし現実の平均（55.5 日）はそれをも超えた。これは、人が想像する「最悪」が、内側の視点の延長線上にとどまり、本当に起こりうる遅延の幅を捉えきれていないことを示す。</div>
         <h3>定義の拡張 — 時間からコスト・便益へ</h3>
-        <p>当初の計画錯誤は<strong>所要時間</strong>の過小評価に焦点を当てていた。これを <em>Lovallo</em> &amp; <em>Kahneman</em>(2003)が拡張し、時間だけでなく<strong>コストの過小評価</strong>と<strong>便益の過大評価</strong>を含む形に定義を広げた。つまり、「思ったより早く終わる」だけでなく「思ったより安く済み、思ったより得をする」という見通しの甘さまでを射程に収めたのである。</p>
+        <p>当初の計画錯誤は<strong>所要時間</strong>の過小評価に焦点を当てていた。これを <em>Lovallo</em> &amp; <em>Kahneman</em>(2003)が拡張し、時間だけでなく<strong>コストの過小評価</strong>・<strong>リスクの過小評価</strong>と<strong>便益の過大評価</strong>を含む形に定義を広げた。つまり、「思ったより早く終わる」だけでなく「思ったより安く済み、思ったより得をする」という見通しの甘さまでを射程に収めたのである。</p>
         <p>さらに <em>Flyvbjerg</em> &amp; <em>Sunstein</em>(2017)は、この拡張された広義の概念を <strong>"planning fallacy writ large"</strong>（大規模化された計画錯誤）と呼び、当初の時間に限った狭義の計画錯誤と区別することを提案した。大規模な公共事業などで、工期・費用が当初見積もりを大きく超過し、見込まれた便益が過大評価される現象がこれに当たる。</p>
         <table>
           <tr><th>概念</th><th>提案者</th><th>射程</th></tr>
           <tr><td>狭義の計画錯誤</td><td>Kahneman &amp; Tversky(1979)</td><td>所要<b>時間</b>の過小評価</td></tr>
-          <tr><td>拡張された定義</td><td>Lovallo &amp; Kahneman(2003)</td><td>時間＋<b>コスト</b>の過小評価／<b>便益</b>の過大評価</td></tr>
+          <tr><td>拡張された定義</td><td>Lovallo &amp; Kahneman(2003)</td><td>時間＋<b>コスト</b>・<b>リスク</b>の過小評価／<b>便益</b>の過大評価</td></tr>
           <tr><td>"planning fallacy writ large"</td><td>Flyvbjerg &amp; Sunstein(2017)</td><td>広義概念として上記をまとめて呼ぶ</td></tr>
         </table>
         <h3>対策 — 外側の視点としての参照クラス予測</h3>
@@ -107,7 +107,7 @@ PsychApp.registerModule({
         { term: "Buehler, Griffin, & Ross(1994)", def: "卒論完成日の予測で計画錯誤を実証した代表的研究(JPSP 67(3))。" },
         { term: "予測33.9日／実際55.5日", def: "卒論研究の中心的数値。実際は予測を約64%超過した。" },
         { term: "「最悪の場合」48.6日", def: "学生が挙げた悲観的見積もり。それでも実際の55.5日には届かなかった。" },
-        { term: "Lovallo & Kahneman(2003)", def: "計画錯誤を時間だけでなくコスト過小評価・便益過大評価へ拡張した。" },
+        { term: "Lovallo & Kahneman(2003)", def: "計画錯誤を時間だけでなくコスト・リスクの過小評価・便益過大評価へ拡張した。" },
         { term: "Flyvbjerg & Sunstein(2017)", def: "拡張された広義概念を \"planning fallacy writ large\" と呼んだ。" },
         { term: "参照クラス予測(reference class forecasting)", def: "類似事例の分布に基づいて予測する、外側の視点を手続き化した対策。" },
         { term: "便益の過大評価", def: "計画から得られる利益を高く見積もる傾向。拡張された定義に含まれる。" },

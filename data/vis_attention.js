@@ -88,7 +88,7 @@ PsychApp.registerModule({
       body: `
         <p>注意が選択である以上、選ばれなかったものは深く処理されない。その帰結は、しばしば直観に反するほど大きな「見落とし」として現れる。</p>
         <h3>非注意性盲 — 見えないゴリラ</h3>
-        <p><strong>非注意性盲（inattentional blindness）</strong>は、注意を向けていない<em>顕著な対象</em>が目に映っていても気づかれない現象である。<strong>Mack と Rock</strong>が体系的に示し、<strong>Simons と Chabris</strong>の「<strong>見えないゴリラ</strong>」実験で広く知られた。観察者がバスのパスを数える課題に没頭していると、画面を横切るゴリラの着ぐるみに約半数が気づかない。</p>
+        <p><strong>非注意性盲（inattentional blindness）</strong>は、注意を向けていない<em>顕著な対象</em>が目に映っていても気づかれない現象である。<strong>Mack と Rock</strong>が体系的に示し、<strong>Simons と Chabris</strong>の「<strong>見えないゴリラ</strong>」実験で広く知られた。観察者がバスケットボールのパスを数える課題に没頭していると、画面を横切るゴリラの着ぐるみに約半数が気づかない。</p>
         <div class="callout key"><b>含意</b>：私たちは「視野に入ったものはすべて見える」と思いがちだが、<strong>気づき（awareness）には注意が必要</strong>である。網膜に像が結ばれていても、注意がなければ意識に上らないことがある。</div>
         <h3>変化盲</h3>
         <p><strong>変化盲（change blindness）</strong>は、場面の<em>変化そのもの</em>に注意が向かないと、たとえ大きな変化でも気づかないという現象である。<strong>Rensink のフリッカー法</strong>では、2枚の画像の間に短い空白を挟んで交互提示すると、変化が大きくても発見に長くかかる。空白が変化に伴う<em>動きの信号（トランジェント）</em>をかき消すため、変化が注意を自動的に引かなくなるのである。漸進的なゆっくりした変化や、映画のカットのつなぎ目でも変化盲は生じる。</p>

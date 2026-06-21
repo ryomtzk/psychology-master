@@ -49,7 +49,7 @@ PsychApp.registerModule({
         <text x="262" y="58" font-size="11" fill="#e0566b" font-weight="700">事後（鋭い＝確信）</text>
         <line x1="200" y1="50" x2="200" y2="190" stroke="#e0566b" stroke-width="1" stroke-dasharray="4 3"/>
         <circle cx="200" cy="50" r="4" fill="#e0566b"/>
-        <text x="200" y="44" text-anchor="middle" font-size="9" fill="#e0566b">最尤の解釈＝知覚</text>
+        <text x="200" y="44" text-anchor="middle" font-size="9" fill="#e0566b">MAP（最大事後確率）の解釈＝知覚</text>
         <text x="240" y="238" text-anchor="middle" font-size="9.5" fill="#5b6478">曖昧な尤度に事前を掛けると、鋭く一意な事後（知覚）になる</text>
       </svg>`,
       figcaption: "知覚はベイズ推論として定式化できる。曖昧な感覚入力（尤度）に、世界の規則性を表す事前を掛け合わせると、鋭く一意な事後分布が得られ、そのピークが知覚として出力される。",

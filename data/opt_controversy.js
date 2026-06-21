@@ -74,7 +74,7 @@ PsychApp.registerModule({
         </table>
         <p>同じ楽観性を測るはずの2手法が、出来事の頻度・深刻度によって異なる結果を生む。この食い違いこそが、Harris &amp; Hahn の人工産物批判の核心であった。どちらの手法を採るかで結論が変わるなら、観測された「楽観性」が心理なのか手続きなのか、データだけからは切り分けられない。</p>
         <h3>Shah ら(2016) の悲観的レビュー</h3>
-        <p><em>Simmons &amp; Massey</em>（2012, <em>JEP: General</em>, "Is optimism real?"）が実在性を問うた流れを受け、<em>Shah, Harris, Bird, Catmur, &amp; Hahn</em>（2016, <em>Cognitive Psychology</em> 90:71–127, "A pessimistic view of optimistic belief updating"）は、Sharot らの信念更新パラダイムを<strong>5つの実験</strong>で再検討した。</p>
+        <p><em>Simmons &amp; Massey</em>（2012, <em>JEP: General</em>, "Is optimism real?"）が楽観性の実在を確認した一方で、<em>Shah, Harris, Bird, Catmur, &amp; Hahn</em>（2016, <em>Cognitive Psychology</em> 90:71–127, "A pessimistic view of optimistic belief updating"）は、Sharot らの信念更新パラダイムを<strong>5つの実験</strong>で再検討した。</p>
         <div class="callout warn"><b>Shah ら(2016)の主張</b>：5実験で<strong>楽観的更新の証拠が見られなかった</strong>。スポーツファンや喫煙者といった特定集団を除けば、一般的な楽観バイアスは存在しない、というのが彼らの結論である。</div>
         <p>同じ批判系列として、<em>Harris, de Molière, Soh, &amp; Hahn</em>（2017, <em>PLOS ONE</em>）は統計的交絡を統制した5研究を行い、比較法による先行結果に楽観的解釈を支持する証拠はないと報告した。</p>
         <h3>Garrett &amp; Sharot らの反論</h3>

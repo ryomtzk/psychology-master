@@ -305,7 +305,7 @@ PsychApp.registerModule({
           <tr><td><b>核</b></td><td>報酬と業績の交換・取引</td><td>ビジョンで人を鼓舞し変える</td></tr>
           <tr><td><b>手段</b></td><td>条件付き報酬・例外管理</td><td>カリスマ・知的刺激・個別配慮</td></tr>
         </table>
-        <p><strong>変革型リーダーシップ</strong>（バス／バーンズ）は、魅力的なビジョンを示し、部下の価値観・意欲を高め、期待以上の成果へ導く。<strong>LMX理論（Leader-Member Exchange）</strong>は、リーダーが部下一人ひとりと結ぶ<strong>関係の質</strong>に着目し、質の高い関係（内集団）の部下ほど高い業績・満足を示すとした。</p>
+        <p><strong>変革型リーダーシップ</strong>（バーンズ／バス）は、魅力的なビジョンを示し、部下の価値観・意欲を高め、期待以上の成果へ導く。<strong>LMX理論（Leader-Member Exchange）</strong>は、リーダーが部下一人ひとりと結ぶ<strong>関係の質</strong>に着目し、質の高い関係（内集団）の部下ほど高い業績・満足を示すとした。</p>
         <div class="callout note">特性論・行動論はリーダー自身に、状況適合理論は状況に、LMX理論はリーダーと部下の「関係」に、それぞれ焦点を移してきた点を押さえると整理しやすい。</div>
       `,
       figure: `<svg viewBox="0 0 340 320" xmlns="http://www.w3.org/2000/svg" font-family="sans-serif">
